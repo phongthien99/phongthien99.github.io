@@ -19,7 +19,7 @@ Experienced Senior Back-end Developer with a proven track record of delivering h
 
 ## Work Experience
 
-### Senior Back-end Developer
+### Senior Backend Developer
 
 *Thudo Multimedia,  Ha Noi, Viet Nam*                                                                           May 2021 - Present
 
@@ -30,14 +30,14 @@ Experienced Senior Back-end Developer with a proven track record of delivering h
 - Optimize code and test system performance
 - Engage in the product deployment process to ensure stable system operation
 
-### Fresher Back-end Developer
+### Fresher Backend Developer
 
 *Anvita Company, Ha Noi, Viet Nam*                                                                              Mar 2020 - Jun  2021
 
 - Participate in developing e-commerce functions
 - Training new team members
 
-### Internship F**ull-stack Developer**
+### Internship Full-stack Developer
 
  *Mobio Vietnam JSC, Ha Noi, Viet Nam*                                                                             Mar 2019 - Jul  2019
 

@@ -5,7 +5,6 @@ order: 1
 ---
 
 # Nguyen Truong Giang
-
 Nam Tu Liem, Ha Noi, Vietnam | [nguyentruonggiangptdq@gmail.com](mailto:nguyentruonggiangptdq@email.com) | 0335810127 | [linkedin.com/phongthien](https://www.linkedin.com/in/phongthien)
 
 Experienced Senior Back-end Developer with a proven track record of delivering high-quality software solutions. Seeking a challenging role where I can leverage my expertise in Golang, Nodejs  to drive innovation and contribute to the success of a dynamic team.

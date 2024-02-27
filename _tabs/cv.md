@@ -58,6 +58,7 @@ Experienced Senior Back-end Developer with a proven track record of delivering h
 - HLS, DASH
 - Cubejs
 - Vuejs
+- K6,Locust
 
 ## Certifications
 

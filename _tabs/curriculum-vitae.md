@@ -21,7 +21,7 @@ Experienced Senior Back-end Developer with a proven track record of delivering h
 
 ### Senior Backend Developer
 
-*Thudo Multimedia,  Ha Noi, Viet Nam*                                                                           May 2021 - Present
+*Thudo Multimedia,  Ha Noi, Viet Nam                                                                           May 2021 - Present*
 
 - Participate in the development of OTT functions and solutions (SSAI, Livestream, VOD, etc.)
 - Contribute to product development following the SaaS model
@@ -32,14 +32,14 @@ Experienced Senior Back-end Developer with a proven track record of delivering h
 
 ### Fresher Backend Developer
 
-*Anvita Company, Ha Noi, Viet Nam*                                                                              Mar 2020 - Jun  2021
+*Anvita Company, Ha Noi, Viet Nam                                                                              Mar 2020 - Jun  2021*
 
 - Participate in developing e-commerce functions
 - Training new team members
 
 ### Internship Full-stack Developer
 
- *Mobio Vietnam JSC, Ha Noi, Viet Nam*                                                                             Mar 2019 - Jul  2019
+ *Mobio Vietnam JSC, Ha Noi, Viet Nam                                                                          Mar 2019 - Jul  2019*
 
 - Learn frameworks (Angular, flask)
 - Learn about code style and project architecture

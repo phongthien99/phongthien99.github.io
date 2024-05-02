@@ -71,7 +71,7 @@ Experienced Senior Back-end Developer with a proven track record of delivering h
     
     Amazon Web Service(AWS)
     
-    Issued  Sep 2024
+    Issued  Sep 2023
     
 
 ## References

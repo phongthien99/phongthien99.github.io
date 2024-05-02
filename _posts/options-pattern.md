@@ -1,5 +1,5 @@
 ---
-title: Text and Typography
+title: Options Pattern
 author: phongthien99
 date: 2024-05-03 00:40:00 +0800
 categories: [Design-pattern]

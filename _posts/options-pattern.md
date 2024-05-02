@@ -5,6 +5,7 @@ date: 2024-05-03 00:40:00 +0800
 categories: [Design-pattern]
 tags: [interview]
 math: true
+media_subpath: '/posts/20180809'
 ---
 
 # Options Pattern

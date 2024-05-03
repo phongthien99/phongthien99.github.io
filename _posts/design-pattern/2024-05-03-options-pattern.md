@@ -5,7 +5,7 @@ date: 2024-05-03 00:40:00 +0800
 categories: [Design-pattern]
 tags: [interview]
 math: true
-media_subpath: '/posts/20180809'
+media_subpath: '/posts/20240503'
 ---
 
 # Options Pattern
@@ -15,7 +15,7 @@ media_subpath: '/posts/20180809'
 - helps solve the problem when a function or constructor has too many parameters, making calling the function or constructor complicated and confusing.
 - instead of passing a series of parameters, we create an object containing optional parameters (options object), from which we can set the values for those parameters dynamically.
 
-## **Problem**
+## Problem
 
 - calling a function or constructor with too many parameters can result in code that is difficult to read, verbose, and confusing.
 - additionally, when we need to change parameters, we must modify each function or constructor call.

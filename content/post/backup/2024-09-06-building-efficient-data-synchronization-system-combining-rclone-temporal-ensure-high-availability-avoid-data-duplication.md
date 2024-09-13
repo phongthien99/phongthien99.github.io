@@ -1,7 +1,7 @@
 ---
 title: Combining Rclone and Temporal to Ensure High Availability and Avoid Data Duplication"
 author: phongthien99
-date: 2024-05-03 00:40:00 +0800
+date: 2024-09-07 00:40:00 +0800
 categories: [Backup]
 tags: [temporal,rclone]
 math: true

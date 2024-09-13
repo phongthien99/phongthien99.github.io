@@ -11,11 +11,11 @@ media_subpath: '/posts/20180809'
 
 ## Đặt vấn đề
 
-      Để đảm bảo chất lượng mã nguồn trong phát triển phần mềm, unit testing là một yếu tố không thể thiếu. Việc viết và tổ chức các bài kiểm tra đơn vị một cách hiệu quả là điều quan trọng, đặc biệt khi làm việc với các ứng dụng phức tạp. Tuy nhiên, việc này thường gặp khó khăn trong việc quản lý các phụ thuộc và duy trì cấu trúc kiểm tra rõ ràng..
+Để đảm bảo chất lượng mã nguồn trong phát triển phần mềm, unit testing là một yếu tố không thể thiếu. Việc viết và tổ chức các bài kiểm tra đơn vị một cách hiệu quả là điều quan trọng, đặc biệt khi làm việc với các ứng dụng phức tạp. Tuy nhiên, việc này thường gặp khó khăn trong việc quản lý các phụ thuộc và duy trì cấu trúc kiểm tra rõ ràng..
 
 ## Giải pháp
 
-     Khi làm việc với Go, việc kết hợp [Uberfx](https://github.com/uber-go/fx) (framework DI) và [Ginkgo](https://github.com/onsi/ginkgo) (thư viện BDD) cung cấp một phương pháp hiệu quả để giải quyết các vấn đề trên. Uberfx giúp quản lý các phụ thuộc của ứng dụng, trong khi Ginkgo hỗ trợ viết các bài kiểm tra đơn vị theo cách dễ đọc và rõ ràng.
+Khi làm việc với Go, việc kết hợp [Uberfx](https://github.com/uber-go/fx) (framework DI) và [Ginkgo](https://github.com/onsi/ginkgo) (thư viện BDD) cung cấp một phương pháp hiệu quả để giải quyết các vấn đề trên. Uberfx giúp quản lý các phụ thuộc của ứng dụng, trong khi Ginkgo hỗ trợ viết các bài kiểm tra đơn vị theo cách dễ đọc và rõ ràng.
 
 Bài viết này sẽ hướng dẫn bạn cách sử dụng Uberfx để quản lý phụ thuộc và Ginkgo để viết các bài kiểm tra, nhằm xây dựng một quy trình phát triển mạnh mẽ và dễ bảo trì.
 
@@ -107,13 +107,13 @@ func Module() fx.Option {
 }
 ```
 
-### 
 
-### Giải thích
+
+Giải thích
 
 - `Module() fx.Option`: Hàm này sử dụng `fx.Provide` của Uberfx để cung cấp một thể hiện của `userService` như là một dịch vụ cho các phần khác của ứng dụng. Đây là cách để Uberfx quản lý và cung cấp dịch vụ thông qua DI.
 
-### Cách Hoạt Động
+Cách Hoạt Động
 
 - **Khởi tạo:** Khi ứng dụng khởi động, `Module()` sẽ được gọi để cung cấp `userService` qua Uberfx. Điều này cho phép các phần khác của ứng dụng có thể yêu cầu dịch vụ này mà không cần phải khởi tạo nó trực tiếp.
 - **Quản lý Người Dùng:** Các phương thức trong `userService` cho phép tạo, lấy, cập nhật và xóa người dùng trong một bản đồ, với sự đồng bộ hóa cần thiết để xử lý nhiều yêu cầu đồng thời.
@@ -191,14 +191,14 @@ func TestService(t *testing.T) {
 
 ```
 
-**Giải thích:**
+Giải thích
 
 - **`func TestService(t *testing.T)`:** Đây là hàm điểm vào (entry point) cho các bài kiểm tra trong Go. Khi bạn chạy lệnh `go test`, Go sẽ tìm các hàm có tên bắt đầu bằng `Test` và thực thi chúng. Hàm `TestService` là một hàm đặc biệt được sử dụng để khởi động Ginkgo và chạy các bài kiểm tra đã được định nghĩa bằng Ginkgo.
 - **`RegisterFailHandler(Fail)`:** Đăng ký một hàm xử lý lỗi. Trong trường hợp có lỗi trong các bài kiểm tra, hàm `Fail` của Ginkgo sẽ được gọi, dẫn đến việc báo cáo lỗi và dừng quá trình kiểm tra.
 - **`RunSpecs(t, "UserService Suite")`:** Khởi động Ginkgo và thực hiện tất cả các bài kiểm tra đã được định nghĩa. Tham số đầu tiên là đối tượng `testing.T` để Ginkgo có thể tích hợp với hệ thống kiểm tra của Go. Tham số thứ hai là tên của suite kiểm tra, dùng để tổ chức và báo cáo các bài kiểm tra.
 - `fx.Populate(&userService)` yêu cầu Uberfx cung cấp một instance của `UserService` và gán nó cho biến `userService`.
     
-     **Làm thế nào `fx.Populate` hoạt động:** Khi ứng dụng Uberfx khởi động, nó tìm các dịch vụ hoặc phụ thuộc đã được đăng ký (trong ví dụ này là `UserService` thông qua `example.Module()`) và tự động cung cấp chúng cho các biến được chỉ định thông qua `fx.Populate`. Điều này giúp tách biệt việc khởi tạo các đối tượng khỏi logic của bài kiểm tra, làm cho mã nguồn trở nên sạch sẽ và dễ bảo trì hơn
+ **Làm thế nào `fx.Populate` hoạt động:** Khi ứng dụng Uberfx khởi động, nó tìm các dịch vụ hoặc phụ thuộc đã được đăng ký (trong ví dụ này là `UserService` thông qua `example.Module()`) và tự động cung cấp chúng cho các biến được chỉ định thông qua `fx.Populate`. Điều này giúp tách biệt việc khởi tạo các đối tượng khỏi logic của bài kiểm tra, làm cho mã nguồn trở nên sạch sẽ và dễ bảo trì hơn
     
 
 ### Bước 3: Chạy test

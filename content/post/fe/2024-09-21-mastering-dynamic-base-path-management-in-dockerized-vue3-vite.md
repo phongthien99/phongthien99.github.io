@@ -16,8 +16,6 @@ Trong phát triển ứng dụng web hiện đại, việc thiết lập đườ
 Một trong những thách thức lớn là việc thay đổi base path của ứng dụng trong các môi trường khác nhau mà không cần phải rebuild lại toàn bộ. Khi ứng dụng được triển khai trong các môi trường như development, staging hoặc production, yêu cầu về base path có thể khác nhau, và việc không có cơ chế để điều chỉnh chúng một cách linh hoạt có thể dẫn đến:
 
 - **Khó khăn trong triển khai**: Cần phải duy trì nhiều cấu hình hoặc bản build riêng cho từng môi trường, gây tốn thời gian và công sức.
-- **Thiếu linh hoạt**: Nếu base path không thể thay đổi tại runtime, các thay đổi nhỏ sẽ yêu cầu phải tái biên dịch ứng dụng, ảnh hưởng đến trải nghiệm người dùng.
-- **Khả năng mở rộng hạn chế**: Khi ứng dụng phát triển, yêu cầu về cấu hình có thể thay đổi, và việc không thể điều chỉnh base path có thể cản trở quá trình nào
 
 ### Giải Pháp
 

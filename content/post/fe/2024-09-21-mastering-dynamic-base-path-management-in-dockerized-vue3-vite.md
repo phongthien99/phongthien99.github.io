@@ -196,7 +196,7 @@ services:
     volumes:
       - ./nginx.template.conf:/nginx.template.conf # Ánh xạ file nginx.template.conf vào container
       - ./dist:/app # Thư mục chứa file build của ứng dụng Vue
-      - ./init.sh:/init.sh # Ánh xạ file script init.sh vào container
+      - ./gen-template.sh:/init.sh # Ánh xạ file script init.sh vào container
 
 ```
 

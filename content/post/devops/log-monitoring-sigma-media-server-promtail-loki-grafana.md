@@ -2,7 +2,7 @@
 title: Log Monitoring for Sigma Media Server Using Promtail, Loki, and Grafana
 author: phongthien99
 date: 2024-10-05 12:40:00 +0800
-categories: [Fe]
+categories: [Devops]
 tags: [monitor]
 math: true
 media_subpath: '/posts/20240503'

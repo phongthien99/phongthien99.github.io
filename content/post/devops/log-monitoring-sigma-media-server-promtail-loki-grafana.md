@@ -11,7 +11,7 @@ media_subpath: '/posts/20240503'
 
 ## Đặt vấn đề
 
-     Trong quá trình vận hành **Sigma Media Server**, việc kiểm tra log  là một nhiệm vụ quan trọng để đảm bảo hệ thống hoạt động ổn định. Tuy nhiên, các log này thường được lưu trữ tại thư mục `/var/log/sigma-machine`, và việc phải thường xuyên truy cập vào thư mục, sử dụng lệnh `cat` hoặc `tail` để theo dõi log không chỉ tốn thời gian mà còn gây khó khăn khi cần giám sát liên tục và xử lý log từ nhiều dịch vụ khác nhau. Điều này đặt ra nhu cầu cho một giải pháp giám sát log tập trung, giúp theo dõi và phân tích log nhanh chóng, hiệu quả hơn.
+Trong quá trình vận hành **Sigma Media Server**, việc kiểm tra log  là một nhiệm vụ quan trọng để đảm bảo hệ thống hoạt động ổn định. Tuy nhiên, các log này thường được lưu trữ tại thư mục `/var/log/sigma-machine`, và việc phải thường xuyên truy cập vào thư mục, sử dụng lệnh `cat` hoặc `tail` để theo dõi log không chỉ tốn thời gian mà còn gây khó khăn khi cần giám sát liên tục và xử lý log từ nhiều dịch vụ khác nhau. Điều này đặt ra nhu cầu cho một giải pháp giám sát log tập trung, giúp theo dõi và phân tích log nhanh chóng, hiệu quả hơn.
 
 ## Giải pháp
 
@@ -23,7 +23,7 @@ media_subpath: '/posts/20240503'
 
 ## Thực hiện
 
-    Triển khai thực nghiệm qua docker-compose
+Triển khai thực nghiệm qua docker-compose
 
 ### Bước 1: Tạo file Docker Compose
 

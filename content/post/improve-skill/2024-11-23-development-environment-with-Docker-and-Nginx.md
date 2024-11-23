@@ -1,7 +1,7 @@
 ---
 title: Development environment with Docker and Nginx
 author: phongthien99
-date: 2024-30-23 23:40:00 +0700
+date: 2024-11-23 23:40:00 +0700
 categories: [Improve-Skill]
 tags: [nginx]
 math: true

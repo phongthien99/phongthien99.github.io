@@ -37,8 +37,6 @@ touch main.go
 Thêm đoạn mã sau vào file `main.go`:
 
 ```go
-go
-Copy code
 package main
 
 import (
@@ -122,8 +120,6 @@ networks:
 Khởi động ứng dụng với lệnh:
 
 ```bash
-bash
-Copy code
 docker-compose up
 
 ```

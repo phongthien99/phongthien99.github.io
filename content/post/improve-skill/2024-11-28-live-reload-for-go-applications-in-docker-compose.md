@@ -3,7 +3,7 @@ title: Live Reload for Go Applications in Docker Compose
 author: phongthien99
 date: 2024-11-28 01:17:00 +0800
 categories: [Improve-Skill]
-tags: [portainer]
+tags: [Improve-Skill]
 math: true
 media_subpath: '/posts/20180809'
 ---

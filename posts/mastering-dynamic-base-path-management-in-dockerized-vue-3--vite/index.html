@@ -1,0 +1,220 @@
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><meta name=description content="Mastering Dynamic Base Path Management in Dockerized Vue 3 + Vite Đặt vấn đề Trong phát triển ứng dụng web hiện đại, việc thiết lập đường dẫn build động (dynamic build path) là một yếu tố quan trọng để đảm bảo tính linh hoạt và khả năng mở rộng của ứng dụng. Đối với các ứng dụng Vue 3 sử dụng Vite, việc quản lý đường dẫn build không chỉ ảnh hưởng đến việc truy cập tài nguyên mà còn quyết định cách mà ứng dụng tương tác với các dịch vụ khác, như API.\n"><title>Mastering Dynamic Base Path Management in Dockerized Vue 3 + Vite</title>
+<link rel=canonical href=https://phongthien99.github.io/posts/mastering-dynamic-base-path-management-in-dockerized-vue-3--vite/><link rel=stylesheet href=/scss/style.min.ad1c27307bf6d6b4094d9b29dffa9af9a7a20c004565c1f3eed4749031e3fbc7.css><meta property='og:title' content="Mastering Dynamic Base Path Management in Dockerized Vue 3 + Vite"><meta property='og:description' content="Mastering Dynamic Base Path Management in Dockerized Vue 3 + Vite Đặt vấn đề Trong phát triển ứng dụng web hiện đại, việc thiết lập đường dẫn build động (dynamic build path) là một yếu tố quan trọng để đảm bảo tính linh hoạt và khả năng mở rộng của ứng dụng. Đối với các ứng dụng Vue 3 sử dụng Vite, việc quản lý đường dẫn build không chỉ ảnh hưởng đến việc truy cập tài nguyên mà còn quyết định cách mà ứng dụng tương tác với các dịch vụ khác, như API.\n"><meta property='og:url' content='https://phongthien99.github.io/posts/mastering-dynamic-base-path-management-in-dockerized-vue-3--vite/'><meta property='og:site_name' content='phongthien'><meta property='og:type' content='article'><meta property='article:section' content='Post'><meta property='article:tag' content='nginx'><meta property='article:tag' content='fe'><meta property='article:tag' content='vue3'><meta property='article:tag' content='vite'><meta property='article:published_time' content='2024-09-21T12:40:00+08:00'><meta property='article:modified_time' content='2024-09-21T12:40:00+08:00'><meta name=twitter:title content="Mastering Dynamic Base Path Management in Dockerized Vue 3 + Vite"><meta name=twitter:description content="Mastering Dynamic Base Path Management in Dockerized Vue 3 + Vite Đặt vấn đề Trong phát triển ứng dụng web hiện đại, việc thiết lập đường dẫn build động (dynamic build path) là một yếu tố quan trọng để đảm bảo tính linh hoạt và khả năng mở rộng của ứng dụng. Đối với các ứng dụng Vue 3 sử dụng Vite, việc quản lý đường dẫn build không chỉ ảnh hưởng đến việc truy cập tài nguyên mà còn quyết định cách mà ứng dụng tương tác với các dịch vụ khác, như API.\n"><link rel="shortcut icon" href=/favicon.png></head><body class=article-page><script>(function(){const e="StackColorScheme";localStorage.getItem(e)||localStorage.setItem(e,"auto")})()</script><script>(function(){const t="StackColorScheme",e=localStorage.getItem(t),n=window.matchMedia("(prefers-color-scheme: dark)").matches===!0;e=="dark"||e==="auto"&&n?document.documentElement.dataset.scheme="dark":document.documentElement.dataset.scheme="light"})()</script><div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky"><button class="hamburger hamburger--spin" type=button id=toggle-menu aria-label="Toggle Menu">
+<span class=hamburger-box><span class=hamburger-inner></span></span></button><header><figure class=site-avatar><a href=/><img src=/img/avatar_hu8234470758632672421.jpg width=300 height=300 class=site-logo loading=lazy alt=Avatar>
+</a><span class=emoji>🏅</span></figure><div class=site-meta><h1 class=site-name><a href=/>phongthien</a></h1><h2 class=site-description>Software Engineer</h2></div></header><ol class=menu-social><li><a href=https://github.com/phongthien99 target=_blank title=GitHub rel=me><svg class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6.0 00-1.3-3.2 4.2 4.2.0 00-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3.0 00-6.2.0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2.0 00-.1 3.2A4.6 4.6.0 004 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg></a></li><li><a href=https://twitter.com target=_blank title=linkedin rel=me><svg class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M10 14a3.5 3.5.0 005 0l4-4a3.5 3.5.0 00-5-5l-.5.5"/><path d="M14 10a3.5 3.5.0 00-5 0l-4 4a3.5 3.5.0 005 5l.5-.5"/></svg></a></li></ol><ol class=menu id=main-menu><li><a href=/><svg class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><polyline points="5 12 3 12 12 3 21 12 19 12"/><path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/><path d="M9 21v-6a2 2 0 012-2h2a2 2 0 012 2v6"/></svg>
+<span>Home</span></a></li><li><a href=/archives/><svg class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><rect x="3" y="4" width="18" height="4" rx="2"/><path d="M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+<span>Archives</span></a></li><li><a href=/search/><svg class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="10" cy="10" r="7"/><line x1="21" y1="21" x2="15" y2="15"/></svg>
+<span>Search</span></a></li><li><a href=/about-me/><svg class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="7" r="4"/><path d="M6 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/></svg>
+<span>About me</span></a></li><li class=menu-bottom-section><ol class=menu><li id=dark-mode-toggle><svg class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="8" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<svg class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="16" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<span>Dark Mode</span></li></ol></li></ol></aside><aside class="sidebar right-sidebar sticky"><section class="widget archives"><div class=widget-icon><svg class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><line x1="5" y1="9" x2="19" y2="9"/><line x1="5" y1="15" x2="19" y2="15"/><line x1="11" y1="4" x2="7" y2="20"/><line x1="17" y1="4" x2="13" y2="20"/></svg></div><h2 class="widget-title section-title">Table of contents</h2><div class=widget--toc><nav id=TableOfContents><ol><li><a href=#đặt-vấn-đề>Đặt vấn đề</a><ol><li><a href=#giải-pháp>Giải Pháp</a></li><li><a href=#1-dynamic-environment-variables>1. <strong>Dynamic Environment Variables</strong></a></li><li><a href=#2-nginx-configuration-generation>2. <strong>Nginx Configuration Generation</strong></a></li><li><a href=#3-tạo-template-cho-indexhtml>3. <strong>Tạo Template Cho <code>index.html</code></strong></a></li></ol></li><li><a href=#thực-hiện>Thực hiện</a><ol><li><a href=#bước-1-chỉnh-sửa-file-indexhtml>Bước 1: Chỉnh sửa file <code>index.html</code></a></li><li><a href=#bước-2-tạo-file-envtemplatejs-trong-thư-mục-public>Bước 2: Tạo file <code>env.template.js</code> trong thư mục <code>public</code></a></li><li><a href=#bước-3-cài-đặt-và-cấu-hình-vite-plugin-dynamic-base>Bước 3: Cài đặt và cấu hình <code>vite-plugin-dynamic-base</code></a></li><li><a href=#bước-4-tạo-file-nginxtemplateconf>Bước 4: Tạo file <code>nginx.template.conf</code></a></li><li><a href=#bước-5-tạo-script-gen-templatesh-để-sinh-file-từ-các-template>Bước 5: Tạo script <code>gen-template.sh</code> để sinh file từ các template</a></li><li><a href=#bước-6-cấu-hình-docker-composeyml-để-chạy-thử>Bước 6: Cấu hình <code>docker-compose.yml</code> để chạy thử</a></li></ol></li><li><a href=#kết-luận>Kết luận</a></li><li><a href=#tài-liệu-tham-khảo>Tài liệu tham khảo</a></li></ol></nav></div></section></aside><main class="main full-width"><article class=main-article><header class=article-header><div class=article-details><header class=article-category><a href=/categories/fe/>Fe</a></header><div class=article-title-wrapper><h2 class=article-title><a href=/posts/mastering-dynamic-base-path-management-in-dockerized-vue-3--vite/>Mastering Dynamic Base Path Management in Dockerized Vue 3 + Vite</a></h2></div><footer class=article-time><div><svg class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M11.795 21H5a2 2 0 01-2-2V7a2 2 0 012-2h12a2 2 0 012 2v4"/><circle cx="18" cy="18" r="4"/><path d="M15 3v4"/><path d="M7 3v4"/><path d="M3 11h16"/><path d="M18 16.496V18l1 1"/></svg>
+<time class=article-time--published>Sep 21, 2024</time></div><div><svg class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+<time class=article-time--reading>5 minute read</time></div></footer></div></header><section class=article-content><h1 id=mastering-dynamic-base-path-management-in-dockerized-vue-3--vite>Mastering Dynamic Base Path Management in Dockerized Vue 3 + Vite</h1><h2 id=đặt-vấn-đề>Đặt vấn đề</h2><p>Trong phát triển ứng dụng web hiện đại, việc thiết lập đường dẫn build động (dynamic build path) là một yếu tố quan trọng để đảm bảo tính linh hoạt và khả năng mở rộng của ứng dụng. Đối với các ứng dụng Vue 3 sử dụng Vite, việc quản lý đường dẫn build không chỉ ảnh hưởng đến việc truy cập tài nguyên mà còn quyết định cách mà ứng dụng tương tác với các dịch vụ khác, như API.</p><p>Một trong những thách thức lớn là việc thay đổi base path của ứng dụng trong các môi trường khác nhau mà không cần phải rebuild lại toàn bộ. Khi ứng dụng được triển khai trong các môi trường như development, staging hoặc production, yêu cầu về base path có thể khác nhau, và việc không có cơ chế để điều chỉnh chúng một cách linh hoạt có thể dẫn đến:</p><ul><li><strong>Khó khăn trong triển khai</strong>: Cần phải duy trì nhiều cấu hình hoặc bản build riêng cho từng môi trường, gây tốn thời gian và công sức.</li></ul><h3 id=giải-pháp>Giải Pháp</h3><p>Để giải quyết vấn đề dynamic base path trong Vue 3 + Vite, chúng ta kết hợp ba kỹ thuật chính:</p><h3 id=1-dynamic-environment-variables>1. <strong>Dynamic Environment Variables</strong></h3><ul><li>Sử dụng file như <code>/env.js</code> để chứa các biến môi trường (ví dụ: <code>BASE_PATH</code>, <code>API_ENDPOINT</code>).</li><li>Tải các biến này vào ứng dụng tại runtime thông qua đoạn script trong <code>index.html</code>.</li></ul><h3 id=2-nginx-configuration-generation>2. <strong>Nginx Configuration Generation</strong></h3><ul><li>Sử dụng script hoặc template engine để tự động sinh file cấu hình nginx dựa trên các biến môi trường hiện tại.</li><li>Áp dụng các thay đổi base path động trong cấu hình nginx để tương thích với các môi trường khác nhau.</li></ul><h3 id=3-tạo-template-cho-indexhtml>3. <strong>Tạo Template Cho <code>index.html</code></strong></h3><ul><li>Sinh <code>index.html</code> cuối cùng dựa trên template và các biến môi trường tại runtime.</li></ul><p>Việc kết hợp các kỹ thuật này giúp thay đổi base path linh hoạt mà không cần build lại ứng dụng, đảm bảo khả năng thích ứng và tối ưu hóa quá trình triển khai.</p><h2 id=thực-hiện>Thực hiện</h2><p>Thực hiện trên project <a class=link href=http://github.com/wei-zone/vue3-quick-start.git target=_blank rel=noopener>github.com/wei-zone/vue3-quick-start.git</a></p><h3 id=bước-1-chỉnh-sửa-file-indexhtml>Bước 1: Chỉnh sửa file <code>index.html</code></h3><ul><li>Thêm đoạn script để tải <code>env.js</code> từ <code>BASE_PATH</code> vào trong thẻ <code>&lt;head></code> của file <code>index.html</code>.</li></ul><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-html data-lang=html><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=cp>&lt;!DOCTYPE html&gt;</span>
+</span></span><span class=line><span class=cl><span class=p>&lt;</span><span class=nt>html</span> <span class=na>lang</span><span class=o>=</span><span class=s>&#34;en&#34;</span><span class=p>&gt;</span>
+</span></span><span class=line><span class=cl>  <span class=p>&lt;</span><span class=nt>head</span><span class=p>&gt;</span>
+</span></span><span class=line><span class=cl>    <span class=c>&lt;!-- Thêm đoạn này vào --&gt;</span>
+</span></span><span class=line><span class=cl>    <span class=p>&lt;</span><span class=nt>script</span> <span class=na>src</span><span class=o>=</span><span class=s>&#34;${BASE_PATH}/env.js&#34;</span><span class=p>&gt;&lt;/</span><span class=nt>script</span><span class=p>&gt;</span>
+</span></span><span class=line><span class=cl>  <span class=p>&lt;/</span><span class=nt>head</span><span class=p>&gt;</span>
+</span></span><span class=line><span class=cl>  <span class=p>&lt;</span><span class=nt>body</span><span class=p>&gt;</span>
+</span></span><span class=line><span class=cl>    <span class=p>&lt;</span><span class=nt>div</span> <span class=na>id</span><span class=o>=</span><span class=s>&#34;app&#34;</span><span class=p>&gt;&lt;/</span><span class=nt>div</span><span class=p>&gt;</span>
+</span></span><span class=line><span class=cl>  <span class=p>&lt;/</span><span class=nt>body</span><span class=p>&gt;</span>
+</span></span><span class=line><span class=cl><span class=p>&lt;/</span><span class=nt>html</span><span class=p>&gt;</span>
+</span></span></code></pre></td></tr></table></div></div><h3 id=bước-2-tạo-file-envtemplatejs-trong-thư-mục-public>Bước 2: Tạo file <code>env.template.js</code> trong thư mục <code>public</code></h3><ul><li>Tạo file <code>env.template.js</code> để định nghĩa biến <code>BASE_PATH</code> và các biến môi trường khác nếu cần.</li></ul><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-jsx data-lang=jsx><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=p>(</span><span class=kd>function</span><span class=p>(</span><span class=nb>window</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=nb>window</span><span class=p>.</span><span class=nx>env</span> <span class=o>=</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=nx>BASE_PATH</span><span class=o>:</span> <span class=s1>&#39;${BASE_PATH}&#39;</span> <span class=c1>// Biến môi trường sẽ được thay thế khi build
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=p>};</span>
+</span></span><span class=line><span class=cl><span class=p>})(</span><span class=k>this</span><span class=p>);</span>
+</span></span></code></pre></td></tr></table></div></div><h3 id=bước-3-cài-đặt-và-cấu-hình-vite-plugin-dynamic-base>Bước 3: Cài đặt và cấu hình <code>vite-plugin-dynamic-base</code></h3><ul><li>Cài đặt thư viện <code>vite-plugin-dynamic-base</code> vào <code>devDependencies</code>.</li></ul><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>pnpm add vite-plugin-dynamic-base --save-dev
+</span></span></code></pre></td></tr></table></div></div><ul><li>Cấu hình plugin <code>vite-plugin-dynamic-base</code> trong file <code>vite.config.ts</code>:</li></ul><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-tsx data-lang=tsx><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>defineConfig</span> <span class=p>}</span> <span class=kr>from</span> <span class=s1>&#39;vite&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=nx>vue</span> <span class=kr>from</span> <span class=s1>&#39;@vitejs/plugin-vue&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>dynamicBase</span> <span class=p>}</span> <span class=kr>from</span> <span class=s1>&#39;vite-plugin-dynamic-base&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kr>export</span> <span class=k>default</span> <span class=nx>defineConfig</span><span class=p>({</span>
+</span></span><span class=line><span class=cl>  <span class=nx>plugins</span><span class=o>:</span> <span class=p>[</span>
+</span></span><span class=line><span class=cl>    <span class=nx>vue</span><span class=p>(),</span>
+</span></span><span class=line><span class=cl>    <span class=nx>dynamicBase</span><span class=p>({</span>
+</span></span><span class=line><span class=cl>      <span class=nx>publicPath</span><span class=o>:</span> <span class=s1>&#39;window.env.BASE_PATH&#39;</span><span class=p>,</span> <span class=c1>// Sử dụng biến BASE_PATH từ env.js
+</span></span></span><span class=line><span class=cl><span class=c1></span>      <span class=nx>transformIndexHtml</span>: <span class=kt>true</span><span class=p>,</span> <span class=c1>// Biến đổi file index.html để sử dụng BASE_PATH
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=p>}),</span>
+</span></span><span class=line><span class=cl>  <span class=p>],</span>
+</span></span><span class=line><span class=cl><span class=p>});</span>
+</span></span></code></pre></td></tr></table></div></div><ul><li>Thực hiện build dự án:</li></ul><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl>bash
+</span></span><span class=line><span class=cl>Copy code
+</span></span><span class=line><span class=cl>pnpm build
+</span></span></code></pre></td></tr></table></div></div><h3 id=bước-4-tạo-file-nginxtemplateconf>Bước 4: Tạo file <code>nginx.template.conf</code></h3><ul><li>Tạo file <code>nginx.template.conf</code> để cấu hình Nginx với <code>BASE_PATH</code> động.</li></ul><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-gdscript3 data-lang=gdscript3><span class=line><span class=cl><span class=n>nginx</span>
+</span></span><span class=line><span class=cl><span class=n>Copy</span> <span class=n>code</span>
+</span></span><span class=line><span class=cl><span class=n>user</span>  <span class=n>nginx</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=n>worker_processes</span>  <span class=mi>1</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=n>error_log</span>  <span class=o>/</span><span class=k>var</span><span class=o>/</span><span class=nb>log</span><span class=o>/</span><span class=n>nginx</span><span class=o>/</span><span class=n>error</span><span class=o>.</span><span class=n>log</span> <span class=n>warn</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=n>pid</span>        <span class=o>/</span><span class=k>var</span><span class=o>/</span><span class=n>run</span><span class=o>/</span><span class=n>nginx</span><span class=o>.</span><span class=n>pid</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=n>events</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=n>worker_connections</span>  <span class=mi>1024</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=n>http</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=n>include</span>       <span class=o>/</span><span class=n>etc</span><span class=o>/</span><span class=n>nginx</span><span class=o>/</span><span class=n>mime</span><span class=o>.</span><span class=n>types</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=n>default_type</span>  <span class=n>application</span><span class=o>/</span><span class=n>octet</span><span class=o>-</span><span class=n>stream</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=n>log_format</span>  <span class=n>main</span>  <span class=s1>&#39;$remote_addr - $remote_user [$time_local] &#34;$request&#34; &#39;</span>
+</span></span><span class=line><span class=cl>                    <span class=s1>&#39;$status $body_bytes_sent &#34;$http_referer&#34; &#39;</span>
+</span></span><span class=line><span class=cl>                    <span class=s1>&#39;&#34;$http_user_agent&#34; &#34;$http_x_forwarded_for&#34;&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=n>access_log</span>  <span class=o>/</span><span class=k>var</span><span class=o>/</span><span class=nb>log</span><span class=o>/</span><span class=n>nginx</span><span class=o>/</span><span class=n>access</span><span class=o>.</span><span class=n>log</span>  <span class=n>main</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=n>sendfile</span>        <span class=n>on</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=n>keepalive_timeout</span>  <span class=mi>65</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=n>server</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=n>listen</span>       <span class=mi>80</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=n>server_name</span>  <span class=n>localhost</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=n>location</span> <span class=o>$</span><span class=p>{</span><span class=n>BASE_PATH</span><span class=p>}</span> <span class=p>{</span>  <span class=c1># Sử dụng BASE_PATH được thay thế khi chạy script</span>
+</span></span><span class=line><span class=cl>      <span class=n>alias</span>   <span class=o>/</span><span class=n>app</span><span class=o>/</span><span class=p>;</span>  <span class=c1># Thư mục chứa file build của ứng dụng Vue</span>
+</span></span><span class=line><span class=cl>      <span class=n>index</span>  <span class=n>index</span><span class=o>.</span><span class=n>html</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>      <span class=n>try_files</span> <span class=o>$</span><span class=n>uri</span> <span class=o>$</span><span class=n>uri</span><span class=o>/</span> <span class=o>/</span><span class=n>index</span><span class=o>.</span><span class=n>html</span><span class=p>;</span>  <span class=c1># Hỗ trợ cho SPA</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=n>error_page</span>   <span class=mi>500</span> <span class=mi>502</span> <span class=mi>503</span> <span class=mi>504</span>  <span class=o>/</span><span class=mi>50</span><span class=n>x</span><span class=o>.</span><span class=n>html</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=n>location</span> <span class=o>=</span> <span class=o>/</span><span class=mi>50</span><span class=n>x</span><span class=o>.</span><span class=n>html</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>      <span class=n>root</span>   <span class=o>/</span><span class=n>usr</span><span class=o>/</span><span class=n>share</span><span class=o>/</span><span class=n>nginx</span><span class=o>/</span><span class=n>html</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><h3 id=bước-5-tạo-script-gen-templatesh-để-sinh-file-từ-các-template>Bước 5: Tạo script <code>gen-template.sh</code> để sinh file từ các template</h3><ul><li>Tạo script <code>gen-template.sh</code> để thay thế các biến môi trường trong file template.</li></ul><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1>#!/bin/bash</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># Thay thế biến trong env.template.js và tạo file env.js</span>
+</span></span><span class=line><span class=cl>envsubst &lt; /app/env.template.js &gt; /app/env.js
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># Thay thế biến trong index.html và ghi đè lại file</span>
+</span></span><span class=line><span class=cl>envsubst &lt; /app/index.html <span class=p>|</span> tee /app/index.html &gt; /dev/null
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># Thay thế biến trong nginx.template.conf và tạo file nginx.conf</span>
+</span></span><span class=line><span class=cl>envsubst &lt; /nginx.template.conf &gt; /etc/nginx/nginx.conf
+</span></span></code></pre></td></tr></table></div></div><h3 id=bước-6-cấu-hình-docker-composeyml-để-chạy-thử>Bước 6: Cấu hình <code>docker-compose.yml</code> để chạy thử</h3><ul><li>Cấu hình file <code>docker-compose.yml</code> để chạy Nginx với <code>BASE_PATH</code> đã được thay thế.</li></ul><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-yaml data-lang=yaml><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w></span><span class=nt>version</span><span class=p>:</span><span class=w> </span><span class=s1>&#39;3.8&#39;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w></span><span class=nt>services</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>nginx</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>image</span><span class=p>:</span><span class=w> </span><span class=l>nginx:latest</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>ports</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>- <span class=s2>&#34;8086:80&#34;</span><span class=w> </span><span class=c># Mở cổng 8086 để truy cập Nginx từ bên ngoài</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>command</span><span class=p>:</span><span class=w> </span><span class=p>[</span><span class=s2>&#34;/bin/sh&#34;</span><span class=p>,</span><span class=w> </span><span class=s2>&#34;-c&#34;</span><span class=p>,</span><span class=w> </span><span class=s2>&#34;/init.sh &amp;&amp; nginx-debug -g &#39;daemon off;&#39;&#34;</span><span class=p>]</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>environment</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>- <span class=l>BASE_PATH=/test-app</span><span class=w> </span><span class=c># Biến môi trường sẽ được sử dụng trong script gen-template.sh</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>volumes</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>- <span class=l>./nginx.template.conf:/nginx.template.conf</span><span class=w> </span><span class=c># Ánh xạ file nginx.template.conf vào container</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>- <span class=l>./dist:/app</span><span class=w> </span><span class=c># Thư mục chứa file build của ứng dụng Vue</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>- <span class=l>./gen-template.sh:/init.sh</span><span class=w> </span><span class=c># Ánh xạ file script init.sh vào container</span><span class=w>
+</span></span></span></code></pre></td></tr></table></div></div><h2 id=kết-luận>Kết luận</h2><p>Thiết lập dynamic build path cho Vue 3 với Vite giúp điều chỉnh cấu hình ứng dụng linh hoạt mà không cần rebuild. Giải pháp này tối ưu hóa triển khai, giảm thiểu sai sót và dễ dàng thích ứng với thay đổi môi trường.</p><h2 id=tài-liệu-tham-khảo>Tài liệu tham khảo</h2><p><a class=link href=https://medium.com/@sushil.singh56/read-dynamic-environment-variables-in-angular-621e3ba38eb4 target=_blank rel=noopener>Read Dynamic Environment Variables in Angular</a></p></section><footer class=article-footer><section class=article-tags><a href=/tags/nginx/>Nginx</a>
+<a href=/tags/fe/>Fe</a>
+<a href=/tags/vue3/>Vue3</a>
+<a href=/tags/vite/>Vite</a></section><section class=article-copyright><svg class="icon icon-tabler icon-tabler-copyright" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><path d="M14.5 9a3.5 4 0 100 6"/></svg>
+<span>Licensed under CC BY-NC-SA 4.0</span></section></footer><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css integrity=sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV crossorigin=anonymous><script src=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js integrity=sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8 crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js integrity=sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05 crossorigin=anonymous defer></script><script>window.addEventListener("DOMContentLoaded",()=>{renderMathInElement(document.body,{delimiters:[{left:"$$",right:"$$",display:!0},{left:"$",right:"$",display:!1},{left:"\\(",right:"\\)",display:!1},{left:"\\[",right:"\\]",display:!0}],ignoredClasses:["gist"]})})</script></article><div class=disqus-container></div><style>.disqus-container{background-color:var(--card-background);border-radius:var(--card-border-radius);box-shadow:var(--shadow-l1);padding:var(--card-padding)}</style><script>window.addEventListener("onColorSchemeChange",e=>{typeof DISQUS=="object"&&DISQUS.reset({reload:!0})})</script><footer class=site-footer><section class=copyright>&copy;
+2024 phongthien</section><section class=powerby>Built with <a href=https://gohugo.io/ target=_blank rel=noopener>Hugo</a><br>Theme <b><a href=https://github.com/CaiJimmy/hugo-theme-stack target=_blank rel=noopener data-version=3.29.0>Stack</a></b> designed by <a href=https://jimmycai.com target=_blank rel=noopener>Jimmy</a></section></footer><div class=pswp tabindex=-1 role=dialog aria-hidden=true><div class=pswp__bg></div><div class=pswp__scroll-wrap><div class=pswp__container><div class=pswp__item></div><div class=pswp__item></div><div class=pswp__item></div></div><div class="pswp__ui pswp__ui--hidden"><div class=pswp__top-bar><div class=pswp__counter></div><button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+<button class="pswp__button pswp__button--share" title=Share></button>
+<button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+<button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button><div class=pswp__preloader><div class=pswp__preloader__icn><div class=pswp__preloader__cut><div class=pswp__preloader__donut></div></div></div></div></div><div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap"><div class=pswp__share-tooltip></div></div><button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+</button>
+<button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)"></button><div class=pswp__caption><div class=pswp__caption__center></div></div></div></div></div><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo=" crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU=" crossorigin=anonymous defer></script><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css crossorigin=anonymous><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css crossorigin=anonymous></main></div><script src=https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z+KMkF24hUW8WePSA9HM=" crossorigin=anonymous></script><script type=text/javascript src=/ts/main.1e9a3bafd846ced4c345d084b355fb8c7bae75701c338f8a1f8a82c780137826.js defer></script><script>(function(){const e=document.createElement("link");e.href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap",e.type="text/css",e.rel="stylesheet",document.head.appendChild(e)})()</script></body></html>

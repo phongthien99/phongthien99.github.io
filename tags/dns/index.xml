@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Dns on phongthien</title><link>https://phongthien99.github.io/tags/dns/</link><description>Recent content in Dns on phongthien</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Sat, 17 Aug 2024 01:17:00 +0800</lastBuildDate><atom:link href="https://phongthien99.github.io/tags/dns/index.xml" rel="self" type="application/rss+xml"/><item><title>Setting Up Fake Wildcard Domain with Coredns on Local Ubuntu</title><link>https://phongthien99.github.io/posts/setting-up-fake-wildcard-domain-with-coredns-on-local-ubuntu/</link><pubDate>Sat, 17 Aug 2024 01:17:00 +0800</pubDate><guid>https://phongthien99.github.io/posts/setting-up-fake-wildcard-domain-with-coredns-on-local-ubuntu/</guid><description>&lt;h1 id="setting-up-fake-wildcard-domain-with-coredns-on-ubuntu">Setting Up Fake Wildcard Domain with Coredns on Ubuntu
+&lt;/h1>&lt;h2 id="đặt-vấn-đề">Đặt vấn đề
+&lt;/h2>&lt;p>Trong quá trình phát triển phần mềm, việc sử dụng nhiều tên miền giả dạng &lt;code>*.lh&lt;/code> là khá phổ biến. Thông thường, để xử lý các tên miền này, chúng ta phải thủ công sửa file &lt;code>/etc/hosts&lt;/code> mỗi khi cần tạo một tên miền mới. Điều này không chỉ gây mất thời gian mà đôi khi còn dẫn tới các lỗi không mong muốn nếu quên cập nhật file.&lt;/p>
+&lt;h2 id="giải-pháp">Giải pháp
+&lt;/h2>&lt;p>CoreDNS cung cấp khả năng định tuyến DNS mạnh mẽ và có thể dễ dàng cấu hình để xử lý các wildcard domain.&lt;/p>
+&lt;h2 id="thực-hiện">Thực hiện
+&lt;/h2>&lt;p>Triển khai thông qua Docker-compose&lt;/p>
+&lt;h3 id="bước-1-tạo-file-docker-compose">Bước 1: Tạo file Docker Compose
+&lt;/h3>&lt;p>Tạo một thư mục cho cấu hình Docker Compose:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">mkdir coredns-wildcard
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nb">cd&lt;/span> coredns-wildcard
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>Tạo một file &lt;code>docker-compose.yml&lt;/code> với nội dung sau:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-yaml" data-lang="yaml">&lt;span class="line">&lt;span class="cl">&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="nt">version&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s1">&amp;#39;3&amp;#39;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="nt">services&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">coredns&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">image&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">coredns/coredns:latest&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">container_name&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">coredns&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">command&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;-conf /Corefile&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">ports&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="s2">&amp;#34;53:53/udp&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">volumes&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="l">./Corefile:/etc/coredns/Corefile&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">restart&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">unless-stopped&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;h3 id="bước-2-cấu-hình-coredns">Bước 2: Cấu hình CoreDNS
+&lt;/h3>&lt;p>Tạo một file cấu hình tên là &lt;code>Corefile&lt;/code> trong thư mục &lt;code>coredns-wildcard&lt;/code> với nội dung sau:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-fallback" data-lang="fallback">&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">.:53 {
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> template IN ANY lh {
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> match &amp;#34;\w*\.(lh\.)$&amp;#34;
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> answer &amp;#34;{{ .Name }} 3600 IN A 127.0.0.1&amp;#34;
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> fallthrough
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> }
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> forward . 8.8.8.8
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> log
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">}
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>Cấu hình này sẽ chuyển hướng tất cả các tên miền dạng &lt;code>*.lh&lt;/code> tới địa chỉ &lt;code>127.0.0.1&lt;/code> và sử dụng Google DNS cho các yêu cầu khác.&lt;/p>
+&lt;h3 id="bước-3-chạy-docker-compose">Bước 3: Chạy Docker Compose
+&lt;/h3>&lt;p>Trong thư mục &lt;code>coredns-wildcard&lt;/code>, chạy lệnh sau để khởi động CoreDNS:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">docker-compose up -d
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;h3 id="bước-4-cấu-hình-dns-trên-máy-tính-cá-nhân">Bước 4: Cấu hình DNS trên máy tính cá nhân
+&lt;/h3>&lt;p>Để sử dụng CoreDNS, chỉnh sửa file &lt;code>/etc/resolv.conf&lt;/code> để sử dụng CoreDNS làm DNS cục bộ:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">sudo nano /etc/resolv.conf
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>&lt;strong>Thêm dòng sau vào đầu file:&lt;/strong>&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-fallback" data-lang="fallback">&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">nameserver 127.0.0.1
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;h3 id="bước-6-kiểm-tra-cấu-hình">Bước 6: Kiểm tra cấu hình
+&lt;/h3>&lt;p>Kiểm tra xem cấu hình đã hoạt động hay chưa bằng cách sử dụng lệnh &lt;code>nslookup&lt;/code>:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">nslookup test.lt
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>Nếu cấu hình đúng, bạn sẽ nhận được phản hồi với địa chỉ IP &lt;code>127.0.0.1&lt;/code>.&lt;/p>
+&lt;h2 id="kết-luận">Kết luận
+&lt;/h2>&lt;p>Với các bước trên, việc thiết lập wildcard domain với CoreDNS trên Ubuntu thông qua Docker Compose trở nên đơn giản và hiệu quả. Đây là một giải pháp tốt để quản lý các tên miền giả phục vụ cho quá trình phát triển phần mềm một cách linh hoạt.&lt;/p></description></item></channel></rss>

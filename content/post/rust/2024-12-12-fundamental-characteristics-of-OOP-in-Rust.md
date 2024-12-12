@@ -2,7 +2,7 @@
 title: Fundamental Characteristics of OOP in Rust
 author: phongthien99
 date: 2024-12-12 01:17:00 +0800
-categories: [Improve-Skill]
+categories: [Learn-rust]
 tags: [rust]
 math: true
 media_subpath: '/posts/20180809'

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Idea on phongthien</title><link>https://phongthien99.github.io/tags/idea/</link><description>Recent content in Idea on phongthien</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Mon, 24 Jun 2024 00:40:00 +0800</lastBuildDate><atom:link href="https://phongthien99.github.io/tags/idea/index.xml" rel="self" type="application/rss+xml"/><item><title>Building an HTTP Server for Multi-Platform Data Storage</title><link>https://phongthien99.github.io/posts/building-an-http-server-for-multi-platform-data-storage/</link><pubDate>Mon, 24 Jun 2024 00:40:00 +0800</pubDate><guid>https://phongthien99.github.io/posts/building-an-http-server-for-multi-platform-data-storage/</guid><description>&lt;h1 id="building-an-http-server-for-multi-platform-data-storage">Building an HTTP Server for Multi-Platform Data Storage
+&lt;/h1>&lt;h2 id="introduction">Introduction
+&lt;/h2>&lt;p>In the deployment of Video On Demand (VOD) services, transcoding and storing video require a flexible and efficient system. To address this issue, we can build an HTTP server to manage the writing and retrieving of data from FFmpeg to various storage platforms such as S3, FTP, OS, and HTTP.&lt;/p>
+&lt;h2 id="solution">Solution
+&lt;/h2>&lt;p>We will design an HTTP server with two main endpoints:&lt;/p>
+&lt;ol>
+&lt;li>&lt;strong>PUT /origin/{config}/{filepath}&lt;/strong>
+&lt;ul>
+&lt;li>Receive data from FFmpeg and save it to the configured storage platform.&lt;/li>
+&lt;li>&lt;code>config&lt;/code> is encoded in base64, decoded to determine the storage platform, and then save the data accordingly (S3, FTP, OS, HTTP). The request can store data on multiple platforms simultaneously.&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>&lt;strong>GET /origin/{config}/{filepath}&lt;/strong>
+&lt;ul>
+&lt;li>Retrieve data from the configured storage platforms based on &lt;code>config&lt;/code>.&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ol>
+&lt;p>Configure FFmpeg to use the HTTP server for testing:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">ffmpeg -i video.mp4 &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> -c:a aac &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> -c:v h264 &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> -f hls &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> -force_key_frames expr:gte&lt;span class="o">(&lt;/span>t,n_forced*2&lt;span class="o">)&lt;/span> &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> -hls_base_url /origin/BASE64_ENCODED_CONFIG/segments/ &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> -hls_playlist_type vod &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> -hls_segment_filename http://localhost:8086/origin/BASE64_ENCODED_CONFIG/segments/segment_%03d.ts &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> -hls_time &lt;span class="m">2&lt;/span> &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> -vf &lt;span class="nv">scale&lt;/span>&lt;span class="o">=&lt;/span>1280:-1 &lt;span class="se">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="se">&lt;/span> http://localhost:8086/origin/BASE64_ENCODED_CONFIG/manifest/master.m3u8 -y
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;h2 id="conclusion">Conclusion
+&lt;/h2>&lt;p>Building an HTTP server with the structure &lt;code>/origin/:config/:filePath&lt;/code> helps manage and retrieve data efficiently and simplifies the storage process in a VOD system. This approach minimizes the complexity in data transmission and configuration handling, meeting the needs of a modern VOD system effectively.&lt;/p></description></item></channel></rss>

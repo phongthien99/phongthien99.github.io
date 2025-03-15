@@ -2,7 +2,7 @@
 title: Efficient Configuration Management in NestJS
 author: phongthien99
 date: 2025-03-15 10:17:00 +0800
-categories: [Learn-rust]
+categories: [Nestjs]
 tags: [nodejs]
 math: true
 media_subpath: '/posts/20180809'

@@ -1,7 +1,7 @@
 ---
 title: Monkey Patch In TypeScript
 author: phongthien99
-date: 2025-04-05 10:17:00 +0800
+date: 2025-04-06 10:17:00 +0800
 categories: [Nestjs]
 tags: [nodejs]
 math: true

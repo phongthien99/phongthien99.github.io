@@ -1,11 +1,10 @@
 ---
 title: Monkey Patch In TypeScript
 author: phongthien99
-date: 2025-04-06 10:17:00 +0800
+date: 2025-04-06 00:00:00 +0800
 categories: [Nestjs]
 tags: [nodejs]
 math: true
-media_subpath: '/posts/20180809'
 ---
 # Monkey Patch In TypeScript
 

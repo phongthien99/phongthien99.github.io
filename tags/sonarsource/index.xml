@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>SonarSource on phongthien</title><link>https://phongthien99.github.io/tags/sonarsource/</link><description>Recent content in SonarSource on phongthien</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Sat, 12 Oct 2024 01:17:00 +0800</lastBuildDate><atom:link href="https://phongthien99.github.io/tags/sonarsource/index.xml" rel="self" type="application/rss+xml"/><item><title>Effective Code Quality Management with SonarSource: A Solution for Tackling Technical Debt in Software Development</title><link>https://phongthien99.github.io/posts/effective-code-quality-management-with-sonarsource-a-solution-for-tackling-technical-debt-in-software-development/</link><pubDate>Sat, 12 Oct 2024 01:17:00 +0800</pubDate><guid>https://phongthien99.github.io/posts/effective-code-quality-management-with-sonarsource-a-solution-for-tackling-technical-debt-in-software-development/</guid><description>&lt;h1 id="effective-code-quality-management-with-sonarsource-a-solution-for-tackling-technical-debt-in-software-development">Effective Code Quality Management with SonarSource: A Solution for Tackling Technical Debt in Software Development
+&lt;/h1>&lt;h2 id="đặt-vấn-đề">Đặt vấn đề
+&lt;/h2>&lt;p>Trong quá trình phát triển phần mềm, có những giai đoạn dự án chạy với tốc độ &amp;ldquo;như ăn cướp&amp;rdquo;, khi các nhà phát triển buộc phải tập trung giải quyết các vấn đề trước mắt mà không có thời gian tuân thủ các tiêu chuẩn chất lượng. Điều này dẫn đến mã nguồn có thể trở nên lộn xộn, thiếu cấu trúc và khó bảo trì – tạo thành một &amp;ldquo;đống rác&amp;rdquo; chứa các đoạn mã lỗi, không nhất quán, và tiềm ẩn nhiều rủi ro bảo mật.&lt;/p>
+&lt;p>Những giải pháp tạm thời này có thể giúp dự án tiến triển trong ngắn hạn, nhưng về lâu dài sẽ làm tăng nợ kỹ thuật, khiến mã trở nên cồng kềnh và khó bảo trì. Chính vì vậy, cần một công cụ để phân tích và quản lý chất lượng mã, giúp phát hiện và xử lý các vấn đề này kịp thời, nhằm duy trì tính ổn định và bền vững cho dự án.&lt;/p>
+&lt;h2 id="giải-pháp">Giải pháp
+&lt;/h2>&lt;p>SonarSource là một công cụ phân tích mã nguồn mạnh mẽ, giúp đội ngũ phát triển kiểm soát chất lượng mã một cách toàn diện. Nó không chỉ phát hiện &amp;ldquo;đống rác&amp;rdquo; ẩn trong mã nguồn mà còn cung cấp các giải pháp cụ thể để dọn dẹp một cách hệ thống. Sử dụng SonarSource giúp giảm thiểu nợ kỹ thuật, duy trì hiệu suất mã ổn định, và giảm thiểu rủi ro bảo mật, ngay cả khi dự án phải phát triển nhanh chóng trong những thời điểm gấp gáp.&lt;/p>
+&lt;h2 id="thực-hiện">Thực hiện
+&lt;/h2>&lt;p>Dưới đây là các bước để triển khai SonarSource thực nghiệm thông qua Docker Compose:&lt;/p>
+&lt;h3 id="bước-1-tạo-file-docker-compose">Bước 1: Tạo file Docker Compose
+&lt;/h3>&lt;p>File Docker Compose cấu hình các dịch vụ chính như sau:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-yaml" data-lang="yaml">&lt;span class="line">&lt;span class="cl">&lt;span class="l">yaml&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="l">Copy code&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="nt">services&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">sonarqube&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">image&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">sonarqube:community&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">read_only&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="kc">true&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">volumes&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="l">sonarqube_data:/opt/sonarqube/data&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="l">sonarqube_extensions:/opt/sonarqube/extensions&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="l">sonarqube_logs:/opt/sonarqube/logs&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="l">sonarqube_temp:/opt/sonarqube/temp&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">ports&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="s2">&amp;#34;9000:9000&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="nt">volumes&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">sonarqube_data&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">sonarqube_extensions&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">sonarqube_logs&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">sonarqube_temp&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;h3 id="bước-2-đăng-nhập-vào-sonarqube">Bước 2: Đăng nhập vào SonarQube
+&lt;/h3>&lt;ul>
+&lt;li>Truy cập giao diện SonarQube qua &lt;code>http://localhost:9000&lt;/code>.&lt;/li>
+&lt;li>Đăng nhập bằng tài khoản admin hoặc tài khoản cá nhân của bạn.&lt;/li>
+&lt;/ul>
+&lt;h3 id="bước-3-tạo-project-mới">Bước 3: Tạo Project Mới
+&lt;/h3>&lt;ul>
+&lt;li>Chọn &lt;strong>Projects&lt;/strong> và nhấp vào &lt;strong>Create Project&lt;/strong>.&lt;/li>
+&lt;li>Bạn có thể chọn tạo dự án từ một repository (GitHub, GitLab, Bitbucket) hoặc tạo thủ công.&lt;/li>
+&lt;/ul>
+&lt;h3 id="bước-4-cấu-hình-project">Bước 4: Cấu hình Project
+&lt;/h3>&lt;ul>
+&lt;li>Nhập tên và &lt;strong>key&lt;/strong> duy nhất cho project.&lt;/li>
+&lt;li>Nếu sử dụng SonarCloud, bạn có thể chọn hoặc tạo tổ chức để quản lý.&lt;/li>
+&lt;/ul>
+&lt;h3 id="bước-5-tạo-token-xác-thực">Bước 5: Tạo Token Xác Thực
+&lt;/h3>&lt;ul>
+&lt;li>Tạo token để thực hiện quá trình quét mã.&lt;/li>
+&lt;li>Lưu token này để dùng trong các bước sau.&lt;/li>
+&lt;/ul>
+&lt;h3 id="bước-6-cấu-hình-công-cụ-phân-tích-mã">Bước 6: Cấu hình công cụ phân tích mã
+&lt;/h3>&lt;p>Tạo file &lt;code>sonar-project.properties&lt;/code> trong project của bạn:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">sonar.projectKey&lt;span class="o">=&lt;/span>&amp;lt;&amp;lt;key đã tạo ở project&amp;gt;&amp;gt;
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>Sau đó, chạy lệnh quét mã bằng cách sử dụng Docker:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">docker run --rm --net&lt;span class="o">=&lt;/span>host -e &lt;span class="nv">SONAR_HOST_URL&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;http://localhost:9000&amp;#34;&lt;/span> -e &lt;span class="nv">SONAR_TOKEN&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;&amp;lt;&amp;lt;token đã tạo ở project&amp;gt;&amp;gt;&amp;#34;&lt;/span> -e &lt;span class="nv">SONAR_PROJECT_KEY&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;key đã tạo ở project&amp;#34;&lt;/span> -v &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="k">$(&lt;/span>&lt;span class="nb">pwd&lt;/span>&lt;span class="k">)&lt;/span>&lt;span class="s2">:/usr/src&amp;#34;&lt;/span> sonarsource/sonar-scanner-cli
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;h2 id="kết-luận">Kết luận
+&lt;/h2>&lt;p>SonarSource là một công cụ mạnh mẽ giúp các đội phát triển phần mềm duy trì chất lượng mã nguồn ngay cả trong những giai đoạn phát triển khẩn trương. Bằng cách tích hợp SonarSource vào quy trình phát triển, chúng ta có thể phát hiện sớm các vấn đề về mã, tối ưu hóa hiệu suất và giảm thiểu rủi ro bảo mật. Kết quả là mã nguồn trở nên dễ quản lý hơn, giảm bớt nợ kỹ thuật và đảm bảo dự án có thể phát triển bền vững hơn về lâu dài.&lt;/p></description></item></channel></rss>

@@ -44,16 +44,16 @@ Chúng ta sẽ xây dựng một quy trình:
 
 ---
 
-## III. Thực hiệ
+## III. Thực hiện
 
 ### 1. `update-repo.sh` – **Thêm `.deb` vào repository**
 
-### ✅ Nhiệm vụ:
+#### ✅ Nhiệm vụ:
 
 - Kiểm tra và tạo cấu hình `conf/distributions` nếu chưa có.
 - Thêm gói `.deb` vào đúng `codename` bằng `reprepro`.
 
-### 🧩 Nội dung chính:
+#### 🧩 Nội dung chính:
 
 ```bash
 
@@ -98,7 +98,7 @@ echo "✅ Completed!"
 
 ```
 
-### 🛠️ Cách chạy:
+#### 🛠️ Cách chạy:
 
 ```bash
 
@@ -110,12 +110,12 @@ echo "✅ Completed!"
 
 ### 2. `generate-sources-list.sh` – **Tạo file `sources.list` cho client**
 
-### ✅ Nhiệm vụ:
+#### ✅ Nhiệm vụ:
 
 - Duyệt file `conf/distributions` để lấy danh sách các `Codename` và `Component`.
 - Sinh ra dòng cấu hình repo chuẩn cho `apt`.
 
-### 🧩 Nội dung chính:
+#### 🧩 Nội dung chính:
 
 ```bash
 
@@ -141,7 +141,7 @@ cat "$OUTPUT"
 
 ```
 
-### 🛠️ Cách chạy:
+#### 🛠️ Cách chạy:
 
 ```bash
 
@@ -161,7 +161,7 @@ deb [trusted=yes,arch=amd64] https://my-s3-bucket.s3.amazonaws.com/repo v1.0 mai
 
 ### 3. `publish.sh` – **Đồng bộ hóa toàn bộ repo lên S3**
 
-### ✅ Nhiệm vụ:
+#### ✅ Nhiệm vụ:
 
 - Lấy cấu hình từ S3 về local.
 - Duyệt và thêm tất cả file `.deb` hiện có vào repo.
@@ -169,7 +169,7 @@ deb [trusted=yes,arch=amd64] https://my-s3-bucket.s3.amazonaws.com/repo v1.0 mai
 - Sync toàn bộ repo lên S3.
 - Tạo file `.list` và upload nó lên S3.
 
-### 🧩 Nội dung chính:
+#### 🧩 Nội dung chính:
 
 ```bash
 
@@ -200,17 +200,16 @@ aws s3 cp ./$REPO_NAME.list s3://$S3_BUCKET/source/$REPO_NAME.list
 
 ```
 
-### 🛠️ Cách chạy:
+#### 🛠️ Cách chạy:
 
 ```bash
-
 ./publish.sh my-s3-bucket my-repo v1.0 https://my-s3-bucket.s3.amazonaws.com/repo
 
 ```
 
 ---
 
-## 4.Thử nghiêm
+### 4. Thử nghiêm
 
 Client có thể cấu hình APT như sau:
 

@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Deployment on phongthien</title><link>https://phongthien99.github.io/tags/deployment/</link><description>Recent content in Deployment on phongthien</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Sat, 21 Jun 2025 01:00:00 +0000</lastBuildDate><atom:link href="https://phongthien99.github.io/tags/deployment/index.xml" rel="self" type="application/rss+xml"/><item><title>Streamlining Deployment with GitLab CI/CD</title><link>https://phongthien99.github.io/posts/streamlining-deployment-with-gitlab-ci/cd/</link><pubDate>Sat, 21 Jun 2025 01:00:00 +0000</pubDate><guid>https://phongthien99.github.io/posts/streamlining-deployment-with-gitlab-ci/cd/</guid><description>&lt;h1 id="streamlining-deployment-with-gitlab-cicd">Streamlining Deployment with GitLab CI/CD
+&lt;/h1>&lt;h2 id="-1-đặt-vấn-đề">🧩 1. Đặt Vấn Đề
+&lt;/h2>&lt;p>Trong quá trình phát triển phần mềm, việc kiểm thử và debug nhanh các job CI/CD là rất quan trọng. Tuy nhiên, GitLab CI/CD thường gặp một số vấn đề khi test local bằng &lt;code>gitlab-runner exec&lt;/code>:&lt;/p>
+&lt;ul>
+&lt;li>❌ &lt;code>gitlab-runner exec&lt;/code> &lt;strong>không hỗ trợ &lt;code>include:&lt;/code> hoặc &lt;code>extends:&lt;/code> từ file ngoài&lt;/strong>&lt;/li>
+&lt;li>❌ Pipeline thực tế quá phức tạp, chứa nhiều môi trường như &lt;code>dev&lt;/code>, &lt;code>prod&lt;/code>, &lt;code>staging&lt;/code>&lt;/li>
+&lt;li>❌ Không dễ test nhanh từng job do phải khai báo phân tán, phụ thuộc nhiều nơi&lt;/li>
+&lt;/ul>
+&lt;hr>
+&lt;h2 id="-2-giải-pháp">💡 2. Giải Pháp
+&lt;/h2>&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th>Vấn đề&lt;/th>
+&lt;th>Giải pháp&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td>Không test local được&lt;/td>
+&lt;td>Gom job + biến vào &lt;strong>1 file duy nhất&lt;/strong> để test&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>Quản lý nhiều môi trường&lt;/td>
+&lt;td>Mỗi môi trường tách riêng &lt;code>vars-*.yml&lt;/code>&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>Tái sử dụng script&lt;/td>
+&lt;td>Dùng &lt;code>.job-base&lt;/code> làm template job&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>Giữ file &lt;code>.gitlab-ci.yml&lt;/code> gọn&lt;/td>
+&lt;td>Chỉ &lt;code>include&lt;/code> file tổng &lt;code>.ci/include.yml&lt;/code>&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table>
+&lt;hr>
+&lt;h2 id="-3-thực-hiện">🛠️ 3. Thực Hiện
+&lt;/h2>&lt;h3 id="-31-cấu-trúc-thư-mục">📁 3.1. Cấu trúc thư mục
+&lt;/h3>&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-gdscript3" data-lang="gdscript3">&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="o">.&lt;/span>&lt;span class="n">gitlab&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="n">ci&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">yml&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="o">.&lt;/span>&lt;span class="n">ci&lt;/span>&lt;span class="o">/&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="err">├─&lt;/span> &lt;span class="n">job&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="n">template&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">yml&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="err">├─&lt;/span> &lt;span class="n">vars&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="n">local&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">yml&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="err">├─&lt;/span> &lt;span class="n">vars&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="n">dev&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">yml&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="err">├─&lt;/span> &lt;span class="n">vars&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="n">prod&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">yml&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="err">├─&lt;/span> &lt;span class="n">workflow&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="n">dev&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">yml&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="err">├─&lt;/span> &lt;span class="n">workflow&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="n">prod&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">yml&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="err">├─&lt;/span> &lt;span class="n">include&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">yml&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;blockquote>
+&lt;p>📝 Ghi chú: Chúng ta tách cấu hình CI/CD thành các thành phần nhỏ gọn và rõ ràng:&lt;/p>
+&lt;ul>
+&lt;li>Template dùng chung&lt;/li>
+&lt;li>Biến theo từng môi trường&lt;/li>
+&lt;li>Workflow cụ thể cho từng môi trường&lt;/li>
+&lt;li>File gom tổng cho chạy thực tế &amp;amp; chạy local&lt;/li>
+&lt;/ul>&lt;/blockquote>
+&lt;hr>
+&lt;h3 id="-32-định-nghĩa-job-template-cijob-templateyml">🧱 3.2. Định nghĩa job template &lt;code>.ci/job-template.yml&lt;/code>
+&lt;/h3>&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-yaml" data-lang="yaml">&lt;span class="line">&lt;span class="cl">&lt;span class="nt">.job-base&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">stage&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">test&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">tags&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="l">dind&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">script&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="l">echo &amp;#34;ENV=$ENV&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="l">echo &amp;#34;API_URL=$API_URL&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">variables&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">ENV&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;local&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">API_URL&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;http://localhost:3000&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;blockquote>
+&lt;p>📌 Ghi chú: Đây là template chính, định nghĩa các bước và biến mặc định.&lt;/p>
+&lt;p>Mọi job thực tế sẽ &lt;code>extends&lt;/code> từ &lt;code>.job-base&lt;/code>.&lt;/p>&lt;/blockquote>
+&lt;hr>
+&lt;h3 id="-33-biến-môi-trường">⚙️ 3.3. Biến môi trường
+&lt;/h3>&lt;h3 id="civars-devyml">&lt;code>.ci/vars-dev.yml&lt;/code>
+&lt;/h3>&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;span class="lnt">4
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-yaml" data-lang="yaml">&lt;span class="line">&lt;span class="cl">&lt;span class="nt">.variables-dev&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">variables&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">ENV&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;dev&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">API_URL&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;https://api.dev.example.com&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;h3 id="civars-localyml">&lt;code>.ci/vars-local.yml&lt;/code>
+&lt;/h3>&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;span class="lnt">4
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-yaml" data-lang="yaml">&lt;span class="line">&lt;span class="cl">&lt;span class="nt">.variables-local&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">variables&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">ENV&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;local&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">API_URL&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;http://localhost:3000&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;h3 id="civars-prodyml">&lt;code>.ci/vars-prod.yml&lt;/code>
+&lt;/h3>&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;span class="lnt">4
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-yaml" data-lang="yaml">&lt;span class="line">&lt;span class="cl">&lt;span class="nt">.variables-prod&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">variables&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">ENV&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;prod&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">API_URL&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;https://api.prod.example.com&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;blockquote>
+&lt;p>📌 Ghi chú: Tách biến theo từng môi trường giúp:&lt;/p>
+&lt;ul>
+&lt;li>Không bị nhầm biến khi deploy&lt;/li>
+&lt;li>Dễ test từng môi trường độc lập&lt;/li>
+&lt;li>Linh hoạt mở rộng về sau (thêm &lt;code>qa&lt;/code>, &lt;code>uat&lt;/code>, v.v.)&lt;/li>
+&lt;/ul>&lt;/blockquote>
+&lt;hr>
+&lt;h3 id="-34-định-nghĩa-các-job">🔁 3.4. Định nghĩa các job
+&lt;/h3>&lt;h3 id="ciworkflow-devyml">&lt;code>.ci/workflow-dev.yml&lt;/code>
+&lt;/h3>&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-yaml" data-lang="yaml">&lt;span class="line">&lt;span class="cl">&lt;span class="nt">job-dev&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">extends&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="l">.job-base, .variables-dev]&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;h3 id="ciworkflow-prodyml">&lt;code>.ci/workflow-prod.yml&lt;/code>
+&lt;/h3>&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-yaml" data-lang="yaml">&lt;span class="line">&lt;span class="cl">&lt;span class="nt">job-prod&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">extends&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="l">.job-base, .variables-prod]&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;blockquote>
+&lt;p>📌 Ghi chú: Mỗi job được build bằng cách kế thừa job-base và biến riêng môi trường.&lt;/p>
+&lt;p>Giúp cấu hình đơn giản, không lặp lại.&lt;/p>&lt;/blockquote>
+&lt;hr>
+&lt;h3 id="-35-file-includeyml">📦 3.5. File &lt;code>include.yml&lt;/code>
+&lt;/h3>&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;span class="lnt">4
+&lt;/span>&lt;span class="lnt">5
+&lt;/span>&lt;span class="lnt">6
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-yaml" data-lang="yaml">&lt;span class="line">&lt;span class="cl">&lt;span class="nt">include&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="nt">local&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;.ci/job-template.yml&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="nt">local&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;.ci/vars-dev.yml&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="nt">local&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;.ci/vars-prod.yml&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="nt">local&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;.ci/workflow-dev.yml&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="nt">local&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;.ci/workflow-prod.yml&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;blockquote>
+&lt;p>📌 Ghi chú: Gom tất cả file cần thiết cho pipeline GitLab CI chạy thực tế trên server.&lt;/p>
+&lt;p>File &lt;code>.gitlab-ci.yml&lt;/code> chỉ cần &lt;code>include&lt;/code> file này là đủ.&lt;/p>&lt;/blockquote>
+&lt;hr>
+&lt;hr>
+&lt;h3 id="-37-chạy-test-local">🧪 3.7. Chạy test local
+&lt;/h3>&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">gitlab-runner &lt;span class="nb">exec&lt;/span> shell .job-base --cicd-config-file .ci/job-template.yml
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;blockquote>
+&lt;p>🛠️ Ghi chú:&lt;/p>
+&lt;p>Lệnh này sẽ chạy job &lt;code>.job-base&lt;/code> bằng cấu hình trong file &lt;code>.ci/job-template.yml&lt;/code>.&lt;/p>
+&lt;p>Có thể chỉnh sửa nhanh script, biến, v.v. để test mà không ảnh hưởng pipeline thật.&lt;/p>&lt;/blockquote>
+&lt;hr>
+&lt;h2 id="-4-kết-luận">✅ 4. Kết Luận
+&lt;/h2>&lt;h3 id="-ưu-điểm-đạt-được">✅ &lt;strong>Ưu điểm đạt được&lt;/strong>
+&lt;/h3>&lt;ul>
+&lt;li>&lt;strong>✔️ Dễ test local&lt;/strong>:
+→ Test được từng job thông qua giá trị của biến môi trường (variable).&lt;/li>
+&lt;li>&lt;strong>✔️ Quản lý môi trường rõ ràng&lt;/strong>:
+→ Mỗi môi trường (&lt;code>dev&lt;/code>, &lt;code>staging&lt;/code>, &lt;code>prod&lt;/code>,&amp;hellip;) có file biến riêng (&lt;code>vars-*.yml&lt;/code>).&lt;/li>
+&lt;li>&lt;strong>✔️ Dễ bảo trì &amp;amp; mở rộng&lt;/strong>:
+→ Dùng &lt;code>job-base&lt;/code> như template để tránh lặp lại, dễ mở rộng khi thêm job mới.&lt;/li>
+&lt;li>&lt;strong>✔️ CI gọn nhẹ&lt;/strong>:
+→ File &lt;code>.gitlab-ci.yml&lt;/code> chính chỉ cần &lt;code>include&lt;/code> một file tổng hợp.&lt;/li>
+&lt;/ul>
+&lt;hr>
+&lt;h3 id="-nguyên-lý-kỹ-thuật-phần-mềm--ứng-dụng-trong-gitlab-cicd">🔧 &lt;strong>Nguyên lý kỹ thuật phần mềm &amp;amp; Ứng dụng trong GitLab CI/CD&lt;/strong>
+&lt;/h3>&lt;ul>
+&lt;li>&lt;strong>Function/Module Reuse (Tái sử dụng hàm/module)&lt;/strong>:
+→ &lt;code>job-base&lt;/code> hoạt động như một &lt;strong>hàm dùng lại&lt;/strong>, các job chỉ cần &lt;code>extends&lt;/code> để kế thừa cấu trúc.&lt;/li>
+&lt;li>&lt;strong>Encapsulation (Đóng gói)&lt;/strong>:
+→ Biến môi trường được &lt;strong>đóng gói&lt;/strong> theo từng môi trường riêng biệt (&lt;code>vars-dev.yml&lt;/code>, &lt;code>vars-prod.yml&lt;/code>), giúp tránh rò rỉ hoặc ghi đè sai lệch.&lt;/li>
+&lt;li>&lt;strong>Composition over Inheritance (Thành phần hơn kế thừa)&lt;/strong>:
+→ Kết hợp &lt;code>job-base&lt;/code> + file biến (&lt;code>.variables-*&lt;/code>) cho phép tái sử dụng linh hoạt hơn là copy/paste hoặc kế thừa toàn bộ job.&lt;/li>
+&lt;li>&lt;strong>Separation of Concerns (Phân tách trách nhiệm)&lt;/strong>:
+→ Tách biệt từng thành phần CI/CD:
+&lt;ul>
+&lt;li>Template job (&lt;code>job-template.yml&lt;/code>)&lt;/li>
+&lt;li>Biến môi trường (&lt;code>vars-*.yml&lt;/code>)&lt;/li>
+&lt;li>Luồng chính (&lt;code>.gitlab-ci.yml&lt;/code>)
+→ Mỗi file chỉ đảm nhận &lt;strong>một vai trò duy nhất&lt;/strong>, dễ đọc và dễ debug.&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>&lt;strong>Unit Test / Test độc lập hàm&lt;/strong>:
+→ Có thể test từng job độc lập trong &lt;code>job-template.yml&lt;/code> như cách viết và test unit test trong lập trình.&lt;/li>
+&lt;/ul></description></item></channel></rss>

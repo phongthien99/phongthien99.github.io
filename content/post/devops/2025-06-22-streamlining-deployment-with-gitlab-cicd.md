@@ -9,8 +9,6 @@ author: "Phong Thien"
 
 # Streamlining Deployment with GitLab CI/CD
 
----
-
 ## 🧩 1. Đặt Vấn Đề
 
 Trong quá trình phát triển phần mềm, việc kiểm thử và debug nhanh các job CI/CD là rất quan trọng. Tuy nhiên, GitLab CI/CD thường gặp một số vấn đề khi test local bằng `gitlab-runner exec`:

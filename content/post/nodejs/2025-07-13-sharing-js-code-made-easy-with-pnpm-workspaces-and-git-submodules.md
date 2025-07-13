@@ -12,7 +12,7 @@ author: "phongthien"
 
 # Sharing JS Code Made Easy with pnpm Workspaces & Git Submodules
 
-# 🎯 Đặt Vấn Đề:
+##  🎯 Đặt Vấn Đề:
 
 Hãy tưởng tượng bạn có nhiều dự án front-end (ví dụ: một ứng dụng web chính, một cổng admin, một landing page riêng) và nhiều dự án back-end (API Gateway, microservices). Tất cả những dự án này đều cần dùng chung một số thành phần như:
 
@@ -27,23 +27,23 @@ Nếu không có chiến lược quản lý tốt, bạn sẽ gặp phải nhữ
 2. **Khó khăn khi cập nhật (Difficult Updates):** Mỗi lần cần cập nhật thư viện chung, phải update thủ công từng dự án, dễ quên và dễ phá vỡ.
 3. **Quản lý phiên bản phức tạp (Version Management):** Làm sao đảm bảo tất cả dự án chạy ổn định với các version phù hợp?
 
-# 💡 Giải Pháp: Kết Hợp `pnpm workspace` và `git submodule`
+## 💡 Giải Pháp: Kết Hợp `pnpm workspace` và `git submodule`
 
-Để giải quyết triệt để, chúng ta có thể kết hợp **pnpm workspace** và **git submodule**.
+  Để giải quyết triệt để, chúng ta có thể kết hợp **pnpm workspace** và **git submodule**.
 
-## 🟢 `pnpm workspace`
+### 🟢 `pnpm workspace`
 
-- Cho phép quản lý nhiều package (dự án con hoặc thư viện) trong cùng một repo hoặc các folder con.
+  - Cho phép quản lý nhiều package (dự án con hoặc thư viện) trong cùng một repo hoặc các folder con.
 
-## 🔵 `git submodule`
+### 🔵 `git submodule`
 
-- Cho phép nhúng một repository Git khác vào như một thư mục con, nhưng vẫn giữ commit và lịch sử riêng.
-- Bạn có thể lock từng dự án vào một commit cụ thể của shared lib.
-- Tách biệt rõ ràng trách nhiệm giữa repo chính và repo thư viện.
+  - Cho phép nhúng một repository Git khác vào như một thư mục con, nhưng vẫn giữ commit và lịch sử riêng.
+  - Bạn có thể lock từng dự án vào một commit cụ thể của shared lib.
+  - Tách biệt rõ ràng trách nhiệm giữa repo chính và repo thư viện.
 
 ---
 
-# ⚙️ Cơ Chế Hoạt Động
+### ⚙️ Cơ Chế Hoạt Động
 
 - Tạo repo riêng cho shared libraries, ví dụ: `shared-libs`.
 - Trong mỗi dự án chính, thêm `shared-libs` làm submodule nếu cần dùng .
@@ -52,9 +52,9 @@ Nếu không có chiến lược quản lý tốt, bạn sẽ gặp phải nhữ
 
 ---
 
-# 🚀 Thực Hiện Chi Tiết
+## 🚀 Thực Hiện Chi Tiết
 
-## Bước 1️⃣: Thêm `shared-libs` vào dự án chính bằng `git submodule`
+### Bước 1️⃣: Thêm `shared-libs` vào dự án chính bằng `git submodule`
 
 ```bash
 
@@ -68,7 +68,7 @@ git submodule update --init --recursive
 
 ---
 
-## Bước 2️⃣: Cấu hình `pnpm workspace`
+### Bước 2️⃣: Cấu hình `pnpm workspace`
 
 Tại thư mục gốc dự án chính, thêm file `pnpm-workspace.yaml` (hoặc chỉnh sửa nếu đã có):
 
@@ -84,7 +84,7 @@ packages:
 
 ---
 
-## Bước 3️⃣: Khai báo dependency trong `package.json`
+### Bước 3️⃣: Khai báo dependency trong `package.json`
 
 Mở file `package.json` của dự án chính, chỉnh `dependencies` (hoặc `devDependencies`) như sau:
 
@@ -107,7 +107,7 @@ Mở file `package.json` của dự án chính, chỉnh `dependencies` (hoặc `
 
 ---
 
-## Bước 4️⃣: Cài đặt
+### Bước 4️⃣: Cài đặt
 
 Sau khi chỉnh xong `package.json`, chạy:
 
@@ -119,9 +119,9 @@ pnpm install
 
 ---
 
-## Bước 5️⃣: Làm việc với submodule
+### Bước 5️⃣: Làm việc với submodule
 
-### Clone dự án mới
+#### Clone dự án mới
 
 ```bash
 
@@ -131,7 +131,7 @@ pnpm install
 
 ```
 
-### Khi cần cập nhật `shared-libs`
+#### Khi cần cập nhật `shared-libs`
 
 ```bash
 cd lib/shared-libs
@@ -144,7 +144,7 @@ git commit -m "Update shared-libs to latest commit"
 
 ---
 
-# 🛠️ Một số lệnh hữu ích với `git submodule`
+## 🛠️ Một số lệnh hữu ích với `git submodule`
 
 | Lệnh | Mục đích |
 | --- | --- |
@@ -154,21 +154,18 @@ git commit -m "Update shared-libs to latest commit"
 | `cd lib/shared-libs && git pull` | Lấy version mới nhất của submodule |
 | `git add lib/shared-libs && git commit` | Commit thay đổi submodule |
 
----
 
-# 🟢 Ví dụ file `pnpm-workspace.yaml`
 
-```yaml
 
-packages:
-  - 'packages/*'
-  - 'lib/shared-libs/packages/*'
 
-```
 
 ---
 
-# 💥 Lợi Ích Khi Kết Hợp
+## 🏁 Kết Luận
+
+---
+
+### 💥 Lợi Ích Khi Kết Hợp
 
 ✅ **Giảm trùng lặp mã nguồn** — không còn copy-paste.
 
@@ -177,10 +174,6 @@ packages:
 ✅ **Phát triển nhanh & debug dễ** — sửa code shared-libs, dự án chính thấy ngay.
 
 ✅ **Quản lý phiên bản rõ ràng** — submodule tách biệt, chủ động cập nhật.
-
----
-
-# 🏁 Kết Luận
 
 Việc kết hợp **pnpm workspace** và **git submodule** mang đến một giải pháp cực kỳ mạnh mẽ và thực dụng để quản lý thư viện dùng chung giữa nhiều dự án JavaScript/TypeScript.
 

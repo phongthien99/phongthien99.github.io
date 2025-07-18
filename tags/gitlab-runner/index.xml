@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Gitlab-Runner on phongthien</title><link>https://phongthien99.github.io/tags/gitlab-runner/</link><description>Recent content in Gitlab-Runner on phongthien</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Sat, 21 Jun 2025 00:00:00 +0000</lastBuildDate><atom:link href="https://phongthien99.github.io/tags/gitlab-runner/index.xml" rel="self" type="application/rss+xml"/><item><title>Guide to Running GitLab Runner Locally for Building and Testing CI/CD Pipelines</title><link>https://phongthien99.github.io/posts/guide-to-running-gitlab-runner-locally-for-building-and-testing-ci/cd-pipelines/</link><pubDate>Sat, 21 Jun 2025 00:00:00 +0000</pubDate><guid>https://phongthien99.github.io/posts/guide-to-running-gitlab-runner-locally-for-building-and-testing-ci/cd-pipelines/</guid><description>&lt;h2 id="guide-to-running-gitlab-runner-locally-for-building-and-testing-cicd-pipelines">Guide to Running GitLab Runner Locally for Building and Testing CI/CD Pipelines
+&lt;/h2>&lt;h2 id="đặt-vấn-đề">&lt;strong>Đặt Vấn Đề&lt;/strong>
+&lt;/h2>&lt;p>Trong quá trình phát triển phần mềm, việc kiểm thử và triển khai ứng dụng thường xuyên là điều không thể thiếu. Tuy nhiên, việc đợi pipeline CI/CD chạy trên GitLab server có thể mất thời gian, đặc biệt khi cần thử nghiệm nhanh các thay đổi nhỏ trong cấu hình hoặc script. Điều này làm giảm hiệu quả làm việc và gây khó khăn trong việc debug.&lt;/p>
+&lt;h2 id="giải-pháp">&lt;strong>Giải Pháp&lt;/strong>
+&lt;/h2>&lt;p>Chạy &lt;strong>GitLab Runner&lt;/strong> ngay trên máy local là một giải pháp hiệu quả. Điều này cho phép bạn kiểm thử các job CI/CD một cách nhanh chóng mà không cần push code lên GitLab, từ đó tiết kiệm thời gian và giảm thiểu rủi ro phát sinh khi deploy lên môi trường thật.&lt;/p>
+&lt;h2 id="thực-hiện">&lt;strong>Thực Hiện&lt;/strong>
+&lt;/h2>&lt;h3 id="bước-1-cài-đặt-gitlab-runner">&lt;strong>Bước 1: Cài Đặt GitLab Runner&lt;/strong>
+&lt;/h3>&lt;p>Đối với hệ điều hành Ubuntu, bạn có thể cài đặt GitLab Runner bằng cách chạy:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh &lt;span class="p">|&lt;/span> sudo bash
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">sudo apt-get install gitlab-runner&lt;span class="o">=&lt;/span>15.11.1
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;blockquote>
+&lt;p>⚠️ Lưu ý: Bạn có thể chọn phiên bản mới nhất hoặc giữ cố định một phiên bản ổn định tùy theo yêu cầu dự án.&lt;/p>&lt;/blockquote>
+&lt;hr>
+&lt;h3 id="bước-2-viết-file">&lt;strong>Bước 2: Viết File &lt;code>gitlab-ci.yaml&lt;/code>&lt;/strong>
+&lt;/h3>&lt;p>Đây là file định nghĩa pipeline. Dưới đây là ví dụ một job đơn giản dùng để build Docker image:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-yaml" data-lang="yaml">&lt;span class="line">&lt;span class="cl">&lt;span class="nt">image&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">docker:dind&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="nt">stages&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="l">build&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="nt">build-image&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">stage&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">build&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">tags&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="l">shel&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">script&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="l">echo &amp;#34;Build image&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;hr>
+&lt;hr>
+&lt;h3 id="bước-4-chạy-gitlab-runner-local">&lt;strong>Bước 4: Chạy GitLab Runner Local&lt;/strong>
+&lt;/h3>&lt;p>Khi đã có đầy đủ file cấu hình, bạn chỉ cần chạy lệnh sau để thực thi pipeline ngay trên máy:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">gitlab-runner &lt;span class="nb">exec&lt;/span> docker build-image
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;blockquote>
+&lt;p>Lệnh này sẽ chạy job build-image bằng executor docker – tức là trực tiếp trên môi trường máy bạn, không cần đăng ký runner hay kết nối với GitLab server.&lt;/p>&lt;/blockquote>
+&lt;hr>
+&lt;h2 id="kết-luận">&lt;strong>Kết Luận&lt;/strong>
+&lt;/h2>&lt;p>Việc chạy GitLab Runner cục bộ là một công cụ cực kỳ hữu ích trong quá trình phát triển phần mềm hiện đại. Nó giúp bạn kiểm thử nhanh pipeline, tiết kiệm thời gian debug, đảm bảo cấu hình chính xác trước khi đưa code lên môi trường CI/CD chính thức. Hãy tận dụng tính năng này để tối ưu hóa quy trình phát triển và nâng cao chất lượng phần mềm của bạn.&lt;/p></description></item></channel></rss>

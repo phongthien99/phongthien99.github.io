@@ -1,0 +1,1245 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Devops on phongthien</title><link>https://phongthien99.github.io/tags/devops/</link><description>Recent content in Devops on phongthien</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Fri, 18 Jul 2025 00:00:00 +0000</lastBuildDate><atom:link href="https://phongthien99.github.io/tags/devops/index.xml" rel="self" type="application/rss+xml"/><item><title>From Manual to Automated: Enhancing Nginx Test Workflows</title><link>https://phongthien99.github.io/posts/from-manual-to-automated-enhancing-nginx-test-workflows/</link><pubDate>Fri, 18 Jul 2025 00:00:00 +0000</pubDate><guid>https://phongthien99.github.io/posts/from-manual-to-automated-enhancing-nginx-test-workflows/</guid><description>&lt;h1 id="from-manual-to-automated-enhancing-nginx-test-workflows">From Manual to Automated: Enhancing Nginx Test Workflows
+&lt;/h1>&lt;h2 id="problem-statement">Problem Statement
+&lt;/h2>&lt;p>Trong quá trình phát triển và vận hành hệ thống sử dụng &lt;strong>Nginx làm reverse proxy&lt;/strong>, việc thêm, sửa hoặc xóa các cấu hình &lt;code>location&lt;/code>, &lt;code>rewrite&lt;/code>, hoặc &lt;code>proxy_pass&lt;/code> có thể:&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>Ảnh hưởng không mong muốn đến các routing khác&lt;/strong> (ví dụ: route &lt;code>/admin/&lt;/code> bị chặn khi thêm &lt;code>/admin/api&lt;/code>)&lt;/li>
+&lt;li>&lt;strong>Gây lỗi ẩn&lt;/strong> khó phát hiện do trùng khớp thứ tự &lt;code>location&lt;/code> hoặc &lt;code>rewrite&lt;/code> không đúng như mong đợi&lt;/li>
+&lt;li>Thiếu công cụ kiểm thử tự động nên việc đảm bảo tính đúng đắn phụ thuộc nhiều vào manual test hoặc sản phẩm thật&lt;/li>
+&lt;/ul>
+&lt;p>Hệ quả:&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>Regression&lt;/strong>: thay đổi một route ảnh hưởng đến các route khác&lt;/li>
+&lt;/ul>
+&lt;h2 id="solution">Solution
+&lt;/h2>&lt;p>Để giải quyết những vấn đề trên, chúng ta cần một &lt;strong>bộ test tự động mạnh mẽ để kiểm thử routing của Nginx&lt;/strong>. Mục tiêu là đảm bảo các routing mới &lt;strong>không ảnh hưởng&lt;/strong> đến các route hiện có, đồng thời có thể &lt;strong>diễn giải và in ra cây routing logic&lt;/strong> giúp kiểm tra độ ưu tiên và khớp &lt;code>location&lt;/code> một cách chính xác. Bộ test này cũng phải &lt;strong>tái sử dụng&lt;/strong> được cho nhiều phiên bản cấu hình Nginx khác nhau trong các quy trình CI/CD, staging, hoặc kiểm tra pull request.&lt;/p>
+&lt;p>&lt;strong>Đề xuất kỹ thuật:&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>Sử dụng &lt;code>testcontainers&lt;/code> kết hợp &lt;code>Ginkgo/Gomega&lt;/code>&lt;/strong>: Đây là sự kết hợp lý tưởng để mô phỏng hệ thống Nginx với cấu hình cụ thể. Mỗi test case sẽ khởi tạo một Nginx container với file &lt;code>nginx.conf&lt;/code> tương ứng, gửi các HTTP request và kiểm tra response có đúng như kỳ vọng.&lt;/li>
+&lt;li>&lt;strong>Xây dựng bộ test matrix (routing path → backend mong muốn)&lt;/strong>: Cách tiếp cận này giúp dễ dàng mở rộng khi có thêm route mới, đồng thời kiểm tra hiệu quả các trường hợp xung đột, rewrite sai, hoặc khớp sai thứ tự.&lt;/li>
+&lt;/ul>
+&lt;h2 id="implementation">Implementation
+&lt;/h2>&lt;h3 id="định-nghĩa-routing-và-test-case">Định nghĩa routing và Test Case
+&lt;/h3>&lt;p>&lt;strong>Routing cần test:&lt;/strong>&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-nginx" data-lang="nginx">&lt;span class="line">&lt;span class="cl">&lt;span class="k">server&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kn">listen&lt;/span> &lt;span class="mi">80&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kn">location&lt;/span> &lt;span class="s">/web&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kn">proxy_pass&lt;/span> &lt;span class="s">http://whoami.com&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kn">location&lt;/span> &lt;span class="s">/api/&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kn">rewrite&lt;/span> &lt;span class="s">^/api/(.*)&lt;/span>$ &lt;span class="s">/&lt;/span>&lt;span class="nv">$1&lt;/span> &lt;span class="s">break&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kn">proxy_pass&lt;/span> &lt;span class="s">http://whoami.com&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>&lt;strong>Bảng Test Case:&lt;/strong>&lt;/p>
+&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th>Test Case ID&lt;/th>
+&lt;th>Input URL&lt;/th>
+&lt;th>Expected URI nhận tại backend&lt;/th>
+&lt;th>Ghi chú&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td>TC001&lt;/td>
+&lt;td>&lt;code>/web&lt;/code>&lt;/td>
+&lt;td>&lt;code>GET /web&lt;/code>&lt;/td>
+&lt;td>&lt;code>proxy_pass&lt;/code> giữ nguyên URI&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>TC002&lt;/td>
+&lt;td>&lt;code>/api/demo&lt;/code>&lt;/td>
+&lt;td>&lt;code>GET /demo&lt;/code>&lt;/td>
+&lt;td>&lt;code>rewrite&lt;/code> + &lt;code>proxy_pass&lt;/code>&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>TC003&lt;/td>
+&lt;td>&lt;code>/api/test/x&lt;/code>&lt;/td>
+&lt;td>&lt;code>GET /test/x&lt;/code>&lt;/td>
+&lt;td>&lt;code>rewrite&lt;/code> sâu hơn&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>TC004&lt;/td>
+&lt;td>&lt;code>/api/&lt;/code>&lt;/td>
+&lt;td>&lt;code>GET /&lt;/code>&lt;/td>
+&lt;td>&lt;code>rewrite /api/&lt;/code> → &lt;code>/&lt;/code>&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table>
+&lt;h3 id="mã-nguồn-ginkgo-test-nginx_testgo">Mã nguồn Ginkgo test: &lt;code>nginx_test.go&lt;/code>
+&lt;/h3>&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt"> 10
+&lt;/span>&lt;span class="lnt"> 11
+&lt;/span>&lt;span class="lnt"> 12
+&lt;/span>&lt;span class="lnt"> 13
+&lt;/span>&lt;span class="lnt"> 14
+&lt;/span>&lt;span class="lnt"> 15
+&lt;/span>&lt;span class="lnt"> 16
+&lt;/span>&lt;span class="lnt"> 17
+&lt;/span>&lt;span class="lnt"> 18
+&lt;/span>&lt;span class="lnt"> 19
+&lt;/span>&lt;span class="lnt"> 20
+&lt;/span>&lt;span class="lnt"> 21
+&lt;/span>&lt;span class="lnt"> 22
+&lt;/span>&lt;span class="lnt"> 23
+&lt;/span>&lt;span class="lnt"> 24
+&lt;/span>&lt;span class="lnt"> 25
+&lt;/span>&lt;span class="lnt"> 26
+&lt;/span>&lt;span class="lnt"> 27
+&lt;/span>&lt;span class="lnt"> 28
+&lt;/span>&lt;span class="lnt"> 29
+&lt;/span>&lt;span class="lnt"> 30
+&lt;/span>&lt;span class="lnt"> 31
+&lt;/span>&lt;span class="lnt"> 32
+&lt;/span>&lt;span class="lnt"> 33
+&lt;/span>&lt;span class="lnt"> 34
+&lt;/span>&lt;span class="lnt"> 35
+&lt;/span>&lt;span class="lnt"> 36
+&lt;/span>&lt;span class="lnt"> 37
+&lt;/span>&lt;span class="lnt"> 38
+&lt;/span>&lt;span class="lnt"> 39
+&lt;/span>&lt;span class="lnt"> 40
+&lt;/span>&lt;span class="lnt"> 41
+&lt;/span>&lt;span class="lnt"> 42
+&lt;/span>&lt;span class="lnt"> 43
+&lt;/span>&lt;span class="lnt"> 44
+&lt;/span>&lt;span class="lnt"> 45
+&lt;/span>&lt;span class="lnt"> 46
+&lt;/span>&lt;span class="lnt"> 47
+&lt;/span>&lt;span class="lnt"> 48
+&lt;/span>&lt;span class="lnt"> 49
+&lt;/span>&lt;span class="lnt"> 50
+&lt;/span>&lt;span class="lnt"> 51
+&lt;/span>&lt;span class="lnt"> 52
+&lt;/span>&lt;span class="lnt"> 53
+&lt;/span>&lt;span class="lnt"> 54
+&lt;/span>&lt;span class="lnt"> 55
+&lt;/span>&lt;span class="lnt"> 56
+&lt;/span>&lt;span class="lnt"> 57
+&lt;/span>&lt;span class="lnt"> 58
+&lt;/span>&lt;span class="lnt"> 59
+&lt;/span>&lt;span class="lnt"> 60
+&lt;/span>&lt;span class="lnt"> 61
+&lt;/span>&lt;span class="lnt"> 62
+&lt;/span>&lt;span class="lnt"> 63
+&lt;/span>&lt;span class="lnt"> 64
+&lt;/span>&lt;span class="lnt"> 65
+&lt;/span>&lt;span class="lnt"> 66
+&lt;/span>&lt;span class="lnt"> 67
+&lt;/span>&lt;span class="lnt"> 68
+&lt;/span>&lt;span class="lnt"> 69
+&lt;/span>&lt;span class="lnt"> 70
+&lt;/span>&lt;span class="lnt"> 71
+&lt;/span>&lt;span class="lnt"> 72
+&lt;/span>&lt;span class="lnt"> 73
+&lt;/span>&lt;span class="lnt"> 74
+&lt;/span>&lt;span class="lnt"> 75
+&lt;/span>&lt;span class="lnt"> 76
+&lt;/span>&lt;span class="lnt"> 77
+&lt;/span>&lt;span class="lnt"> 78
+&lt;/span>&lt;span class="lnt"> 79
+&lt;/span>&lt;span class="lnt"> 80
+&lt;/span>&lt;span class="lnt"> 81
+&lt;/span>&lt;span class="lnt"> 82
+&lt;/span>&lt;span class="lnt"> 83
+&lt;/span>&lt;span class="lnt"> 84
+&lt;/span>&lt;span class="lnt"> 85
+&lt;/span>&lt;span class="lnt"> 86
+&lt;/span>&lt;span class="lnt"> 87
+&lt;/span>&lt;span class="lnt"> 88
+&lt;/span>&lt;span class="lnt"> 89
+&lt;/span>&lt;span class="lnt"> 90
+&lt;/span>&lt;span class="lnt"> 91
+&lt;/span>&lt;span class="lnt"> 92
+&lt;/span>&lt;span class="lnt"> 93
+&lt;/span>&lt;span class="lnt"> 94
+&lt;/span>&lt;span class="lnt"> 95
+&lt;/span>&lt;span class="lnt"> 96
+&lt;/span>&lt;span class="lnt"> 97
+&lt;/span>&lt;span class="lnt"> 98
+&lt;/span>&lt;span class="lnt"> 99
+&lt;/span>&lt;span class="lnt">100
+&lt;/span>&lt;span class="lnt">101
+&lt;/span>&lt;span class="lnt">102
+&lt;/span>&lt;span class="lnt">103
+&lt;/span>&lt;span class="lnt">104
+&lt;/span>&lt;span class="lnt">105
+&lt;/span>&lt;span class="lnt">106
+&lt;/span>&lt;span class="lnt">107
+&lt;/span>&lt;span class="lnt">108
+&lt;/span>&lt;span class="lnt">109
+&lt;/span>&lt;span class="lnt">110
+&lt;/span>&lt;span class="lnt">111
+&lt;/span>&lt;span class="lnt">112
+&lt;/span>&lt;span class="lnt">113
+&lt;/span>&lt;span class="lnt">114
+&lt;/span>&lt;span class="lnt">115
+&lt;/span>&lt;span class="lnt">116
+&lt;/span>&lt;span class="lnt">117
+&lt;/span>&lt;span class="lnt">118
+&lt;/span>&lt;span class="lnt">119
+&lt;/span>&lt;span class="lnt">120
+&lt;/span>&lt;span class="lnt">121
+&lt;/span>&lt;span class="lnt">122
+&lt;/span>&lt;span class="lnt">123
+&lt;/span>&lt;span class="lnt">124
+&lt;/span>&lt;span class="lnt">125
+&lt;/span>&lt;span class="lnt">126
+&lt;/span>&lt;span class="lnt">127
+&lt;/span>&lt;span class="lnt">128
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-go" data-lang="go">&lt;span class="line">&lt;span class="cl">&lt;span class="kn">package&lt;/span> &lt;span class="nx">nginx_test&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kn">import&lt;/span> &lt;span class="p">(&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s">&amp;#34;context&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s">&amp;#34;fmt&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s">&amp;#34;io&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s">&amp;#34;log&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s">&amp;#34;net/http&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s">&amp;#34;testing&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s">&amp;#34;time&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">.&lt;/span> &lt;span class="s">&amp;#34;github.com/onsi/ginkgo/v2&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">.&lt;/span> &lt;span class="s">&amp;#34;github.com/onsi/gomega&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s">&amp;#34;github.com/testcontainers/testcontainers-go&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s">&amp;#34;github.com/testcontainers/testcontainers-go/network&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s">&amp;#34;github.com/testcontainers/testcontainers-go/wait&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kd">var&lt;/span> &lt;span class="p">(&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">ctx&lt;/span> &lt;span class="nx">context&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Context&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">net&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="nx">testcontainers&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">DockerNetwork&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">whoamiC&lt;/span> &lt;span class="nx">testcontainers&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Container&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">nginxC&lt;/span> &lt;span class="nx">testcontainers&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Container&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kd">var&lt;/span> &lt;span class="nx">_&lt;/span> &lt;span class="p">=&lt;/span> &lt;span class="nf">BeforeSuite&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kd">func&lt;/span>&lt;span class="p">()&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">log&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">Print&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;Setting up test environment...&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">ctx&lt;/span> &lt;span class="p">=&lt;/span> &lt;span class="nx">context&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">Background&lt;/span>&lt;span class="p">()&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// Tạo Docker network dùng chung&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kd">var&lt;/span> &lt;span class="nx">err&lt;/span> &lt;span class="kt">error&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">net&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">err&lt;/span> &lt;span class="p">=&lt;/span> &lt;span class="nx">network&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">New&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">ctx&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">Expect&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">err&lt;/span>&lt;span class="p">).&lt;/span>&lt;span class="nf">NotTo&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nf">HaveOccurred&lt;/span>&lt;span class="p">())&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// Tạo container whoami&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">whoamiReq&lt;/span> &lt;span class="o">:=&lt;/span> &lt;span class="nx">testcontainers&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">ContainerRequest&lt;/span>&lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">Image&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="s">&amp;#34;traefik/whoami:latest&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">Name&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="s">&amp;#34;whoami&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">Hostname&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="s">&amp;#34;whoami.com&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">ExposedPorts&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="p">[]&lt;/span>&lt;span class="kt">string&lt;/span>&lt;span class="p">{&lt;/span>&lt;span class="s">&amp;#34;80/tcp&amp;#34;&lt;/span>&lt;span class="p">},&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">Networks&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="p">[]&lt;/span>&lt;span class="kt">string&lt;/span>&lt;span class="p">{&lt;/span>&lt;span class="nx">net&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Name&lt;/span>&lt;span class="p">},&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">WaitingFor&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="nx">wait&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">ForHTTP&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;/&amp;#34;&lt;/span>&lt;span class="p">).&lt;/span>&lt;span class="nf">WithPort&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;80/tcp&amp;#34;&lt;/span>&lt;span class="p">).&lt;/span>&lt;span class="nf">WithStartupTimeout&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="mi">10&lt;/span> &lt;span class="o">*&lt;/span> &lt;span class="nx">time&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Second&lt;/span>&lt;span class="p">),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">whoamiC&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">err&lt;/span> &lt;span class="p">=&lt;/span> &lt;span class="nx">testcontainers&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">GenericContainer&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">ctx&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">testcontainers&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">GenericContainerRequest&lt;/span>&lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">ContainerRequest&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="nx">whoamiReq&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">Started&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="kc">true&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">})&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">Expect&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">err&lt;/span>&lt;span class="p">).&lt;/span>&lt;span class="nf">NotTo&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nf">HaveOccurred&lt;/span>&lt;span class="p">())&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// Tạo container nginx&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">nginxReq&lt;/span> &lt;span class="o">:=&lt;/span> &lt;span class="nx">testcontainers&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">ContainerRequest&lt;/span>&lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">Image&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="s">&amp;#34;nginx:latest&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">ExposedPorts&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="p">[]&lt;/span>&lt;span class="kt">string&lt;/span>&lt;span class="p">{&lt;/span>&lt;span class="s">&amp;#34;80/tcp&amp;#34;&lt;/span>&lt;span class="p">},&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">Networks&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="p">[]&lt;/span>&lt;span class="kt">string&lt;/span>&lt;span class="p">{&lt;/span>&lt;span class="nx">net&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Name&lt;/span>&lt;span class="p">},&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">WaitingFor&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="nx">wait&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">ForHTTP&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;/&amp;#34;&lt;/span>&lt;span class="p">).&lt;/span>&lt;span class="nf">WithPort&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;80/tcp&amp;#34;&lt;/span>&lt;span class="p">).&lt;/span>&lt;span class="nf">WithStartupTimeout&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="mi">10&lt;/span> &lt;span class="o">*&lt;/span> &lt;span class="nx">time&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Second&lt;/span>&lt;span class="p">),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">Files&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="p">[]&lt;/span>&lt;span class="nx">testcontainers&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">ContainerFile&lt;/span>&lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">HostFilePath&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="s">&amp;#34;nginx.conf&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="c1">// Đường dẫn đến file cấu hình nginx trên máy local&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">ContainerFilePath&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="s">&amp;#34;/etc/nginx/nginx.conf&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">FileMode&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="mo">0644&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">},&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">},&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">nginxC&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">err&lt;/span> &lt;span class="p">=&lt;/span> &lt;span class="nx">testcontainers&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">GenericContainer&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">ctx&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">testcontainers&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">GenericContainerRequest&lt;/span>&lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">ContainerRequest&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="nx">nginxReq&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">Started&lt;/span>&lt;span class="p">:&lt;/span> &lt;span class="kc">true&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">})&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">Expect&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">err&lt;/span>&lt;span class="p">).&lt;/span>&lt;span class="nf">NotTo&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nf">HaveOccurred&lt;/span>&lt;span class="p">())&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">})&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kd">var&lt;/span> &lt;span class="nx">_&lt;/span> &lt;span class="p">=&lt;/span> &lt;span class="nf">Describe&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;Nginx Reverse Proxy to Whoami&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="kd">func&lt;/span>&lt;span class="p">()&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">testCases&lt;/span> &lt;span class="o">:=&lt;/span> &lt;span class="p">[]&lt;/span>&lt;span class="kd">struct&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">name&lt;/span> &lt;span class="kt">string&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">path&lt;/span> &lt;span class="kt">string&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">expectedURI&lt;/span> &lt;span class="kt">string&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">expectSuccess&lt;/span> &lt;span class="kt">bool&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">{&lt;/span>&lt;span class="s">&amp;#34;proxy_pass without rewrite&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s">&amp;#34;/web&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s">&amp;#34;GET /web&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="kc">true&lt;/span>&lt;span class="p">},&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">{&lt;/span>&lt;span class="s">&amp;#34;rewrite + proxy_pass 1&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s">&amp;#34;/api/demo&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s">&amp;#34;GET /demo&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="kc">true&lt;/span>&lt;span class="p">},&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">{&lt;/span>&lt;span class="s">&amp;#34;rewrite + proxy_pass 2&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s">&amp;#34;/api/test/x&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s">&amp;#34;GET /test/x&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="kc">true&lt;/span>&lt;span class="p">},&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">{&lt;/span>&lt;span class="s">&amp;#34;rewrite + proxy_pass root&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s">&amp;#34;/api/&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s">&amp;#34;GET /&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="kc">true&lt;/span>&lt;span class="p">},&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">for&lt;/span> &lt;span class="nx">_&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">tc&lt;/span> &lt;span class="o">:=&lt;/span> &lt;span class="k">range&lt;/span> &lt;span class="nx">testCases&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">tc&lt;/span> &lt;span class="o">:=&lt;/span> &lt;span class="nx">tc&lt;/span> &lt;span class="c1">// capture range variable&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">It&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">fmt&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">Sprintf&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;should handle route %s → %s&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">tc&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">path&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">tc&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">expectedURI&lt;/span>&lt;span class="p">),&lt;/span> &lt;span class="kd">func&lt;/span>&lt;span class="p">()&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">host&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">_&lt;/span> &lt;span class="o">:=&lt;/span> &lt;span class="nx">nginxC&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">Host&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">ctx&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">port&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">_&lt;/span> &lt;span class="o">:=&lt;/span> &lt;span class="nx">nginxC&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">MappedPort&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">ctx&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s">&amp;#34;80&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">url&lt;/span> &lt;span class="o">:=&lt;/span> &lt;span class="nx">fmt&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">Sprintf&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;http://%s:%s%s&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">host&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">port&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">Port&lt;/span>&lt;span class="p">(),&lt;/span> &lt;span class="nx">tc&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">path&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">resp&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">err&lt;/span> &lt;span class="o">:=&lt;/span> &lt;span class="nx">http&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">Get&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">url&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">Expect&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">err&lt;/span>&lt;span class="p">).&lt;/span>&lt;span class="nf">NotTo&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nf">HaveOccurred&lt;/span>&lt;span class="p">())&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">defer&lt;/span> &lt;span class="nx">resp&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Body&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">Close&lt;/span>&lt;span class="p">()&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">body&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">_&lt;/span> &lt;span class="o">:=&lt;/span> &lt;span class="nx">io&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">ReadAll&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">resp&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Body&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">log&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">Printf&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;Response for %s: %s&amp;#34;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">tc&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">path&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nb">string&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">body&lt;/span>&lt;span class="p">))&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="nx">tc&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">expectSuccess&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">Expect&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">resp&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">StatusCode&lt;/span>&lt;span class="p">).&lt;/span>&lt;span class="nf">To&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nf">Equal&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="mi">200&lt;/span>&lt;span class="p">))&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">Expect&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nb">string&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">body&lt;/span>&lt;span class="p">)).&lt;/span>&lt;span class="nf">To&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nf">ContainSubstring&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">tc&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">expectedURI&lt;/span>&lt;span class="p">))&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">Expect&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nb">string&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">body&lt;/span>&lt;span class="p">)).&lt;/span>&lt;span class="nf">To&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nf">ContainSubstring&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;Hostname: whoami.com&amp;#34;&lt;/span>&lt;span class="p">))&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span> &lt;span class="k">else&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">Expect&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nb">string&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">body&lt;/span>&lt;span class="p">)).&lt;/span>&lt;span class="nf">NotTo&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nf">ContainSubstring&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;Hostname: whoami.com&amp;#34;&lt;/span>&lt;span class="p">))&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">})&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">})&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kd">var&lt;/span> &lt;span class="nx">_&lt;/span> &lt;span class="p">=&lt;/span> &lt;span class="nf">AfterSuite&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kd">func&lt;/span>&lt;span class="p">()&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">log&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">Print&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;Tearing down test environment...&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="nx">whoamiC&lt;/span> &lt;span class="o">!=&lt;/span> &lt;span class="kc">nil&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">whoamiC&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">Terminate&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">ctx&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="nx">nginxC&lt;/span> &lt;span class="o">!=&lt;/span> &lt;span class="kc">nil&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">nginxC&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">Terminate&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">ctx&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="nx">net&lt;/span> &lt;span class="o">!=&lt;/span> &lt;span class="kc">nil&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">net&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">Remove&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">ctx&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">})&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kd">func&lt;/span> &lt;span class="nf">TestNginx&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">t&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="nx">testing&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">T&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">RegisterFailHandler&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">Fail&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">RunSpecs&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">t&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s">&amp;#34;Nginx Suite&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>Để chạy bộ test này, bạn chỉ cần lưu cấu hình Nginx vào file &lt;code>nginx.conf&lt;/code> cùng cấp với file &lt;code>nginx_test.go&lt;/code> và chạy lệnh trong terminal:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">go &lt;span class="nb">test&lt;/span> -v
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;h2 id="conclusion">Conclusion
+&lt;/h2>&lt;p>Việc kiểm thử cấu hình Nginx một cách tự động là một bước tiến quan trọng trong việc đảm bảo sự ổn định và chính xác của hệ thống. Bằng cách kết hợp &lt;strong>Testcontainers&lt;/strong> và &lt;strong>Ginkgo/Gomega&lt;/strong>, chúng ta đã xây dựng được một bộ khung mạnh mẽ, cho phép:&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>Tự động hóa kiểm thử&lt;/strong>: Giảm thiểu đáng kể rủi ro gây ra bởi các thay đổi cấu hình thủ công.&lt;/li>
+&lt;li>&lt;strong>Phát hiện sớm lỗi&lt;/strong>: Các vấn đề về routing, rewrite, hoặc xung đột cấu hình sẽ được nhận diện ngay trong giai đoạn phát triển hoặc CI/CD.&lt;/li>
+&lt;li>&lt;strong>Kiểm soát phức tạp&lt;/strong>: Giúp quản lý hiệu quả hơn các cấu hình Nginx ngày càng phức tạp, đặc biệt trong các hệ thống microservices.&lt;/li>
+&lt;/ul></description></item><item><title>Streamlining Deployment with GitLab CI/CD</title><link>https://phongthien99.github.io/posts/streamlining-deployment-with-gitlab-ci/cd/</link><pubDate>Sat, 21 Jun 2025 01:00:00 +0000</pubDate><guid>https://phongthien99.github.io/posts/streamlining-deployment-with-gitlab-ci/cd/</guid><description>&lt;h1 id="streamlining-deployment-with-gitlab-cicd">Streamlining Deployment with GitLab CI/CD
+&lt;/h1>&lt;h2 id="-1-đặt-vấn-đề">🧩 1. Đặt Vấn Đề
+&lt;/h2>&lt;p>Trong quá trình phát triển phần mềm, việc kiểm thử và debug nhanh các job CI/CD là rất quan trọng. Tuy nhiên, GitLab CI/CD thường gặp một số vấn đề khi test local bằng &lt;code>gitlab-runner exec&lt;/code>:&lt;/p>
+&lt;ul>
+&lt;li>❌ &lt;code>gitlab-runner exec&lt;/code> &lt;strong>không hỗ trợ &lt;code>include:&lt;/code> hoặc &lt;code>extends:&lt;/code> từ file ngoài&lt;/strong>&lt;/li>
+&lt;li>❌ Pipeline thực tế quá phức tạp, chứa nhiều môi trường như &lt;code>dev&lt;/code>, &lt;code>prod&lt;/code>, &lt;code>staging&lt;/code>&lt;/li>
+&lt;li>❌ Không dễ test nhanh từng job do phải khai báo phân tán, phụ thuộc nhiều nơi&lt;/li>
+&lt;/ul>
+&lt;hr>
+&lt;h2 id="-2-giải-pháp">💡 2. Giải Pháp
+&lt;/h2>&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th>Vấn đề&lt;/th>
+&lt;th>Giải pháp&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td>Không test local được&lt;/td>
+&lt;td>Gom job + biến vào &lt;strong>1 file duy nhất&lt;/strong> để test&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>Quản lý nhiều môi trường&lt;/td>
+&lt;td>Mỗi môi trường tách riêng &lt;code>vars-*.yml&lt;/code>&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>Tái sử dụng script&lt;/td>
+&lt;td>Dùng &lt;code>.job-base&lt;/code> làm template job&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>Giữ file &lt;code>.gitlab-ci.yml&lt;/code> gọn&lt;/td>
+&lt;td>Chỉ &lt;code>include&lt;/code> file tổng &lt;code>.ci/include.yml&lt;/code>&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table>
+&lt;hr>
+&lt;h2 id="-3-thực-hiện">🛠️ 3. Thực Hiện
+&lt;/h2>&lt;h3 id="-31-cấu-trúc-thư-mục">📁 3.1. Cấu trúc thư mục
+&lt;/h3>&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-gdscript3" data-lang="gdscript3">&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="o">.&lt;/span>&lt;span class="n">gitlab&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="n">ci&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">yml&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="o">.&lt;/span>&lt;span class="n">ci&lt;/span>&lt;span class="o">/&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="err">├─&lt;/span> &lt;span class="n">job&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="n">template&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">yml&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="err">├─&lt;/span> &lt;span class="n">vars&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="n">local&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">yml&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="err">├─&lt;/span> &lt;span class="n">vars&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="n">dev&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">yml&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="err">├─&lt;/span> &lt;span class="n">vars&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="n">prod&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">yml&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="err">├─&lt;/span> &lt;span class="n">workflow&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="n">dev&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">yml&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="err">├─&lt;/span> &lt;span class="n">workflow&lt;/span>&lt;span class="o">-&lt;/span>&lt;span class="n">prod&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">yml&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="err">├─&lt;/span> &lt;span class="n">include&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">yml&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;blockquote>
+&lt;p>📝 Ghi chú: Chúng ta tách cấu hình CI/CD thành các thành phần nhỏ gọn và rõ ràng:&lt;/p>
+&lt;ul>
+&lt;li>Template dùng chung&lt;/li>
+&lt;li>Biến theo từng môi trường&lt;/li>
+&lt;li>Workflow cụ thể cho từng môi trường&lt;/li>
+&lt;li>File gom tổng cho chạy thực tế &amp;amp; chạy local&lt;/li>
+&lt;/ul>&lt;/blockquote>
+&lt;hr>
+&lt;h3 id="-32-định-nghĩa-job-template-cijob-templateyml">🧱 3.2. Định nghĩa job template &lt;code>.ci/job-template.yml&lt;/code>
+&lt;/h3>&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-yaml" data-lang="yaml">&lt;span class="line">&lt;span class="cl">&lt;span class="nt">.job-base&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">stage&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">test&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">tags&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="l">dind&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">script&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="l">echo &amp;#34;ENV=$ENV&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="l">echo &amp;#34;API_URL=$API_URL&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">variables&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">ENV&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;local&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">API_URL&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;http://localhost:3000&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;blockquote>
+&lt;p>📌 Ghi chú: Đây là template chính, định nghĩa các bước và biến mặc định.&lt;/p>
+&lt;p>Mọi job thực tế sẽ &lt;code>extends&lt;/code> từ &lt;code>.job-base&lt;/code>.&lt;/p>&lt;/blockquote>
+&lt;hr>
+&lt;h3 id="-33-biến-môi-trường">⚙️ 3.3. Biến môi trường
+&lt;/h3>&lt;h3 id="civars-devyml">&lt;code>.ci/vars-dev.yml&lt;/code>
+&lt;/h3>&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;span class="lnt">4
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-yaml" data-lang="yaml">&lt;span class="line">&lt;span class="cl">&lt;span class="nt">.variables-dev&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">variables&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">ENV&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;dev&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">API_URL&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;https://api.dev.example.com&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;h3 id="civars-localyml">&lt;code>.ci/vars-local.yml&lt;/code>
+&lt;/h3>&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;span class="lnt">4
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-yaml" data-lang="yaml">&lt;span class="line">&lt;span class="cl">&lt;span class="nt">.variables-local&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">variables&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">ENV&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;local&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">API_URL&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;http://localhost:3000&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;h3 id="civars-prodyml">&lt;code>.ci/vars-prod.yml&lt;/code>
+&lt;/h3>&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;span class="lnt">4
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-yaml" data-lang="yaml">&lt;span class="line">&lt;span class="cl">&lt;span class="nt">.variables-prod&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">variables&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">ENV&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;prod&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">API_URL&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;https://api.prod.example.com&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;blockquote>
+&lt;p>📌 Ghi chú: Tách biến theo từng môi trường giúp:&lt;/p>
+&lt;ul>
+&lt;li>Không bị nhầm biến khi deploy&lt;/li>
+&lt;li>Dễ test từng môi trường độc lập&lt;/li>
+&lt;li>Linh hoạt mở rộng về sau (thêm &lt;code>qa&lt;/code>, &lt;code>uat&lt;/code>, v.v.)&lt;/li>
+&lt;/ul>&lt;/blockquote>
+&lt;hr>
+&lt;h3 id="-34-định-nghĩa-các-job">🔁 3.4. Định nghĩa các job
+&lt;/h3>&lt;h3 id="ciworkflow-devyml">&lt;code>.ci/workflow-dev.yml&lt;/code>
+&lt;/h3>&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-yaml" data-lang="yaml">&lt;span class="line">&lt;span class="cl">&lt;span class="nt">job-dev&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">extends&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="l">.job-base, .variables-dev]&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;h3 id="ciworkflow-prodyml">&lt;code>.ci/workflow-prod.yml&lt;/code>
+&lt;/h3>&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-yaml" data-lang="yaml">&lt;span class="line">&lt;span class="cl">&lt;span class="nt">job-prod&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">extends&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="l">.job-base, .variables-prod]&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;blockquote>
+&lt;p>📌 Ghi chú: Mỗi job được build bằng cách kế thừa job-base và biến riêng môi trường.&lt;/p>
+&lt;p>Giúp cấu hình đơn giản, không lặp lại.&lt;/p>&lt;/blockquote>
+&lt;hr>
+&lt;h3 id="-35-file-includeyml">📦 3.5. File &lt;code>include.yml&lt;/code>
+&lt;/h3>&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;span class="lnt">4
+&lt;/span>&lt;span class="lnt">5
+&lt;/span>&lt;span class="lnt">6
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-yaml" data-lang="yaml">&lt;span class="line">&lt;span class="cl">&lt;span class="nt">include&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="nt">local&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;.ci/job-template.yml&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="nt">local&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;.ci/vars-dev.yml&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="nt">local&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;.ci/vars-prod.yml&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="nt">local&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;.ci/workflow-dev.yml&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="nt">local&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;.ci/workflow-prod.yml&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;blockquote>
+&lt;p>📌 Ghi chú: Gom tất cả file cần thiết cho pipeline GitLab CI chạy thực tế trên server.&lt;/p>
+&lt;p>File &lt;code>.gitlab-ci.yml&lt;/code> chỉ cần &lt;code>include&lt;/code> file này là đủ.&lt;/p>&lt;/blockquote>
+&lt;hr>
+&lt;hr>
+&lt;h3 id="-37-chạy-test-local">🧪 3.7. Chạy test local
+&lt;/h3>&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">gitlab-runner &lt;span class="nb">exec&lt;/span> shell .job-base --cicd-config-file .ci/job-template.yml
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;blockquote>
+&lt;p>🛠️ Ghi chú:&lt;/p>
+&lt;p>Lệnh này sẽ chạy job &lt;code>.job-base&lt;/code> bằng cấu hình trong file &lt;code>.ci/job-template.yml&lt;/code>.&lt;/p>
+&lt;p>Có thể chỉnh sửa nhanh script, biến, v.v. để test mà không ảnh hưởng pipeline thật.&lt;/p>&lt;/blockquote>
+&lt;hr>
+&lt;h2 id="-4-kết-luận">✅ 4. Kết Luận
+&lt;/h2>&lt;h3 id="-ưu-điểm-đạt-được">✅ &lt;strong>Ưu điểm đạt được&lt;/strong>
+&lt;/h3>&lt;ul>
+&lt;li>&lt;strong>✔️ Dễ test local&lt;/strong>:
+→ Test được từng job thông qua giá trị của biến môi trường (variable).&lt;/li>
+&lt;li>&lt;strong>✔️ Quản lý môi trường rõ ràng&lt;/strong>:
+→ Mỗi môi trường (&lt;code>dev&lt;/code>, &lt;code>staging&lt;/code>, &lt;code>prod&lt;/code>,&amp;hellip;) có file biến riêng (&lt;code>vars-*.yml&lt;/code>).&lt;/li>
+&lt;li>&lt;strong>✔️ Dễ bảo trì &amp;amp; mở rộng&lt;/strong>:
+→ Dùng &lt;code>job-base&lt;/code> như template để tránh lặp lại, dễ mở rộng khi thêm job mới.&lt;/li>
+&lt;li>&lt;strong>✔️ CI gọn nhẹ&lt;/strong>:
+→ File &lt;code>.gitlab-ci.yml&lt;/code> chính chỉ cần &lt;code>include&lt;/code> một file tổng hợp.&lt;/li>
+&lt;/ul>
+&lt;hr>
+&lt;h3 id="-nguyên-lý-kỹ-thuật-phần-mềm--ứng-dụng-trong-gitlab-cicd">🔧 &lt;strong>Nguyên lý kỹ thuật phần mềm &amp;amp; Ứng dụng trong GitLab CI/CD&lt;/strong>
+&lt;/h3>&lt;ul>
+&lt;li>&lt;strong>Function/Module Reuse (Tái sử dụng hàm/module)&lt;/strong>:
+→ &lt;code>job-base&lt;/code> hoạt động như một &lt;strong>hàm dùng lại&lt;/strong>, các job chỉ cần &lt;code>extends&lt;/code> để kế thừa cấu trúc.&lt;/li>
+&lt;li>&lt;strong>Encapsulation (Đóng gói)&lt;/strong>:
+→ Biến môi trường được &lt;strong>đóng gói&lt;/strong> theo từng môi trường riêng biệt (&lt;code>vars-dev.yml&lt;/code>, &lt;code>vars-prod.yml&lt;/code>), giúp tránh rò rỉ hoặc ghi đè sai lệch.&lt;/li>
+&lt;li>&lt;strong>Composition over Inheritance (Thành phần hơn kế thừa)&lt;/strong>:
+→ Kết hợp &lt;code>job-base&lt;/code> + file biến (&lt;code>.variables-*&lt;/code>) cho phép tái sử dụng linh hoạt hơn là copy/paste hoặc kế thừa toàn bộ job.&lt;/li>
+&lt;li>&lt;strong>Separation of Concerns (Phân tách trách nhiệm)&lt;/strong>:
+→ Tách biệt từng thành phần CI/CD:
+&lt;ul>
+&lt;li>Template job (&lt;code>job-template.yml&lt;/code>)&lt;/li>
+&lt;li>Biến môi trường (&lt;code>vars-*.yml&lt;/code>)&lt;/li>
+&lt;li>Luồng chính (&lt;code>.gitlab-ci.yml&lt;/code>)
+→ Mỗi file chỉ đảm nhận &lt;strong>một vai trò duy nhất&lt;/strong>, dễ đọc và dễ debug.&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>&lt;strong>Unit Test / Test độc lập hàm&lt;/strong>:
+→ Có thể test từng job độc lập trong &lt;code>job-template.yml&lt;/code> như cách viết và test unit test trong lập trình.&lt;/li>
+&lt;/ul></description></item><item><title>Guide to Running GitLab Runner Locally for Building and Testing CI/CD Pipelines</title><link>https://phongthien99.github.io/posts/guide-to-running-gitlab-runner-locally-for-building-and-testing-ci/cd-pipelines/</link><pubDate>Sat, 21 Jun 2025 00:00:00 +0000</pubDate><guid>https://phongthien99.github.io/posts/guide-to-running-gitlab-runner-locally-for-building-and-testing-ci/cd-pipelines/</guid><description>&lt;h2 id="guide-to-running-gitlab-runner-locally-for-building-and-testing-cicd-pipelines">Guide to Running GitLab Runner Locally for Building and Testing CI/CD Pipelines
+&lt;/h2>&lt;h2 id="đặt-vấn-đề">&lt;strong>Đặt Vấn Đề&lt;/strong>
+&lt;/h2>&lt;p>Trong quá trình phát triển phần mềm, việc kiểm thử và triển khai ứng dụng thường xuyên là điều không thể thiếu. Tuy nhiên, việc đợi pipeline CI/CD chạy trên GitLab server có thể mất thời gian, đặc biệt khi cần thử nghiệm nhanh các thay đổi nhỏ trong cấu hình hoặc script. Điều này làm giảm hiệu quả làm việc và gây khó khăn trong việc debug.&lt;/p>
+&lt;h2 id="giải-pháp">&lt;strong>Giải Pháp&lt;/strong>
+&lt;/h2>&lt;p>Chạy &lt;strong>GitLab Runner&lt;/strong> ngay trên máy local là một giải pháp hiệu quả. Điều này cho phép bạn kiểm thử các job CI/CD một cách nhanh chóng mà không cần push code lên GitLab, từ đó tiết kiệm thời gian và giảm thiểu rủi ro phát sinh khi deploy lên môi trường thật.&lt;/p>
+&lt;h2 id="thực-hiện">&lt;strong>Thực Hiện&lt;/strong>
+&lt;/h2>&lt;h3 id="bước-1-cài-đặt-gitlab-runner">&lt;strong>Bước 1: Cài Đặt GitLab Runner&lt;/strong>
+&lt;/h3>&lt;p>Đối với hệ điều hành Ubuntu, bạn có thể cài đặt GitLab Runner bằng cách chạy:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh &lt;span class="p">|&lt;/span> sudo bash
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">sudo apt-get install gitlab-runner&lt;span class="o">=&lt;/span>15.11.1
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;blockquote>
+&lt;p>⚠️ Lưu ý: Bạn có thể chọn phiên bản mới nhất hoặc giữ cố định một phiên bản ổn định tùy theo yêu cầu dự án.&lt;/p>&lt;/blockquote>
+&lt;hr>
+&lt;h3 id="bước-2-viết-file">&lt;strong>Bước 2: Viết File &lt;code>gitlab-ci.yaml&lt;/code>&lt;/strong>
+&lt;/h3>&lt;p>Đây là file định nghĩa pipeline. Dưới đây là ví dụ một job đơn giản dùng để build Docker image:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-yaml" data-lang="yaml">&lt;span class="line">&lt;span class="cl">&lt;span class="nt">image&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">docker:dind&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="nt">stages&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="l">build&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="nt">build-image&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">stage&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">build&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">tags&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="l">shel&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">script&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="l">echo &amp;#34;Build image&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;hr>
+&lt;hr>
+&lt;h3 id="bước-4-chạy-gitlab-runner-local">&lt;strong>Bước 4: Chạy GitLab Runner Local&lt;/strong>
+&lt;/h3>&lt;p>Khi đã có đầy đủ file cấu hình, bạn chỉ cần chạy lệnh sau để thực thi pipeline ngay trên máy:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">gitlab-runner &lt;span class="nb">exec&lt;/span> docker build-image
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;blockquote>
+&lt;p>Lệnh này sẽ chạy job build-image bằng executor docker – tức là trực tiếp trên môi trường máy bạn, không cần đăng ký runner hay kết nối với GitLab server.&lt;/p>&lt;/blockquote>
+&lt;hr>
+&lt;h2 id="kết-luận">&lt;strong>Kết Luận&lt;/strong>
+&lt;/h2>&lt;p>Việc chạy GitLab Runner cục bộ là một công cụ cực kỳ hữu ích trong quá trình phát triển phần mềm hiện đại. Nó giúp bạn kiểm thử nhanh pipeline, tiết kiệm thời gian debug, đảm bảo cấu hình chính xác trước khi đưa code lên môi trường CI/CD chính thức. Hãy tận dụng tính năng này để tối ưu hóa quy trình phát triển và nâng cao chất lượng phần mềm của bạn.&lt;/p></description></item><item><title>Hosting a Debian Repository on S3 using Reprepro and AWS CLI</title><link>https://phongthien99.github.io/posts/hosting-a-debian-repository-on-s3-using-reprepro-and-aws-cli/</link><pubDate>Sat, 14 Jun 2025 00:00:00 +0000</pubDate><guid>https://phongthien99.github.io/posts/hosting-a-debian-repository-on-s3-using-reprepro-and-aws-cli/</guid><description>&lt;h1 id="hosting-a-debian-repository-on-s3-using-reprepro-and-aws-cli">Hosting a Debian Repository on S3 using Reprepro and AWS CLI
+&lt;/h1>&lt;h2 id="i-đặt-vấn-đề">I. Đặt vấn đề
+&lt;/h2>&lt;p>Trong quá trình phát triển phần mềm, đặc biệt với hệ thống backend hoặc hạ tầng đóng gói nội bộ, việc phát hành các gói &lt;code>.deb&lt;/code> nhanh chóng và có thể truy cập qua &lt;code>apt&lt;/code> là một lợi thế rất lớn. Tuy nhiên, việc dựng hạ tầng riêng (như NGINX, APT server&amp;hellip;) có thể phức tạp, tốn chi phí và không dễ mở rộng.&lt;/p>
+&lt;p>Một giải pháp hiệu quả, đơn giản hơn là: &lt;strong>host repository Debian trực tiếp trên Amazon S3&lt;/strong> và sử dụng &lt;strong>&lt;code>reprepro&lt;/code>&lt;/strong> để quản lý metadata.&lt;/p>
+&lt;hr>
+&lt;h2 id="ii-cách-giải-quyết">II. Cách giải quyết
+&lt;/h2>&lt;p>Chúng ta sẽ xây dựng một quy trình:&lt;/p>
+&lt;ul>
+&lt;li>Tạo repo Debian chuẩn bằng &lt;code>reprepro&lt;/code>.&lt;/li>
+&lt;li>Cập nhật các gói &lt;code>.deb&lt;/code> vào repo.&lt;/li>
+&lt;li>Đồng bộ repo lên Amazon S3.&lt;/li>
+&lt;li>Sinh ra file &lt;code>.list&lt;/code> để client dễ cấu hình &lt;code>apt&lt;/code>.&lt;/li>
+&lt;/ul>
+&lt;h3 id="công-cụ-sử-dụng">Công cụ sử dụng:
+&lt;/h3>&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th>Công cụ&lt;/th>
+&lt;th>Vai trò&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td>&lt;code>reprepro&lt;/code>&lt;/td>
+&lt;td>Tạo &amp;amp; quản lý cấu trúc Debian repo (&lt;code>conf/&lt;/code>, &lt;code>pool/&lt;/code>, &lt;code>dists/&lt;/code>)&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>&lt;code>aws s3 sync&lt;/code>&lt;/td>
+&lt;td>Đồng bộ thư mục repo lên Amazon S3&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>Shell Script&lt;/td>
+&lt;td>Tự động hóa các bước thêm gói, build metadata, và đồng bộ hóa&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table>
+&lt;hr>
+&lt;h2 id="iii-thực-hiện">III. Thực hiện
+&lt;/h2>&lt;h3 id="1-update-reposh--thêm">1. &lt;code>update-repo.sh&lt;/code> – &lt;strong>Thêm &lt;code>.deb&lt;/code> vào repository&lt;/strong>
+&lt;/h3>&lt;h4 id="-nhiệm-vụ">✅ Nhiệm vụ:
+&lt;/h4>&lt;ul>
+&lt;li>Kiểm tra và tạo cấu hình &lt;code>conf/distributions&lt;/code> nếu chưa có.&lt;/li>
+&lt;li>Thêm gói &lt;code>.deb&lt;/code> vào đúng &lt;code>codename&lt;/code> bằng &lt;code>reprepro&lt;/code>.&lt;/li>
+&lt;/ul>
+&lt;h4 id="-nội-dung-chính">🧩 Nội dung chính:
+&lt;/h4>&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;span class="lnt">21
+&lt;/span>&lt;span class="lnt">22
+&lt;/span>&lt;span class="lnt">23
+&lt;/span>&lt;span class="lnt">24
+&lt;/span>&lt;span class="lnt">25
+&lt;/span>&lt;span class="lnt">26
+&lt;/span>&lt;span class="lnt">27
+&lt;/span>&lt;span class="lnt">28
+&lt;/span>&lt;span class="lnt">29
+&lt;/span>&lt;span class="lnt">30
+&lt;/span>&lt;span class="lnt">31
+&lt;/span>&lt;span class="lnt">32
+&lt;/span>&lt;span class="lnt">33
+&lt;/span>&lt;span class="lnt">34
+&lt;/span>&lt;span class="lnt">35
+&lt;/span>&lt;span class="lnt">36
+&lt;/span>&lt;span class="lnt">37
+&lt;/span>&lt;span class="lnt">38
+&lt;/span>&lt;span class="lnt">39
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">#!/bin/bash&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nb">set&lt;/span> -e
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nv">REPO_DIR&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nv">REPO_DIR&lt;/span>&lt;span class="k">:-&lt;/span>&lt;span class="p">./repo&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span> &lt;span class="c1"># Thư mục chứa repo&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nv">DEB_FILE&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="nv">$1&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span> &lt;span class="c1"># File .deb đầu vào&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nv">DIST&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="nv">$2&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span> &lt;span class="c1"># Codename (vd: v1.0)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nv">ARCH&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nv">ARCH&lt;/span>&lt;span class="k">:-&lt;/span>&lt;span class="nv">amd64&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nv">COMPONENT&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nv">COMPONENT&lt;/span>&lt;span class="k">:-&lt;/span>&lt;span class="nv">main&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">if&lt;/span> &lt;span class="o">[[&lt;/span> -z &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="nv">$DEB_FILE&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span> &lt;span class="o">||&lt;/span> -z &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="nv">$DIST&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span> &lt;span class="o">]]&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="k">then&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">echo&lt;/span> &lt;span class="s2">&amp;#34;Usage: &lt;/span>&lt;span class="nv">$0&lt;/span>&lt;span class="s2"> path/to/package.deb &amp;lt;codename&amp;gt;&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">exit&lt;/span> &lt;span class="m">1&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">fi&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">if&lt;/span> &lt;span class="o">[[&lt;/span> ! -f &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="nv">$DEB_FILE&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span> &lt;span class="o">]]&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="k">then&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">echo&lt;/span> &lt;span class="s2">&amp;#34;❌ File not exist: &lt;/span>&lt;span class="nv">$DEB_FILE&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">exit&lt;/span> &lt;span class="m">2&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">fi&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">mkdir -p &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="nv">$REPO_DIR&lt;/span>&lt;span class="s2">/conf&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nv">DIST_FILE&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="nv">$REPO_DIR&lt;/span>&lt;span class="s2">/conf/distributions&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">if&lt;/span> ! grep -q &lt;span class="s2">&amp;#34;Codename: &lt;/span>&lt;span class="nv">$DIST&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span> &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="nv">$DIST_FILE&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span> 2&amp;gt;/dev/null&lt;span class="p">;&lt;/span> &lt;span class="k">then&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">echo&lt;/span> &lt;span class="s2">&amp;#34;➕ Adding new codename: &lt;/span>&lt;span class="nv">$DIST&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> cat &amp;gt;&amp;gt; &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="nv">$DIST_FILE&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span> &lt;span class="s">&amp;lt;&amp;lt;EOF
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s">Origin: LocalCompany
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s">Label: LocalRepo
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s">Codename: $DIST
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s">Architectures: $ARCH
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s">Components: $COMPONENT
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s">Description: Auto-generated distribution $DIST
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="s">EOF&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">fi&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nb">echo&lt;/span> &lt;span class="s2">&amp;#34;📦 Adding package: &lt;/span>&lt;span class="nv">$DEB_FILE&lt;/span>&lt;span class="s2"> → codename: &lt;/span>&lt;span class="nv">$DIST&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">reprepro -b &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="nv">$REPO_DIR&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span> includedeb &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="nv">$DIST&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span> &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="nv">$DEB_FILE&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nb">echo&lt;/span> &lt;span class="s2">&amp;#34;✅ Completed!&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;h4 id="-cách-chạy">🛠️ Cách chạy:
+&lt;/h4>&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">./update-repo.sh ./incoming/myapp_1.0.0.deb v1.0
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;hr>
+&lt;h3 id="2-generate-sources-listsh--tạo-file">2. &lt;code>generate-sources-list.sh&lt;/code> – &lt;strong>Tạo file &lt;code>sources.list&lt;/code> cho client&lt;/strong>
+&lt;/h3>&lt;h4 id="-nhiệm-vụ-1">✅ Nhiệm vụ:
+&lt;/h4>&lt;ul>
+&lt;li>Duyệt file &lt;code>conf/distributions&lt;/code> để lấy danh sách các &lt;code>Codename&lt;/code> và &lt;code>Component&lt;/code>.&lt;/li>
+&lt;li>Sinh ra dòng cấu hình repo chuẩn cho &lt;code>apt&lt;/code>.&lt;/li>
+&lt;/ul>
+&lt;h4 id="-nội-dung-chính-1">🧩 Nội dung chính:
+&lt;/h4>&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">#!/bin/bash&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nv">REPO_URL&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nv">1&lt;/span>&lt;span class="k">:-&lt;/span>&lt;span class="s2">&amp;#34;http://localhost/repo&amp;#34;&lt;/span>&lt;span class="si">}&lt;/span> &lt;span class="c1"># URL repo&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nv">OUTPUT&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nv">2&lt;/span>&lt;span class="k">:-&lt;/span>&lt;span class="s2">&amp;#34;localrepo.list&amp;#34;&lt;/span>&lt;span class="si">}&lt;/span> &lt;span class="c1"># Tên file output&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nv">DISTRIBUTIONS_FILE&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;repo/conf/distributions&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&amp;gt; &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="nv">$OUTPUT&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span> &lt;span class="c1"># Clear file&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">grep -E &lt;span class="s1">&amp;#39;^Codename:&amp;#39;&lt;/span> &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="nv">$DISTRIBUTIONS_FILE&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span> &lt;span class="p">|&lt;/span> awk &lt;span class="s1">&amp;#39;{print $2}&amp;#39;&lt;/span> &lt;span class="p">|&lt;/span> &lt;span class="k">while&lt;/span> &lt;span class="nb">read&lt;/span> -r codename&lt;span class="p">;&lt;/span> &lt;span class="k">do&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nv">component&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="k">$(&lt;/span>grep -A &lt;span class="m">10&lt;/span> &lt;span class="s2">&amp;#34;Codename: &lt;/span>&lt;span class="nv">$codename&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span> &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="nv">$DISTRIBUTIONS_FILE&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span> &lt;span class="p">|&lt;/span> grep -E &lt;span class="s1">&amp;#39;^Components:&amp;#39;&lt;/span> &lt;span class="p">|&lt;/span> awk &lt;span class="s1">&amp;#39;{$1=&amp;#34;&amp;#34;; print $0}&amp;#39;&lt;/span> &lt;span class="p">|&lt;/span> xargs -n1 &lt;span class="p">|&lt;/span> sort -u &lt;span class="p">|&lt;/span> xargs&lt;span class="k">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="o">[[&lt;/span> -n &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="nv">$component&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span> &lt;span class="o">]]&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="k">then&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">echo&lt;/span> &lt;span class="s2">&amp;#34;deb [trusted=yes,arch=amd64] &lt;/span>&lt;span class="nv">$REPO_URL&lt;/span>&lt;span class="s2"> &lt;/span>&lt;span class="nv">$codename&lt;/span>&lt;span class="s2"> &lt;/span>&lt;span class="nv">$component&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span> &amp;gt;&amp;gt; &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="nv">$OUTPUT&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">else&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">echo&lt;/span> &lt;span class="s2">&amp;#34;⚠️ Warning: No components found for Codename: &lt;/span>&lt;span class="nv">$codename&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">fi&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">done&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nb">echo&lt;/span> &lt;span class="s2">&amp;#34;✅ File &lt;/span>&lt;span class="nv">$OUTPUT&lt;/span>&lt;span class="s2"> created:&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">cat &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="nv">$OUTPUT&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;h4 id="-cách-chạy-1">🛠️ Cách chạy:
+&lt;/h4>&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">./generate-sources-list.sh https://my-s3-bucket.s3.amazonaws.com/repo my-repo.list
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>File output &lt;code>my-repo.list&lt;/code> có dạng:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-fallback" data-lang="fallback">&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">deb [trusted=yes,arch=amd64] https://my-s3-bucket.s3.amazonaws.com/repo v1.0 main
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;hr>
+&lt;h3 id="3-publishsh--đồng-bộ-hóa-toàn-bộ-repo-lên-s3">3. &lt;code>publish.sh&lt;/code> – &lt;strong>Đồng bộ hóa toàn bộ repo lên S3&lt;/strong>
+&lt;/h3>&lt;h4 id="-nhiệm-vụ-2">✅ Nhiệm vụ:
+&lt;/h4>&lt;ul>
+&lt;li>Lấy cấu hình từ S3 về local.&lt;/li>
+&lt;li>Duyệt và thêm tất cả file &lt;code>.deb&lt;/code> hiện có vào repo.&lt;/li>
+&lt;li>Xóa &lt;code>repo/db&lt;/code> để tránh sync dữ liệu cache không cần thiết.&lt;/li>
+&lt;li>Sync toàn bộ repo lên S3.&lt;/li>
+&lt;li>Tạo file &lt;code>.list&lt;/code> và upload nó lên S3.&lt;/li>
+&lt;/ul>
+&lt;h4 id="-nội-dung-chính-2">🧩 Nội dung chính:
+&lt;/h4>&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;span class="lnt">21
+&lt;/span>&lt;span class="lnt">22
+&lt;/span>&lt;span class="lnt">23
+&lt;/span>&lt;span class="lnt">24
+&lt;/span>&lt;span class="lnt">25
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">#!/bin/bash&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nb">set&lt;/span> -e
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nv">S3_BUCKET&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="nv">$1&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nv">REPO_NAME&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="nv">$2&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nv">VERSION&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="nv">$3&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nv">PUBLIC_HOST_URL&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="nv">$4&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">if&lt;/span> &lt;span class="o">[[&lt;/span> -z &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="nv">$S3_BUCKET&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span> &lt;span class="o">||&lt;/span> -z &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="nv">$REPO_NAME&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span> &lt;span class="o">||&lt;/span> -z &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="nv">$VERSION&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span> &lt;span class="o">||&lt;/span> -z &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="nv">$PUBLIC_HOST_URL&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span> &lt;span class="o">]]&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="k">then&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">echo&lt;/span> &lt;span class="s2">&amp;#34;Usage: &lt;/span>&lt;span class="nv">$0&lt;/span>&lt;span class="s2"> &amp;lt;S3_BUCKET&amp;gt; &amp;lt;REPO_NAME&amp;gt; &amp;lt;VERSION&amp;gt; &amp;lt;PUBLIC_HOST_URL&amp;gt;&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">exit&lt;/span> &lt;span class="m">1&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">fi&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">aws s3 sync s3://&lt;span class="nv">$S3_BUCKET&lt;/span>/repo/conf ./repo/conf --exact-timestamps
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">for&lt;/span> file in ./*.deb&lt;span class="p">;&lt;/span> &lt;span class="k">do&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> ./update-repo.sh &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="nv">$file&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span> &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="nv">$VERSION&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">done&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">rm -rf ./repo/db
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">aws s3 sync ./repo s3://&lt;span class="nv">$S3_BUCKET&lt;/span>/repo
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">./generate-sources-list.sh &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="nv">$PUBLIC_HOST_URL&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span> &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="nv">$REPO_NAME&lt;/span>&lt;span class="s2">.list&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">aws s3 cp ./&lt;span class="nv">$REPO_NAME&lt;/span>.list s3://&lt;span class="nv">$S3_BUCKET&lt;/span>/source/&lt;span class="nv">$REPO_NAME&lt;/span>.list
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;h4 id="-cách-chạy-2">🛠️ Cách chạy:
+&lt;/h4>&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">./publish.sh my-s3-bucket my-repo v1.0 https://my-s3-bucket.s3.amazonaws.com/repo
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;hr>
+&lt;h3 id="4-thử-nghiêm">4. Thử nghiêm
+&lt;/h3>&lt;p>Client có thể cấu hình APT như sau:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">sudo curl -o /etc/apt/sources.list.d/my-repo.list https://my-s3-bucket.s3.amazonaws.com/source/my-repo.list
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">sudo apt update
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;hr>
+&lt;h2 id="v-kết-luận">V. Kết luận
+&lt;/h2>&lt;p>Việc sử dụng &lt;code>reprepro&lt;/code> kết hợp với S3 là một giải pháp:&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>Nhẹ, đơn giản&lt;/strong>&lt;/li>
+&lt;li>&lt;strong>Không cần web server&lt;/strong>&lt;/li>
+&lt;li>&lt;strong>Dễ tích hợp CI/CD&lt;/strong>&lt;/li>
+&lt;/ul></description></item><item><title>Effective Management of Multiple Kubernetes Environments with Helmfile</title><link>https://phongthien99.github.io/posts/effective-management-of-multiple-kubernetes-environments-with-helmfile/</link><pubDate>Sun, 01 Jun 2025 00:00:00 +0000</pubDate><guid>https://phongthien99.github.io/posts/effective-management-of-multiple-kubernetes-environments-with-helmfile/</guid><description>&lt;h1 id="effective-management-of-multiple-kubernetes-environments-with-helmfile">Effective Management of Multiple Kubernetes Environments with Helmfile
+&lt;/h1>&lt;h2 id="1-đặt-vấn-đề">1. Đặt Vấn Đề
+&lt;/h2>&lt;p>Khi sử dụng Helm để triển khai ứng dụng lên Kubernetes, bạn sẽ sớm nhận ra một số vấn đề phổ biến:&lt;/p>
+&lt;ul>
+&lt;li>🔁 Cần quản lý &lt;strong>nhiều chart&lt;/strong> cho các dịch vụ khác nhau.&lt;/li>
+&lt;li>🌍 Cần giữ &lt;strong>cấu hình nhất quán giữa các môi trường&lt;/strong> (dev, staging, production).&lt;/li>
+&lt;li>⚙️ Cần khả năng &lt;strong>diff trước khi deploy&lt;/strong>, &lt;strong>cập nhật đồng loạt&lt;/strong> dễ kiểm soát.&lt;/li>
+&lt;/ul>
+&lt;p>Việc dùng Helm thuần (&lt;code>helm install&lt;/code>, &lt;code>helm upgrade&lt;/code>) cho từng chart rất thủ công, dễ lỗi và &lt;strong>khó mở rộng&lt;/strong> khi team hoặc dự án lớn lên.&lt;/p>
+&lt;hr>
+&lt;h2 id="2-giải-pháp-helmfile--helm-for-the-real-world">2. Giải Pháp: Helmfile – &lt;em>Helm For The Real World&lt;/em>
+&lt;/h2>&lt;p>&lt;a class="link" href="https://github.com/helmfile/helmfile" target="_blank" rel="noopener"
+>Helmfile&lt;/a> là một công cụ mã nguồn mở giúp bạn quản lý nhiều Helm chart một cách có tổ chức và nhất quán giữa các môi trường.&lt;/p>
+&lt;h3 id="-tính-năng-nổi-bật">🔍 Tính năng nổi bật:
+&lt;/h3>&lt;ul>
+&lt;li>📦 &lt;strong>Triển khai nhiều Helm chart&lt;/strong> với một file YAML duy nhất.&lt;/li>
+&lt;li>🌐 &lt;strong>Hỗ trợ đa môi trường&lt;/strong> (&lt;code>dev&lt;/code>, &lt;code>staging&lt;/code>, &lt;code>production&lt;/code>, v.v.).&lt;/li>
+&lt;li>🔄 &lt;strong>Tích hợp sẵn &lt;code>diff&lt;/code>, &lt;code>template&lt;/code>, &lt;code>sync&lt;/code>, &lt;code>apply&lt;/code>&lt;/strong> — cực kỳ tiện cho CI/CD và GitOps.&lt;/li>
+&lt;li>🧠 &lt;strong>Hỗ trợ biến động (&lt;code>env&lt;/code>), template Go, kế thừa giá trị cấu hình&lt;/strong>, dễ tái sử dụng.&lt;/li>
+&lt;/ul>
+&lt;hr>
+&lt;h2 id="3-hiện-thực-hóa-cài-đặt-và-sử-dụng-helmfile">3. Hiện Thực Hóa: Cài Đặt Và Sử Dụng Helmfile
+&lt;/h2>&lt;h3 id="-script-cài-đặt-helmfile-mới-nhất">🔧 Script Cài Đặt Helmfile Mới Nhất
+&lt;/h3>&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;span class="lnt">21
+&lt;/span>&lt;span class="lnt">22
+&lt;/span>&lt;span class="lnt">23
+&lt;/span>&lt;span class="lnt">24
+&lt;/span>&lt;span class="lnt">25
+&lt;/span>&lt;span class="lnt">26
+&lt;/span>&lt;span class="lnt">27
+&lt;/span>&lt;span class="lnt">28
+&lt;/span>&lt;span class="lnt">29
+&lt;/span>&lt;span class="lnt">30
+&lt;/span>&lt;span class="lnt">31
+&lt;/span>&lt;span class="lnt">32
+&lt;/span>&lt;span class="lnt">33
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">#!/bin/bash&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nb">set&lt;/span> -e
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1"># Lấy phiên bản mới nhất từ GitHub API&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nv">LATEST_VERSION&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="k">$(&lt;/span>curl -s https://api.github.com/repos/helmfile/helmfile/releases/latest &lt;span class="p">|&lt;/span> grep &lt;span class="s1">&amp;#39;&amp;#34;tag_name&amp;#34;:&amp;#39;&lt;/span> &lt;span class="p">|&lt;/span> sed -E &lt;span class="s1">&amp;#39;s/.*&amp;#34;([^&amp;#34;]+)&amp;#34;.*/\1/&amp;#39;&lt;/span>&lt;span class="k">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nb">echo&lt;/span> &lt;span class="s2">&amp;#34;Phiên bản helmfile mới nhất: &lt;/span>&lt;span class="nv">$LATEST_VERSION&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1"># Tạo tên file tải về&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nv">FILE_TAR&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;helmfile_&lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nv">LATEST_VERSION&lt;/span>&lt;span class="p">#v&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="s2">_linux_amd64.tar.gz&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1"># URL tải về&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nv">DOWNLOAD_URL&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s2">&amp;#34;https://github.com/helmfile/helmfile/releases/download/&lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nv">LATEST_VERSION&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="s2">/&lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nv">FILE_TAR&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nb">echo&lt;/span> &lt;span class="s2">&amp;#34;URL tải về: &lt;/span>&lt;span class="nv">$DOWNLOAD_URL&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1"># Tải file tar.gz&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">curl -LO &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="nv">$DOWNLOAD_URL&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1"># Giải nén&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">tar -xzf &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="nv">$FILE_TAR&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1"># Cấp quyền thực thi và di chuyển&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">chmod +x helmfile
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">sudo mv helmfile /usr/local/bin/
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1"># Xóa file tar.gz&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">rm &lt;span class="s2">&amp;#34;&lt;/span>&lt;span class="nv">$FILE_TAR&lt;/span>&lt;span class="s2">&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1"># Kiểm tra phiên bản&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nb">echo&lt;/span> &lt;span class="s2">&amp;#34;Cài đặt thành công. Phiên bản helmfile hiện tại:&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">helmfile --version
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;hr>
+&lt;h3 id="-cấu-trúc-thư-mục-helmfile-nhiều-môi-trường">📁 Cấu Trúc Thư Mục Helmfile Nhiều Môi Trường
+&lt;/h3>&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-fallback" data-lang="fallback">&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">.
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">├── helmfile.yaml
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">├── environments/
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">│ ├── dev.yaml
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">│ ├── staging.yaml
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">│ └── production.yaml
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">├── values/
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">│ └── shared-values.yaml
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">└── charts/
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> ├── redis/
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> └── my-app/
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;hr>
+&lt;h2 id="4-triển-khai-nhiều-môi-trường-với-helmfile">4. Triển Khai Nhiều Môi Trường Với Helmfile
+&lt;/h2>&lt;h3 id="-helmfileyaml-mẫu">🧩 &lt;code>helmfile.yaml&lt;/code> Mẫu
+&lt;/h3>&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;span class="lnt">21
+&lt;/span>&lt;span class="lnt">22
+&lt;/span>&lt;span class="lnt">23
+&lt;/span>&lt;span class="lnt">24
+&lt;/span>&lt;span class="lnt">25
+&lt;/span>&lt;span class="lnt">26
+&lt;/span>&lt;span class="lnt">27
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-yaml" data-lang="yaml">&lt;span class="line">&lt;span class="cl">&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="nt">environments&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">dev&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">values&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="l">environments/dev.yaml&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">staging&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">values&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="l">environments/staging.yaml&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">production&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">values&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="l">environments/production.yaml&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="nn">---&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="nt">releases&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="nt">name&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">redis&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">namespace&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>{{&lt;span class="w"> &lt;/span>&lt;span class="l">.Environment.Name }}&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">chart&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">charts/redis&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">values&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="l">values/shared-values.yaml&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="nt">name&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">my-app&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">namespace&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>{{&lt;span class="w"> &lt;/span>&lt;span class="l">.Environment.Name }}&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">chart&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">charts/my-app&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">needs&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="l">redis&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">values&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="l">values/shared-values.yaml&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="l">environments/{{ .Environment.Name }}.yaml&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;blockquote>
+&lt;p>📌 Lưu ý: dùng &amp;mdash; để phân tách environments: và releases: đúng cú pháp Helmfile.&lt;/p>&lt;/blockquote>
+&lt;hr>
+&lt;h3 id="-ví-dụ-file-environmentsdevyaml">📄 Ví Dụ File &lt;code>environments/dev.yaml&lt;/code>
+&lt;/h3>&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;span class="lnt">4
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-yaml" data-lang="yaml">&lt;span class="line">&lt;span class="cl">&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="nt">replicaCount&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="m">1&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="nt">image&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">tag&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">dev-latest&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;hr>
+&lt;h3 id="-lệnh-triển-khai-theo-môi-trường">🚀 Lệnh Triển Khai Theo Môi Trường
+&lt;/h3>&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;span class="lnt">4
+&lt;/span>&lt;span class="lnt">5
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">bash
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">CopyEdit
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">helmfile -e dev apply &lt;span class="c1"># Triển khai môi trường dev&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">helmfile -e staging diff &lt;span class="c1"># Xem diff môi trường staging&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">helmfile -e production apply &lt;span class="c1"># Triển khai production&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;hr>
+&lt;h2 id="5-kết-luận">5. Kết Luận
+&lt;/h2>&lt;p>Helmfile là trợ thủ đắc lực nếu bạn đang triển khai ứng dụng với nhiều dịch vụ và môi trường:&lt;/p>
+&lt;ul>
+&lt;li>✅ &lt;strong>Giảm rủi ro khi deploy thủ công&lt;/strong>&lt;/li>
+&lt;li>✅ &lt;strong>Quản lý môi trường rõ ràng, tách biệt&lt;/strong>&lt;/li>
+&lt;li>✅ &lt;strong>Tích hợp CI/CD dễ dàng&lt;/strong>&lt;/li>
+&lt;li>✅ &lt;strong>Hỗ trợ đầy đủ triết lý GitOps&lt;/strong>&lt;/li>
+&lt;/ul></description></item></channel></rss>

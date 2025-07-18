@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Telepresence on phongthien</title><link>https://phongthien99.github.io/tags/telepresence/</link><description>Recent content in Telepresence on phongthien</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Sat, 24 Aug 2024 01:17:00 +0800</lastBuildDate><atom:link href="https://phongthien99.github.io/tags/telepresence/index.xml" rel="self" type="application/rss+xml"/><item><title>Fast Connection Localhost to Kubernetes with Telepresence</title><link>https://phongthien99.github.io/posts/fast-connection-localhost-to-kubernetes-with-telepresence/</link><pubDate>Sat, 24 Aug 2024 01:17:00 +0800</pubDate><guid>https://phongthien99.github.io/posts/fast-connection-localhost-to-kubernetes-with-telepresence/</guid><description>&lt;h1 id="fast-connection-localhost-to-kubernetes-with-telepresence">Fast Connection Localhost to Kubernetes with Telepresence
+&lt;/h1>&lt;h2 id="vấn-đề-gặp-phải">Vấn đề gặp phải
+&lt;/h2>&lt;p>Trong quá trình phát triển với kiến trúc microservice, việc tương tác với các dịch vụ khác là điều không thể tránh khỏi. Thay vì phải triển khai toàn bộ các microservice trên máy local, bạn có thể tận dụng các dịch vụ đã được triển khai trên cụm Kubernetes (K8s). Một giải pháp thường được sử dụng là &lt;code>kubectl port-forward&lt;/code> để chuyển tiếp các cổng từ cluster về máy local. Tuy nhiên, phương pháp này có thể trở nên phức tạp và tốn thời gian khi số lượng microservice tăng lên, đòi hỏi việc mở nhiều cổng cho từng dịch vụ.&lt;/p>
+&lt;h2 id="giải-pháp">Giải pháp
+&lt;/h2>&lt;p>Để giải quyết vấn đề phức tạp khi phải mở nhiều cổng bằng &lt;code>kubectl port-forward&lt;/code>, chúng ta có thể sử dụng &lt;strong>Telepresence&lt;/strong>. Công cụ này cung cấp một cách tiếp cận đơn giản và hiệu quả hơn, loại bỏ nhu cầu mở từng cổng cho từng dịch vụ microservice.&lt;/p>
+&lt;p>&lt;strong>Telepresence&lt;/strong> cho phép bạn chạy ứng dụng trên máy local và kết nối trực tiếp với cụm Kubernetes. Thay vì phải thủ công mở cổng cho từng dịch vụ, Telepresence thiết lập một kết nối mạng toàn diện giữa máy local và cluster Kubernetes. Điều này cho phép bạn truy cập mọi dịch vụ trong cluster như thể chúng đang chạy trên chính máy local của bạn.&lt;/p>
+&lt;h2 id="thực-hiện">Thực hiện
+&lt;/h2>&lt;h3 id="1-cài-đặt-trên-ubuntu">1. Cài đặt trên Ubuntu
+&lt;/h3>&lt;p>Trước khi cài đặt Telepresence, hãy đảm bảo rằng máy của bạn đã cài đặt &lt;code>kubectl&lt;/code>.&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;span class="lnt">4
+&lt;/span>&lt;span class="lnt">5
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">&lt;span class="c1"># 1. Download the latest binary (~50 MB):&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">sudo curl -fL https://app.getambassador.io/download/tel2/linux/amd64/latest/telepresence -o /usr/local/bin/telepresence
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1"># 2. Make the binary executable:&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">sudo chmod a+x /usr/local/bin/telepresence
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;h3 id="2-thiết-lập-kết-nối-với-cụm-kubernetes">2. Thiết lập kết nối với cụm Kubernetes
+&lt;/h3>&lt;p>Để kết nối máy local với cụm Kubernetes, bạn chỉ cần chạy lệnh sau:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">telepresence connect
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;h3 id="3-cài-đặt-traffic-manager">3. Cài đặt Traffic Manager
+&lt;/h3>&lt;p>Traffic Manager là thành phần quan trọng giúp Telepresence quản lý lưu lượng giữa máy local và cụm Kubernetes. Bạn có thể cài đặt Traffic Manager bằng cách sử dụng Helm:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">telepresence helm install
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;h3 id="4-thử-nghiệm">4. Thử nghiệm
+&lt;/h3>&lt;p>Sau khi cài đặt và kết nối thành công, bạn có thể thử nghiệm kết nối với các dịch vụ trong cụm Kubernetes:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">telnet &lt;span class="s">&amp;lt;&amp;lt;service-name&amp;gt;&amp;gt;.&amp;lt;&amp;lt;names&lt;/span>pace&amp;gt;&amp;gt; &amp;lt;&amp;lt;port&amp;gt;&amp;gt;
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>Ví dụ: Nếu bạn muốn kết nối tới dịch vụ &lt;code>my-service&lt;/code> trong namespace &lt;code>default&lt;/code> tại cổng 8080, bạn có thể chạy:&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">telnet my-service.default &lt;span class="m">8080&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;h2 id="kết-luận">Kết luận
+&lt;/h2>&lt;p>Telepresence là một công cụ mạnh mẽ giúp đơn giản hóa việc phát triển và thử nghiệm các ứng dụng trong kiến trúc microservice với Kubernetes. Bằng cách loại bỏ nhu cầu mở cổng cho từng dịch vụ, Telepresence cho phép bạn tập trung vào việc phát triển và kiểm thử ứng dụng mà không cần lo lắng về cấu hình phức tạp.&lt;/p>
+&lt;p>Với Telepresence, việc kết nối với cụm Kubernetes trở nên dễ dàng và liền mạch, giúp bạn tiết kiệm thời gian và nâng cao hiệu suất làm việc.&lt;/p>
+&lt;h2 id="tài-liệu-tham-khảo">Tài liệu tham khảo
+&lt;/h2>&lt;ul>
+&lt;li>&lt;a class="link" href="https://www.getambassador.io/docs/telepresence/latest/quick-start?os=gnu-linux" target="_blank" rel="noopener"
+>Telepresence Quick Start Guide&lt;/a>&lt;/li>
+&lt;/ul></description></item></channel></rss>

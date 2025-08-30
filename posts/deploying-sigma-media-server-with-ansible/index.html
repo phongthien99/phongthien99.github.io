@@ -1,0 +1,196 @@
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><meta name=description content="Deploying Sigma Media Server with Ansible Trong bài viết này, chúng ta sẽ cùng nhau triển khai Sigma Media Server lên máy chủ từ xa thông qua Ansible — công cụ tự động hóa cấu hình và triển khai phần mềm phổ biến. Bằng cách sử dụng Ansible, bạn có thể tự động hóa quá trình cài đặt và cấu hình phần mềm trên nhiều máy chủ, giúp tiết kiệm thời gian và giảm thiểu lỗi.\n"><title>Deploying Sigma Media Server with Ansible</title><link rel=canonical href=https://phongthien99.github.io/posts/deploying-sigma-media-server-with-ansible/><link rel=stylesheet href=/scss/style.min.3b9e651bc4e57036da3719d765e0b10d32e161dbbf103c9804519f5350b6d00a.css><meta property='og:title' content="Deploying Sigma Media Server with Ansible"><meta property='og:description' content="Deploying Sigma Media Server with Ansible Trong bài viết này, chúng ta sẽ cùng nhau triển khai Sigma Media Server lên máy chủ từ xa thông qua Ansible — công cụ tự động hóa cấu hình và triển khai phần mềm phổ biến. Bằng cách sử dụng Ansible, bạn có thể tự động hóa quá trình cài đặt và cấu hình phần mềm trên nhiều máy chủ, giúp tiết kiệm thời gian và giảm thiểu lỗi.\n"><meta property='og:url' content='https://phongthien99.github.io/posts/deploying-sigma-media-server-with-ansible/'><meta property='og:site_name' content='phongthien'><meta property='og:type' content='article'><meta property='article:section' content='Post'><meta property='article:tag' content='ansible'><meta property='article:published_time' content='2025-04-20T12:40:00+08:00'><meta property='article:modified_time' content='2025-04-20T12:40:00+08:00'><meta name=twitter:title content="Deploying Sigma Media Server with Ansible"><meta name=twitter:description content="Deploying Sigma Media Server with Ansible Trong bài viết này, chúng ta sẽ cùng nhau triển khai Sigma Media Server lên máy chủ từ xa thông qua Ansible — công cụ tự động hóa cấu hình và triển khai phần mềm phổ biến. Bằng cách sử dụng Ansible, bạn có thể tự động hóa quá trình cài đặt và cấu hình phần mềm trên nhiều máy chủ, giúp tiết kiệm thời gian và giảm thiểu lỗi.\n"><link rel="shortcut icon" href=/favicon.png></head><body class=article-page><script>(function(){const e="StackColorScheme";localStorage.getItem(e)||localStorage.setItem(e,"auto")})()</script><script>(function(){const t="StackColorScheme",e=localStorage.getItem(t),n=window.matchMedia("(prefers-color-scheme: dark)").matches===!0;e=="dark"||e==="auto"&&n?document.documentElement.dataset.scheme="dark":document.documentElement.dataset.scheme="light"})()</script><div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky"><button class="hamburger hamburger--spin" type=button id=toggle-menu aria-label="Toggle Menu">
+<span class=hamburger-box><span class=hamburger-inner></span></span></button><header><figure class=site-avatar><a href=/><img src=/img/avatar_hu_b560a5e3646929f4.jpg width=300 height=300 class=site-logo loading=lazy alt=Avatar>
+</a><span class=emoji>🏅</span></figure><div class=site-meta><h1 class=site-name><a href=/>phongthien</a></h1><h2 class=site-description>Software Engineer</h2></div></header><ol class=menu-social><li><a href=https://github.com/phongthien99 target=_blank title=GitHub rel=me><svg class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6.0 00-1.3-3.2 4.2 4.2.0 00-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3.0 00-6.2.0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2.0 00-.1 3.2A4.6 4.6.0 004 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg></a></li><li><a href=https://twitter.com target=_blank title=linkedin rel=me><svg class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M10 14a3.5 3.5.0 005 0l4-4a3.5 3.5.0 00-5-5l-.5.5"/><path d="M14 10a3.5 3.5.0 00-5 0l-4 4a3.5 3.5.0 005 5l.5-.5"/></svg></a></li></ol><ol class=menu id=main-menu><li><a href=/><svg class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><polyline points="5 12 3 12 12 3 21 12 19 12"/><path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/><path d="M9 21v-6a2 2 0 012-2h2a2 2 0 012 2v6"/></svg>
+<span>Home</span></a></li><li><a href=/archives/><svg class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><rect x="3" y="4" width="18" height="4" rx="2"/><path d="M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+<span>Archives</span></a></li><li><a href=/search/><svg class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="10" cy="10" r="7"/><line x1="21" y1="21" x2="15" y2="15"/></svg>
+<span>Search</span></a></li><li><a href=/about-me/><svg class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="7" r="4"/><path d="M6 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/></svg>
+<span>About me</span></a></li><li class=menu-bottom-section><ol class=menu><li id=dark-mode-toggle><svg class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="8" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<svg class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="16" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<span>Dark Mode</span></li></ol></li></ol></aside><aside class="sidebar right-sidebar sticky"><section class="widget archives"><div class=widget-icon><svg class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><line x1="5" y1="9" x2="19" y2="9"/><line x1="5" y1="15" x2="19" y2="15"/><line x1="11" y1="4" x2="7" y2="20"/><line x1="17" y1="4" x2="13" y2="20"/></svg></div><h2 class="widget-title section-title">Table of contents</h2><div class=widget--toc><nav id=TableOfContents><ol><li><a href=#1-cấu-trúc-dự-án>1. Cấu Trúc Dự Án</a></li><li><a href=#2-file-inventoryini>2. File <code>inventory.ini</code></a></li><li><a href=#3-file-playbookyml>3. File <code>playbook.yml</code></a></li><li><a href=#4-tác-vụ-triển-khai-rolessigmatasksmainyml>4. Tác vụ triển khai (<code>roles/sigma/tasks/main.yml</code>)</a></li><li><a href=#5-handler-khởi-động-và-kiểm-tra-rolessigmahandlersmainyml>5. Handler khởi động và kiểm tra (<code>roles/sigma/handlers/main.yml</code>)</a><ol><li><a href=#mối-quan-hệ-giữa><strong>Mối Quan Hệ Giữa <code>notify</code> và <code>handler</code></strong></a></li></ol></li><li><a href=#6-triển-khai-thực-tế>6. Triển Khai Thực Tế</a></li><li><a href=#kết-luận>Kết Luận</a></li></ol></nav></div></section></aside><main class="main full-width"><article class=main-article><header class=article-header><div class=article-details><header class=article-category><a href=/categories/devops/>Devops</a></header><div class=article-title-wrapper><h2 class=article-title><a href=/posts/deploying-sigma-media-server-with-ansible/>Deploying Sigma Media Server with Ansible</a></h2></div><footer class=article-time><div><svg class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M11.795 21H5a2 2 0 01-2-2V7a2 2 0 012-2h12a2 2 0 012 2v4"/><circle cx="18" cy="18" r="4"/><path d="M15 3v4"/><path d="M7 3v4"/><path d="M3 11h16"/><path d="M18 16.496V18l1 1"/></svg>
+<time class=article-time--published>Apr 20, 2025</time></div><div><svg class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+<time class=article-time--reading>6 minute read</time></div></footer></div></header><section class=article-content><h1 id=deploying-sigma-media-server-with-ansible>Deploying Sigma Media Server with Ansible</h1><p>Trong bài viết này, chúng ta sẽ cùng nhau triển khai <strong>Sigma Media Server</strong> lên máy chủ từ xa thông qua <strong>Ansible</strong> — công cụ tự động hóa cấu hình và triển khai phần mềm phổ biến. Bằng cách sử dụng Ansible, bạn có thể tự động hóa quá trình cài đặt và cấu hình phần mềm trên nhiều máy chủ, giúp tiết kiệm thời gian và giảm thiểu lỗi.</p><hr><h2 id=1-cấu-trúc-dự-án>1. Cấu Trúc Dự Án</h2><p>Dự án được tổ chức theo chuẩn <strong>Ansible Role</strong>, giúp mã dễ bảo trì và mở rộng. Cấu trúc thư mục của dự án như sau:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>devops
+</span></span><span class=line><span class=cl>├── inventory.ini
+</span></span><span class=line><span class=cl>├── playbook.yml
+</span></span><span class=line><span class=cl>└── roles
+</span></span><span class=line><span class=cl>    └── sigma/
+</span></span><span class=line><span class=cl>        ├── handlers/
+</span></span><span class=line><span class=cl>        │   └── main.yml
+</span></span><span class=line><span class=cl>        └── tasks/
+</span></span><span class=line><span class=cl>            └── main.yml
+</span></span></code></pre></td></tr></table></div></div><ul><li><strong><code>inventory.ini</code></strong>: Định nghĩa các máy chủ mục tiêu và thông tin kết nối.</li><li><strong><code>playbook.yml</code></strong>: Playbook chính chứa các bước triển khai.</li><li><strong><code>roles/sigma/handlers/main.yml</code></strong>: Định nghĩa các hành động cần thực hiện sau khi có thay đổi.</li><li><strong><code>roles/sigma/tasks/main.yml</code></strong>: Các task thực thi như cài đặt phần mềm, cấu hình hệ thống.</li></ul><hr><h2 id=2-file-inventoryini>2. File <code>inventory.ini</code></h2><p>Đây là nơi khai báo máy chủ đích (target host), nơi mà Ansible sẽ thực hiện các thao tác từ xa. Nội dung file <code>inventory.ini</code> như sau:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>[sigma_servers]
+</span></span><span class=line><span class=cl>172.16.60.123 ansible_user=dev ansible_password= ansible_become=true
+</span></span></code></pre></td></tr></table></div></div><ul><li><strong>ansible_user</strong>: tài khoản đăng nhập từ xa.</li><li><strong>ansible_password</strong>: mật khẩu đăng nhập.</li><li><strong>ansible_become</strong>: cho phép nâng quyền <code>sudo</code> nếu cần.</li></ul><hr><h2 id=3-file-playbookyml>3. File <code>playbook.yml</code></h2><p>Playbook chính mô tả quá trình triển khai, bao gồm các tác vụ từ việc cài đặt phần mềm cho đến khởi động dịch vụ. Nội dung file <code>playbook.yml</code> như sau:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-yaml data-lang=yaml><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w></span>- <span class=nt>name</span><span class=p>:</span><span class=w> </span><span class=l>Deploy Sigma Media Server</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>hosts</span><span class=p>:</span><span class=w> </span><span class=l>sigma_servers</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>become</span><span class=p>:</span><span class=w> </span><span class=kc>yes</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>roles</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span>- <span class=l>sigma</span><span class=w>
+</span></span></span></code></pre></td></tr></table></div></div><blockquote><p>Playbook này sẽ áp dụng toàn bộ vai trò sigma lên nhóm máy chủ sigma_servers.</p></blockquote><hr><h2 id=4-tác-vụ-triển-khai-rolessigmatasksmainyml>4. Tác vụ triển khai (<code>roles/sigma/tasks/main.yml</code>)</h2><p>Trong phần này, các tác vụ chính được định nghĩa để cài đặt <strong>Sigma Media Server</strong> và thực hiện các thao tác cần thiết như thêm repository, cài đặt gói phần mềm, và ghi nhận phiên bản.</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span><span class=lnt>40
+</span><span class=lnt>41
+</span><span class=lnt>42
+</span><span class=lnt>43
+</span><span class=lnt>44
+</span><span class=lnt>45
+</span><span class=lnt>46
+</span><span class=lnt>47
+</span><span class=lnt>48
+</span><span class=lnt>49
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-yaml data-lang=yaml><span class=line><span class=cl><span class=nn>---</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w></span>- <span class=nt>name</span><span class=p>:</span><span class=w> </span><span class=l>Download Sigma software repository configuration file</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>get_url</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>url</span><span class=p>:</span><span class=w> </span><span class=l>https://repo.sigma.video/debian/sigma-media-server.list</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>dest</span><span class=p>:</span><span class=w> </span><span class=l>/etc/apt/sources.list.d/sigma-media-server.list</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>mode</span><span class=p>:</span><span class=w> </span><span class=s1>&#39;0644&#39;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w></span>- <span class=nt>name</span><span class=p>:</span><span class=w> </span><span class=l>Update apt package list</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>apt</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>update_cache</span><span class=p>:</span><span class=w> </span><span class=kc>yes</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>cache_valid_time</span><span class=p>:</span><span class=w> </span><span class=m>3600</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w></span>- <span class=nt>name</span><span class=p>:</span><span class=w> </span><span class=l>Install Sigma Media Server</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>apt</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>name</span><span class=p>:</span><span class=w> </span><span class=l>sigma-media-server</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>state</span><span class=p>:</span><span class=w> </span><span class=l>present</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>changed_when</span><span class=p>:</span><span class=w> </span><span class=kc>true</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>notify</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span>- <span class=l>Start Sigma Media Server service</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span>- <span class=l>Query Sigma Media Server API</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span>- <span class=l>Show version running</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w></span>- <span class=nt>name</span><span class=p>:</span><span class=w> </span><span class=l>Create certificate directory if not exists</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>file</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>path</span><span class=p>:</span><span class=w> </span><span class=l>/etc/pki/tls/certs</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>state</span><span class=p>:</span><span class=w> </span><span class=l>directory</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>mode</span><span class=p>:</span><span class=w> </span><span class=s1>&#39;0755&#39;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w></span>- <span class=nt>name</span><span class=p>:</span><span class=w> </span><span class=l>Copy CA certificates</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>copy</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>src</span><span class=p>:</span><span class=w> </span><span class=l>/etc/ssl/certs/ca-certificates.crt</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>dest</span><span class=p>:</span><span class=w> </span><span class=l>/etc/pki/tls/certs/ca-bundle.crt</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>mode</span><span class=p>:</span><span class=w> </span><span class=s1>&#39;0644&#39;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>backup</span><span class=p>:</span><span class=w> </span><span class=kc>yes</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    
+</span></span></span><span class=line><span class=cl><span class=w></span>- <span class=nt>name</span><span class=p>:</span><span class=w> </span><span class=l>Get installed version of Sigma Media Server</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>command</span><span class=p>:</span><span class=w> </span><span class=l>dpkg -s sigma-media-server</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>register</span><span class=p>:</span><span class=w> </span><span class=l>sigma_version_info</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>changed_when</span><span class=p>:</span><span class=w> </span><span class=kc>false</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w></span>- <span class=nt>name</span><span class=p>:</span><span class=w> </span><span class=l>Log version</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>debug</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>msg</span><span class=p>:</span><span class=w> </span><span class=p>&gt;-</span><span class=sd>
+</span></span></span><span class=line><span class=cl><span class=sd>      sigma-media-server: {{
+</span></span></span><span class=line><span class=cl><span class=sd>        sigma_version_info.stdout_lines
+</span></span></span><span class=line><span class=cl><span class=sd>        | select(&#39;search&#39;, &#39;^Version:&#39;)
+</span></span></span><span class=line><span class=cl><span class=sd>        | map(&#39;regex_replace&#39;, &#39;^Version \\s*&#39;, &#39;&#39;)
+</span></span></span><span class=line><span class=cl><span class=sd>        | first
+</span></span></span><span class=line><span class=cl><span class=sd>      }}</span><span class=w>
+</span></span></span></code></pre></td></tr></table></div></div><p>Tóm lược các bước:</p><ul><li><strong>Thêm repo Sigma</strong> vào hệ thống.</li><li><strong>Cập nhật danh sách gói</strong> (<code>apt update</code>).</li><li><strong>Cài đặt <code>sigma-media-server</code></strong>.</li><li><strong>Kiểm tra và copy CA</strong> vào thư mục phục vụ cho hệ thống.</li><li><strong>Ghi nhận phiên bản</strong> của phần mềm Sigma đã cài đặt.</li></ul><hr><h2 id=5-handler-khởi-động-và-kiểm-tra-rolessigmahandlersmainyml>5. Handler khởi động và kiểm tra (<code>roles/sigma/handlers/main.yml</code>)</h2><p>Sau khi các task có thay đổi, <strong>handler</strong> sẽ thực hiện các hành động như khởi động lại dịch vụ và kiểm tra trạng thái API của Sigma. Nội dung file <code>handlers/main.yml</code> như sau:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-yaml data-lang=yaml><span class=line><span class=cl>- <span class=nt>name</span><span class=p>:</span><span class=w> </span><span class=l>Start Sigma Media Server service</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>systemd</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>name</span><span class=p>:</span><span class=w> </span><span class=l>sigma-media-server</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>state</span><span class=p>:</span><span class=w> </span><span class=l>started</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>enabled</span><span class=p>:</span><span class=w> </span><span class=kc>true</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w></span>- <span class=nt>name</span><span class=p>:</span><span class=w> </span><span class=l>Query Sigma Media Server API</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>uri</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>url</span><span class=p>:</span><span class=w> </span><span class=l>http://localhost:9999</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>method</span><span class=p>:</span><span class=w> </span><span class=l>GET</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>return_content</span><span class=p>:</span><span class=w> </span><span class=kc>yes</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>status_code</span><span class=p>:</span><span class=w> </span><span class=m>200</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>register</span><span class=p>:</span><span class=w> </span><span class=l>sigma_api_response</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>retries</span><span class=p>:</span><span class=w> </span><span class=m>5</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>delay</span><span class=p>:</span><span class=w> </span><span class=m>2</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>until</span><span class=p>:</span><span class=w> </span><span class=l>sigma_api_response.status == 200</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w></span>- <span class=nt>name</span><span class=p>:</span><span class=w> </span><span class=l>Show version running</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>debug</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>msg</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;Sigma Media Server run version: {{ sigma_api_response.json.version }}&#34;</span><span class=w>
+</span></span></span></code></pre></td></tr></table></div></div><h3 id=mối-quan-hệ-giữa><strong>Mối Quan Hệ Giữa <code>notify</code> và <code>handler</code></strong></h3><p>Trong Ansible, <strong><code>notify</code></strong> và <strong><code>handler</code></strong> có mối quan hệ mật thiết, hỗ trợ quá trình tự động hóa một cách hiệu quả.</p><ul><li><strong><code>notify</code></strong> là thuộc tính trong các task, dùng để thông báo cho Ansible khi có thay đổi. Khi một task thay đổi trạng thái (ví dụ: cài đặt thành công), nó sẽ &ldquo;thông báo&rdquo; cho các handler đã được chỉ định trong phần <code>notify</code> của task.</li><li><strong><code>handler</code></strong> là các tác vụ đặc biệt được định nghĩa trong phần <code>handlers</code>. Chúng chỉ được thực thi khi có sự &ldquo;thông báo&rdquo; từ task. Handler thường được sử dụng để thực hiện các thao tác như khởi động lại dịch vụ, kiểm tra trạng thái hệ thống, hoặc các hành động bổ sung khác mà chỉ cần thực thi khi có thay đổi.</li></ul><p>Ví dụ trong bài viết:</p><ul><li>Khi task <strong>cài đặt <code>sigma-media-server</code></strong> thành công, các <strong>handler</strong> sẽ được thông báo và thực thi:<ul><li><strong>Start Sigma Media Server service</strong>: Khởi động dịch vụ Sigma.</li><li><strong>Query Sigma Media Server API</strong>: Kiểm tra xem API của Sigma có đang hoạt động chính xác không.</li><li><strong>Show version running</strong>: In ra phiên bản của Sigma Media Server hiện đang chạy.</li></ul></li></ul><p>Nhờ vào cơ chế <strong><code>notify</code></strong> và <strong><code>handler</code></strong>, các tác vụ bổ sung chỉ được thực thi khi có sự thay đổi thực sự, giúp tiết kiệm tài nguyên và giảm thiểu việc thực thi không cần thiết.</p><hr><h2 id=6-triển-khai-thực-tế>6. Triển Khai Thực Tế</h2><p>Sau khi cấu hình xong, bạn có thể chạy lệnh dưới đây để triển khai:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl>ansible-playbook -i inventory.ini playbook.yml --ask-pass --ask-become-pass
+</span></span></code></pre></td></tr></table></div></div><ul><li><strong>- <code>i inventory.ini</code></strong>: Chỉ định tệp inventory chứa thông tin máy chủ đích.</li><li><strong><code>playbook.yml</code></strong>: Chỉ định tệp playbook chứa các task cần thực hiện.</li><li><strong><code>-ask-pass</code></strong>: Yêu cầu nhập mật khẩu để kết nối SSH đến máy chủ đích.</li><li><strong><code>-ask-become-pass</code></strong>: Yêu cầu nhập mật khẩu <code>sudo</code> để thực hiện các tác vụ yêu cầu quyền quản trị.</li></ul><blockquote><p>Nếu thiết lập đúng, hệ thống sẽ cài đặt và khởi động Sigma Media Server, đồng thời in ra phiên bản đang chạy.</p></blockquote><hr><h2 id=kết-luận>Kết Luận</h2><p>Với việc đóng gói cấu hình Ansible thành <strong>role</strong> <code>sigma</code>, bạn có thể dễ dàng:</p><ul><li>Tự động hóa triển khai trên nhiều máy chủ.</li><li>Kiểm tra trạng thái hoạt động dịch vụ.</li><li>Ghi lại version nhằm phục vụ giám sát và audit.</li></ul></section><footer class=article-footer><section class=article-tags><a href=/tags/ansible/>Ansible</a></section><section class=article-copyright><svg class="icon icon-tabler icon-tabler-copyright" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><path d="M14.5 9a3.5 4 0 100 6"/></svg>
+<span>Licensed under CC BY-NC-SA 4.0</span></section></footer><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css integrity=sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV crossorigin=anonymous><script src=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js integrity=sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8 crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js integrity=sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05 crossorigin=anonymous defer></script><script>window.addEventListener("DOMContentLoaded",()=>{const e=document.querySelector(".main-article");renderMathInElement(e,{delimiters:[{left:"$$",right:"$$",display:!0},{left:"$",right:"$",display:!1},{left:"\\(",right:"\\)",display:!1},{left:"\\[",right:"\\]",display:!0}],ignoredClasses:["gist"]})})</script></article><aside class=related-content--wrapper><h2 class=section-title>Related content</h2><div class=related-content><div class="flex article-list--tile"><article><a href=/posts/guide-to-installing-and-deploying-helm-chart-from-a-git-repository/><div class=article-details><h2 class=article-title>Guide to Installing and Deploying Helm Chart from a Git Repository</h2></div></a></article><article><a href=/posts/lightweight-and-fast-real-time-log-viewer/><div class=article-details><h2 class=article-title>Lightweight and Fast Real-Time Log Viewer</h2></div></a></article><article><a href=/posts/log-monitoring-for-sigma-media-server-using-promtail-loki-and-grafana/><div class=article-details><h2 class=article-title>Log Monitoring for Sigma Media Server Using Promtail, Loki, and Grafana</h2></div></a></article></div></div></aside><div class=disqus-container></div><style>.disqus-container{background-color:var(--card-background);border-radius:var(--card-border-radius);box-shadow:var(--shadow-l1);padding:var(--card-padding)}</style><script>window.addEventListener("onColorSchemeChange",e=>{typeof DISQUS=="object"&&DISQUS.reset({reload:!0})})</script><footer class=site-footer><section class=copyright>&copy;
+2025 phongthien</section><section class=powerby>Built with <a href=https://gohugo.io/ target=_blank rel=noopener>Hugo</a><br>Theme <b><a href=https://github.com/CaiJimmy/hugo-theme-stack target=_blank rel=noopener data-version=3.30.0>Stack</a></b> designed by <a href=https://jimmycai.com target=_blank rel=noopener>Jimmy</a></section></footer><div class=pswp tabindex=-1 role=dialog aria-hidden=true><div class=pswp__bg></div><div class=pswp__scroll-wrap><div class=pswp__container><div class=pswp__item></div><div class=pswp__item></div><div class=pswp__item></div></div><div class="pswp__ui pswp__ui--hidden"><div class=pswp__top-bar><div class=pswp__counter></div><button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+<button class="pswp__button pswp__button--share" title=Share></button>
+<button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+<button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button><div class=pswp__preloader><div class=pswp__preloader__icn><div class=pswp__preloader__cut><div class=pswp__preloader__donut></div></div></div></div></div><div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap"><div class=pswp__share-tooltip></div></div><button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+</button>
+<button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)"></button><div class=pswp__caption><div class=pswp__caption__center></div></div></div></div></div><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo=" crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU=" crossorigin=anonymous defer></script><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css crossorigin=anonymous><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css crossorigin=anonymous></main></div><script src=https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z+KMkF24hUW8WePSA9HM=" crossorigin=anonymous></script><script type=text/javascript src=/ts/main.1e9a3bafd846ced4c345d084b355fb8c7bae75701c338f8a1f8a82c780137826.js defer></script><script>(function(){const e=document.createElement("link");e.href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap",e.type="text/css",e.rel="stylesheet",document.head.appendChild(e)})()</script></body></html>

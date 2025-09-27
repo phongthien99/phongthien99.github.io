@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Programming on phongthien</title><link>https://phongthien99.github.io/categories/programming/</link><description>Recent content in Programming on phongthien</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Thu, 11 Sep 2025 10:17:00 +0800</lastBuildDate><atom:link href="https://phongthien99.github.io/categories/programming/index.xml" rel="self" type="application/rss+xml"/><item><title>Fake Domain trong Docker: Case Study với Kafka</title><link>https://phongthien99.github.io/posts/fake-domain-trong-docker-case-study-v%E1%BB%9Bi-kafka/</link><pubDate>Thu, 11 Sep 2025 10:17:00 +0800</pubDate><guid>https://phongthien99.github.io/posts/fake-domain-trong-docker-case-study-v%E1%BB%9Bi-kafka/</guid><description>&lt;h1 id="fake-domain-trong-docker-case-study-với-kafka"&gt;Fake Domain trong Docker: Case Study với Kafka
+&lt;/h1&gt;&lt;h2 id="1-đặt-vấn-đề"&gt;1. Đặt vấn đề
+&lt;/h2&gt;&lt;p&gt;Trong môi trường &lt;strong&gt;development&lt;/strong&gt;, chúng ta thường chạy nhiều service bằng Docker: database, message broker, API… để mô phỏng gần giống production. Các service này cần kết nối với nhau, đồng thời developer cũng muốn dùng tool từ &lt;strong&gt;máy host&lt;/strong&gt; (máy thật) để test trực tiếp.&lt;/p&gt;
+&lt;p&gt;Vấn đề thường gặp:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Nếu container A gọi container B bằng &lt;code&gt;localhost&lt;/code&gt;, thì &lt;code&gt;localhost&lt;/code&gt; chỉ trỏ tới chính container A, không phải container B.&lt;/li&gt;
+&lt;li&gt;Nếu dùng &lt;strong&gt;tên container&lt;/strong&gt; (ví dụ &lt;code&gt;kafka&lt;/code&gt;), thì trong Docker network hoạt động tốt, nhưng từ máy host thì hostname này không resolve được.&lt;/li&gt;
+&lt;li&gt;Nếu dùng &lt;strong&gt;IP container&lt;/strong&gt;, thì mỗi lần restart container, IP có thể thay đổi → config dễ bị hỏng.&lt;/li&gt;
+&lt;li&gt;Kết quả là developer thường phải duy trì &lt;strong&gt;hai cấu hình khác nhau&lt;/strong&gt;: một cho client chạy trong Docker network, một cho client chạy trên host.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;👉 Giải pháp là sử dụng &lt;strong&gt;fake domain alias&lt;/strong&gt;:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Docker cho phép gán alias cho container trong network.&lt;/li&gt;
+&lt;li&gt;Các container cùng network gọi service qua alias này.&lt;/li&gt;
+&lt;li&gt;Trên host, ta ánh xạ alias đó về &lt;code&gt;127.0.0.1&lt;/code&gt; trong file &lt;code&gt;/etc/hosts&lt;/code&gt;.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Nhờ vậy:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Container và host cùng dùng một domain để kết nối.&lt;/li&gt;
+&lt;li&gt;Config được thống nhất, giảm lỗi.&lt;/li&gt;
+&lt;li&gt;Developer dev/test thuận tiện hơn, không phải chỉnh sửa config nhiều lần.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id="2-case-study-kafka-trong-docker"&gt;2. Case Study: Kafka trong Docker
+&lt;/h2&gt;&lt;h3 id="21-cấu-hình-kafka-với-fake-domain-alias"&gt;2.1. Cấu hình Kafka với fake domain alias
+&lt;/h3&gt;&lt;p&gt;Ví dụ trong &lt;code&gt;docker-compose.yml&lt;/code&gt;:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt; 1
+&lt;/span&gt;&lt;span class="lnt"&gt; 2
+&lt;/span&gt;&lt;span class="lnt"&gt; 3
+&lt;/span&gt;&lt;span class="lnt"&gt; 4
+&lt;/span&gt;&lt;span class="lnt"&gt; 5
+&lt;/span&gt;&lt;span class="lnt"&gt; 6
+&lt;/span&gt;&lt;span class="lnt"&gt; 7
+&lt;/span&gt;&lt;span class="lnt"&gt; 8
+&lt;/span&gt;&lt;span class="lnt"&gt; 9
+&lt;/span&gt;&lt;span class="lnt"&gt;10
+&lt;/span&gt;&lt;span class="lnt"&gt;11
+&lt;/span&gt;&lt;span class="lnt"&gt;12
+&lt;/span&gt;&lt;span class="lnt"&gt;13
+&lt;/span&gt;&lt;span class="lnt"&gt;14
+&lt;/span&gt;&lt;span class="lnt"&gt;15
+&lt;/span&gt;&lt;span class="lnt"&gt;16
+&lt;/span&gt;&lt;span class="lnt"&gt;17
+&lt;/span&gt;&lt;span class="lnt"&gt;18
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-yaml" data-lang="yaml"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nt"&gt;kafka&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;image&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;confluentinc/cp-kafka:7.6.0&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;container_name&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;kafka&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;networks&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;dev-net&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;aliases&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;- &lt;span class="l"&gt;kafka.remote &lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="c"&gt;# fake domain&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;ports&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;- &lt;span class="m"&gt;9092&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="m"&gt;9092&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;environment&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;KAFKA_PROCESS_ROLES&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;broker,controller&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;KAFKA_NODE_ID&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;1&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;KAFKA_LISTENERS&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;KAFKA_ADVERTISED_LISTENERS&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;PLAINTEXT://kafka.remote:9092&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;KAFKA_LISTENER_SECURITY_PROTOCOL_MAP&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;KAFKA_INTER_BROKER_LISTENER_NAME&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;PLAINTEXT&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;KAFKA_CONTROLLER_LISTENER_NAMES&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;CONTROLLER&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;KAFKA_CONTROLLER_QUORUM_VOTERS&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;1&lt;/span&gt;@&lt;span class="l"&gt;kafka.remote:9093&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;Ở đây:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Kafka &lt;strong&gt;quảng bá&lt;/strong&gt; (advertise) địa chỉ &lt;code&gt;kafka.remote:9092&lt;/code&gt;.&lt;/li&gt;
+&lt;li&gt;Trong network &lt;code&gt;dev-net&lt;/code&gt;, các container khác có thể gọi &lt;code&gt;kafka.remote:9092&lt;/code&gt; mà không cần IP.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h3 id="22-kết-nối-từ-máy-host"&gt;2.2. Kết nối từ máy host
+&lt;/h3&gt;&lt;p&gt;Máy host không biết &lt;code&gt;kafka.remote&lt;/code&gt; là gì, nên nếu chạy client Kafka từ host sẽ bị lỗi.&lt;/p&gt;
+&lt;p&gt;Giải pháp: thêm alias vào &lt;code&gt;/etc/hosts&lt;/code&gt;:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-fallback" data-lang="fallback"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;127.0.0.1 kafka.remote
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;Khi đó:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Container trong network: gọi Kafka bằng &lt;code&gt;kafka.remote:9092&lt;/code&gt;.&lt;/li&gt;
+&lt;li&gt;Host thật: cũng gọi Kafka bằng &lt;code&gt;kafka.remote:9092&lt;/code&gt;.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Ví dụ:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;span class="lnt"&gt;3
+&lt;/span&gt;&lt;span class="lnt"&gt;4
+&lt;/span&gt;&lt;span class="lnt"&gt;5
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-bash" data-lang="bash"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="c1"&gt;# Từ container khác&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;kafka-console-producer.sh --bootstrap-server kafka.remote:9092 --topic &lt;span class="nb"&gt;test&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="c1"&gt;# Từ host&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;kafka-console-consumer.sh --bootstrap-server kafka.remote:9092 --topic &lt;span class="nb"&gt;test&lt;/span&gt; --from-beginning
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;👉 Cả hai trường hợp đều dùng chung config &lt;code&gt;kafka.remote:9092&lt;/code&gt;.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="3-kết-luận"&gt;3. Kết luận
+&lt;/h2&gt;&lt;p&gt;Trong môi trường dev, vấn đề hostname giữa container và host thường gây rắc rối khi kết nối đến các service như Kafka. Sử dụng &lt;strong&gt;fake domain alias&lt;/strong&gt; là một giải pháp đơn giản nhưng hiệu quả:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Container và host dùng &lt;strong&gt;cùng một domain&lt;/strong&gt;.&lt;/li&gt;
+&lt;li&gt;Config thống nhất, giảm lỗi khi chuyển đổi môi trường.&lt;/li&gt;
+&lt;li&gt;Dev/test thuận tiện, gần giống với production (nơi thường dùng domain thay vì IP).&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Đây là một thủ thuật nhỏ nhưng cực kỳ hữu ích để giữ cho môi trường development gọn gàng, nhất quán và thân thiện với developer.&lt;/p&gt;</description></item><item><title>Golang Module Design: Simplifying Struct and Interface Reuse</title><link>https://phongthien99.github.io/posts/golang-module-design-simplifying-struct-and-interface-reuse/</link><pubDate>Sun, 24 Aug 2025 01:17:00 +0800</pubDate><guid>https://phongthien99.github.io/posts/golang-module-design-simplifying-struct-and-interface-reuse/</guid><description>&lt;h3 id="1-đặt-vấn-đề"&gt;1. Đặt vấn đề
+&lt;/h3&gt;&lt;p&gt;Trong các dự án Golang lớn, thường gặp tình huống:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Module mới cần sử dụng một &lt;strong&gt;struct&lt;/strong&gt; hoặc &lt;strong&gt;interface&lt;/strong&gt; đã tồn tại trong module cũ.&lt;/li&gt;
+&lt;li&gt;Nếu import trực tiếp module cũ: module mới sẽ phụ thuộc mạnh vào module cũ → &lt;strong&gt;tight coupling&lt;/strong&gt;, khó bảo trì.&lt;/li&gt;
+&lt;li&gt;Nếu di chuyển struct/interface vào &lt;strong&gt;shared module&lt;/strong&gt;: phải sửa code cũ → dễ gây rủi ro phá vỡ logic đã ổn định.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Câu hỏi đặt ra:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Làm sao để module mới dùng lại struct và interface của module cũ thông qua một shared module, mà không thay đổi code cũ, đồng thời giảm phức tạp và dễ maintain?&lt;/p&gt;&lt;/blockquote&gt;
+&lt;hr&gt;
+&lt;h3 id="2-giải-pháp-type-alias-trong-shared-module"&gt;2. Giải pháp: Type Alias trong Shared Module
+&lt;/h3&gt;&lt;p&gt;Golang hỗ trợ &lt;strong&gt;type alias&lt;/strong&gt;, cho phép tạo &lt;strong&gt;bí danh&lt;/strong&gt; cho struct hoặc interface từ module cũ. Kết hợp với shared module, ta có thể giải quyết vấn đề:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt; 1
+&lt;/span&gt;&lt;span class="lnt"&gt; 2
+&lt;/span&gt;&lt;span class="lnt"&gt; 3
+&lt;/span&gt;&lt;span class="lnt"&gt; 4
+&lt;/span&gt;&lt;span class="lnt"&gt; 5
+&lt;/span&gt;&lt;span class="lnt"&gt; 6
+&lt;/span&gt;&lt;span class="lnt"&gt; 7
+&lt;/span&gt;&lt;span class="lnt"&gt; 8
+&lt;/span&gt;&lt;span class="lnt"&gt; 9
+&lt;/span&gt;&lt;span class="lnt"&gt;10
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-go" data-lang="go"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="c1"&gt;// shared/types.go&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt;&lt;/span&gt;&lt;span class="kn"&gt;package&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;shared&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt;&lt;/span&gt;&lt;span class="kn"&gt;import&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;oldmodule&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;#34;project/module_old&amp;#34;&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt;&lt;/span&gt;&lt;span class="c1"&gt;// Alias cho struct&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt;&lt;/span&gt;&lt;span class="kd"&gt;type&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;User&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;oldmodule&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;User&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt;&lt;/span&gt;&lt;span class="c1"&gt;// Alias cho interface&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt;&lt;/span&gt;&lt;span class="kd"&gt;type&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;UserRepository&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;oldmodule&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;UserRepository&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;ul&gt;
+&lt;li&gt;Module mới chỉ cần import &lt;code&gt;shared&lt;/code&gt;:&lt;/li&gt;
+&lt;/ul&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;span class="lnt"&gt;3
+&lt;/span&gt;&lt;span class="lnt"&gt;4
+&lt;/span&gt;&lt;span class="lnt"&gt;5
+&lt;/span&gt;&lt;span class="lnt"&gt;6
+&lt;/span&gt;&lt;span class="lnt"&gt;7
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-go" data-lang="go"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="kn"&gt;import&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;#34;project/shared&amp;#34;&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt;&lt;/span&gt;&lt;span class="kd"&gt;func&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nf"&gt;UseSharedTypes&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;repo&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;shared&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;UserRepository&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kd"&gt;var&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;u&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;shared&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;User&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;u&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Name&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;#34;Alice&amp;#34;&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;repo&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nf"&gt;Save&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;u&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="c1"&gt;// Gọi phương thức qua interface alias&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt;&lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Lợi ích:&lt;/strong&gt;
+&lt;ul&gt;
+&lt;li&gt;Module mới &lt;strong&gt;không cần biết module cũ&lt;/strong&gt;.&lt;/li&gt;
+&lt;li&gt;Code cũ &lt;strong&gt;không bị ảnh hưởng&lt;/strong&gt;.&lt;/li&gt;
+&lt;li&gt;Nếu struct/interface gốc thay đổi tên hoặc di chuyển, chỉ cần cập nhật alias trong shared module.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Có thể mở rộng bằng wrapper function:&lt;/strong&gt;&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;span class="lnt"&gt;3
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-go" data-lang="go"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="kd"&gt;func&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nf"&gt;NewUser&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;name&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kt"&gt;string&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;shared&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;User&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;return&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;shared&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;User&lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="nx"&gt;Name&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;name&lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt;&lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;ul&gt;
+&lt;li&gt;Giúp module mới thêm logic khởi tạo object mà không sửa module cũ.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h3 id="3-giản-hóa-sự-phức-tạp"&gt;3. Giản hóa sự phức tạp
+&lt;/h3&gt;&lt;p&gt;Sử dụng alias cho &lt;strong&gt;struct và interface&lt;/strong&gt; giúp:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;Giảm phụ thuộc trực tiếp&lt;/strong&gt; giữa module mới và module cũ → tránh tight coupling.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Dễ dàng refactor hoặc mở rộng&lt;/strong&gt; → thay đổi struct/interface gốc chỉ cần sửa alias trong shared module.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Chuẩn hóa truy cập các type chung&lt;/strong&gt; → developer dễ nhìn, maintain hơn.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Giảm code lặp lại&lt;/strong&gt;, tránh copy/paste struct hoặc interface.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Nhờ đó, module mới có thể dùng lại cả struct lẫn interface cũ một cách &lt;strong&gt;an toàn, rõ ràng và linh hoạt&lt;/strong&gt;.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h3 id="4-tuân-thủ-và-vi-phạm-nguyên-tắc"&gt;4. Tuân thủ và vi phạm nguyên tắc
+&lt;/h3&gt;&lt;p&gt;&lt;strong&gt;Tuân thủ:&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;DRY (Don&amp;rsquo;t Repeat Yourself):&lt;/strong&gt; Tránh copy struct/interface, tái sử dụng thông qua alias.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Encapsulation &amp;amp; Separation of Concerns:&lt;/strong&gt; Module mới không cần biết chi tiết module cũ.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Maintainability:&lt;/strong&gt; Thay đổi struct/interface gốc không phá vỡ module mới.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Có thể vi phạm:&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Leak abstraction:&lt;/strong&gt; Alias quá nhiều hoặc không rõ ràng → dễ nhầm lẫn giữa alias và struct/interface gốc.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Single Responsibility Principle (SRP):&lt;/strong&gt; Shared module chứa quá nhiều alias → module trở nên “quá tải”.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Overuse:&lt;/strong&gt; Lạm dụng alias cho mọi struct/interface → giảm readability, khó trace code.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h3 id="5-kết-luận"&gt;5. Kết luận
+&lt;/h3&gt;&lt;p&gt;Sử dụng &lt;strong&gt;type alias trong shared module cho cả struct và interface&lt;/strong&gt; là một giải pháp hiệu quả để:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Cho phép module mới &lt;strong&gt;sử dụng struct và interface của module cũ&lt;/strong&gt; mà không phá vỡ code hiện tại.&lt;/li&gt;
+&lt;li&gt;Giảm sự &lt;strong&gt;phức tạp trong quản lý module&lt;/strong&gt;, chuẩn hóa điểm truy cập các type chung.&lt;/li&gt;
+&lt;li&gt;Duy trì &lt;strong&gt;tính maintainable và mở rộng được dự án&lt;/strong&gt;, đồng thời tuân thủ nhiều nguyên tắc cơ bản của lập trình module.&lt;/li&gt;
+&lt;/ul&gt;</description></item></channel></rss>

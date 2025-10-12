@@ -22,7 +22,7 @@ Nếu thực hiện thủ công, bạn sẽ cần:
 
 Với hàng chục chart trong cùng repo, việc này dễ sai sót, tốn thời gian, và khó tích hợp vào pipeline CI/CD.
 
----
+
 
 ## **2. Giải pháp**
 
@@ -43,7 +43,7 @@ Cách này giúp:
 - **Dễ mở rộng** khi thêm chart mới.
 - **Dễ tích hợp CI/CD** (GitHub Actions, GitLab CI, Jenkins,…).
 
----
+
 
 ## **3. Thực hiện**
 
@@ -73,7 +73,7 @@ Cách này giúp:
 > Mỗi thư mục con như demo-umbrella-chart hay whoami đại diện cho một Helm chart độc lập.
 > 
 
----
+
 
 ### 3.2 Cấu hình `release-it` tổng quát cho từng chart
 

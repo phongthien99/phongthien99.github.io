@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Ai-Agent on phongthien</title><link>https://phongthien99.github.io/tags/ai-agent/</link><description>Recent content in Ai-Agent on phongthien</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Sat, 18 Oct 2025 00:00:00 +0800</lastBuildDate><atom:link href="https://phongthien99.github.io/tags/ai-agent/index.xml" rel="self" type="application/rss+xml"/><item><title>Context Engineering – A Method for Designing Efficient AI Agent Systems with SpecKit</title><link>https://phongthien99.github.io/posts/context-engineering-a-method-for-designing-efficient-ai-agent-systems-with-speckit/</link><pubDate>Sat, 18 Oct 2025 00:00:00 +0800</pubDate><guid>https://phongthien99.github.io/posts/context-engineering-a-method-for-designing-efficient-ai-agent-systems-with-speckit/</guid><description>&lt;h1 id="context-engineering--a-method-for-designing-efficient-ai-agent-systems-with-speckit"&gt;Context Engineering – A Method for Designing Efficient AI Agent Systems with SpecKit
+&lt;/h1&gt;&lt;h2 id="1-bối-cảnh-vì-sao-phát-triển-phần-mềm-với-ai-agent-lại-khó-đến-vậy"&gt;1. Bối cảnh: Vì sao phát triển phần mềm với AI Agent lại khó đến vậy?
+&lt;/h2&gt;&lt;p&gt;AI Agents như Claude Code, GitHub Copilot, hay các LLM-based assistant đang dần trở thành đồng đội trong lập trình. Tuy nhiên, nếu bạn từng làm việc với chúng trong dự án thật, có lẽ bạn đã gặp những vấđề quen thuộc:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Mất ngữ cảnh (Context Loss)&lt;/strong&gt;: AI quên kiến trúc, quy tắc coding, hoặc quyết định kỹ thuật đã thống nhất.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Hallucination &amp;amp; sai lệch&lt;/strong&gt;: AI gợi ý sai công nghệ (ví dụ: đề xuất Redux dù project đang dùng React Query).&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Thiếu truy vết (Traceability)&lt;/strong&gt;: Không rõ vì sao một quyết định kỹ thuật được đưa ra.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Tốn token (Token Inefficiency)&lt;/strong&gt;: Mỗi lần làm việc lại phải &amp;ldquo;nạp&amp;rdquo; toàn bộ context — tốn kém và chậm.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Trong dự án &lt;code&gt;next-solid&lt;/code&gt;, nhóm triển khai 5 features. Nhưng khi đến feature thứ 3, AI Agent lại quên rằng project dùng &lt;code&gt;@tanstack/react-query&lt;/code&gt; — và đề xuất Redux. Lỗi nhỏ, nhưng hậu quả lớn: mất thời gian, sai hướng, và giảm niềm tin vào AI.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Nguyên nhân?&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;👉 Không có hệ thống quản lý ngữ cảnh có cấu trúc, truy vết và tự kiểm chứng.&lt;/p&gt;
+&lt;h2 id="2-giải-pháp-context-engineering"&gt;2. Giải pháp: Context Engineering
+&lt;/h2&gt;&lt;p&gt;&lt;strong&gt;Context Engineering&lt;/strong&gt; là một phương pháp để thiết kế, quản lý, và duy trì ngữ cảnh (context) cho AI Agents một cách có hệ thống.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Công thức nền tảng:&lt;/strong&gt;&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-fallback" data-lang="fallback"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;Context Engineering = Prompt Engineering + Knowledge Design + Memory Management + Reasoning Alignment
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;h3 id="bốn-trụ-cột-của-context-engineering"&gt;Bốn trụ cột của Context Engineering
+&lt;/h3&gt;&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Prompt Engineering&lt;/strong&gt; – thiết kế prompts có cấu trúc, reusable và có validation gates.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Knowledge Design&lt;/strong&gt; – tổ chức kiến thức dự án thành artifacts có schema rõ ràng.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Memory Management&lt;/strong&gt; – lưu trữ và truy xuất context hiệu quả, tránh lãng phí token.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Reasoning Alignment&lt;/strong&gt; – đảm bảo AI suy luận đúng hướng với triết lý dự án.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2 id="3-speckit--framework-hiện-thực-hóa-context-engineering"&gt;3. SpecKit – Framework hiện thực hóa Context Engineering
+&lt;/h2&gt;&lt;p&gt;Để áp dụng Context Engineering vào thực tế, chúng tôi xây dựng &lt;strong&gt;SpecKit&lt;/strong&gt; – một framework gồm các slash commands giúp AI làm việc có tổ chức và tự kiểm soát hơn.&lt;/p&gt;
+&lt;h3 id="cấu-trúc-thư-mục-chính"&gt;Cấu trúc thư mục chính:
+&lt;/h3&gt;&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;span class="lnt"&gt;3
+&lt;/span&gt;&lt;span class="lnt"&gt;4
+&lt;/span&gt;&lt;span class="lnt"&gt;5
+&lt;/span&gt;&lt;span class="lnt"&gt;6
+&lt;/span&gt;&lt;span class="lnt"&gt;7
+&lt;/span&gt;&lt;span class="lnt"&gt;8
+&lt;/span&gt;&lt;span class="lnt"&gt;9
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-gdscript3" data-lang="gdscript3"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;claude&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;commands&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;├──&lt;/span&gt; &lt;span class="n"&gt;speckit&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;specify&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;md&lt;/span&gt; &lt;span class="c1"&gt;# Tạo spec từ mô tả tự nhiên&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;├──&lt;/span&gt; &lt;span class="n"&gt;speckit&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;clarify&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;md&lt;/span&gt; &lt;span class="c1"&gt;# Làm rõ yêu cầu mơ hồ&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;├──&lt;/span&gt; &lt;span class="n"&gt;speckit&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;plan&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;md&lt;/span&gt; &lt;span class="c1"&gt;# Lập kế hoạch và technical design&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;├──&lt;/span&gt; &lt;span class="n"&gt;speckit&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;tasks&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;md&lt;/span&gt; &lt;span class="c1"&gt;# Sinh tasks theo thứ tự phụ thuộc&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;├──&lt;/span&gt; &lt;span class="n"&gt;speckit&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;implement&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;md&lt;/span&gt; &lt;span class="c1"&gt;# Triển khai có checkpoint&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;├──&lt;/span&gt; &lt;span class="n"&gt;speckit&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;analyze&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;md&lt;/span&gt; &lt;span class="c1"&gt;# Kiểm tra consistency giữa artifacts&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;├──&lt;/span&gt; &lt;span class="n"&gt;speckit&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;checklist&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;md&lt;/span&gt; &lt;span class="c1"&gt;# Sinh checklist kiểm thử&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;└──&lt;/span&gt; &lt;span class="n"&gt;speckit&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;constitution&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;md&lt;/span&gt; &lt;span class="c1"&gt;# Bộ nguyên tắc dự án (memory layer)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;h3 id="workflow-tổng-quát"&gt;Workflow tổng quát
+&lt;/h3&gt;&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt; 1
+&lt;/span&gt;&lt;span class="lnt"&gt; 2
+&lt;/span&gt;&lt;span class="lnt"&gt; 3
+&lt;/span&gt;&lt;span class="lnt"&gt; 4
+&lt;/span&gt;&lt;span class="lnt"&gt; 5
+&lt;/span&gt;&lt;span class="lnt"&gt; 6
+&lt;/span&gt;&lt;span class="lnt"&gt; 7
+&lt;/span&gt;&lt;span class="lnt"&gt; 8
+&lt;/span&gt;&lt;span class="lnt"&gt; 9
+&lt;/span&gt;&lt;span class="lnt"&gt;10
+&lt;/span&gt;&lt;span class="lnt"&gt;11
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-fallback" data-lang="fallback"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;User mô tả → /specify → spec.md (+ checklist)
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; ↓
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; /clarify → resolved spec.md
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; ↓
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; /plan → plan.md + research.md + contracts/
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; ↓
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; /tasks → tasks.md (theo dependencies)
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; ↓
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; /analyze → báo cáo consistency
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; ↓
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; /implement → triển khai + validation checkpoints
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;h2 id="4-bên-trong-context-engineering--cách-speckit-hiện-thực-4-trụ-cột"&gt;4. Bên trong Context Engineering – Cách SpecKit hiện thực 4 trụ cột
+&lt;/h2&gt;&lt;h3 id="1-prompt-engineering--prompts-có-cấu-trúc-có-kiểm-chứng"&gt;1️⃣ Prompt Engineering – Prompts có cấu trúc, có kiểm chứng
+&lt;/h3&gt;&lt;p&gt;Mỗi slash command chỉ làm một nhiệm vụ duy nhất.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Ví dụ &lt;code&gt;/specify&lt;/code&gt; chỉ tạo spec, &lt;code&gt;/plan&lt;/code&gt; chỉ lập kế hoạch.&lt;/li&gt;
+&lt;li&gt;Điều này giúp phân tách trách nhiệm rõ ràng và dễ kiểm soát chất lượng.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;SpecKit còn dùng kỹ thuật &lt;strong&gt;Progressive Disclosure&lt;/strong&gt; – chỉ nạp đúng context cần cho mỗi giai đoạn.&lt;/p&gt;
+&lt;p&gt;→ Giảm &lt;strong&gt;60–70%&lt;/strong&gt; lượng token tiêu thụ mỗi vòng.&lt;/p&gt;
+&lt;p&gt;Cuối mỗi phase có &lt;strong&gt;Validation Gates&lt;/strong&gt;: checklist tự động kiểm tra chất lượng spec, completeness, readiness trước khi qua bước tiếp theo.&lt;/p&gt;
+&lt;h3 id="2-knowledge-design--kiến-thức-có-cấu-trúc-có-schema"&gt;2️⃣ Knowledge Design – Kiến thức có cấu trúc, có schema
+&lt;/h3&gt;&lt;p&gt;SpecKit chia artifacts thành 3 tầng:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Tier 1 – Project Memory&lt;/strong&gt;: &lt;code&gt;CLAUDE.md&lt;/code&gt; (AI context hiện tại) + &lt;code&gt;constitution.md&lt;/code&gt; (nguyên tắc dự án).&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Tier 2 – Feature Artifacts&lt;/strong&gt;: mỗi feature có &lt;code&gt;spec.md&lt;/code&gt;, &lt;code&gt;plan.md&lt;/code&gt;, &lt;code&gt;tasks.md&lt;/code&gt;, &lt;code&gt;research.md&lt;/code&gt;, &lt;code&gt;contracts/&lt;/code&gt;, &lt;code&gt;data-model.md&lt;/code&gt;.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Tier 3 – Templates&lt;/strong&gt;: lưu schema chuẩn cho mọi loại artifact.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Mọi file đều tuân theo schema định nghĩa trước, giúp AI hiểu và truy xuất chính xác thay vì phải &amp;ldquo;đoán&amp;rdquo;.&lt;/p&gt;
+&lt;h3 id="3-memory-management--lưu-trữ-và-truy-xuất-hiệu-quả"&gt;3️⃣ Memory Management – Lưu trữ và truy xuất hiệu quả
+&lt;/h3&gt;&lt;p&gt;SpecKit thiết kế memory theo 4 cấp độ:&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Level&lt;/th&gt;
+&lt;th&gt;Loại bộ nhớ&lt;/th&gt;
+&lt;th&gt;Vai trò&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;td&gt;Session Memory&lt;/td&gt;
+&lt;td&gt;Tạm thời, phục vụ conversation hiện tại&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;2&lt;/td&gt;
+&lt;td&gt;Feature Memory&lt;/td&gt;
+&lt;td&gt;Lưu từng feature, có version control&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;3&lt;/td&gt;
+&lt;td&gt;Project Memory&lt;/td&gt;
+&lt;td&gt;Ghi nhận state toàn dự án&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;4&lt;/td&gt;
+&lt;td&gt;Template Memory&lt;/td&gt;
+&lt;td&gt;Đảm bảo consistency và reuse&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;Nhờ đó, AI chỉ cần đọc những phần liên quan, không phải &amp;ldquo;nuốt&amp;rdquo; toàn bộ 5000 tokens của project mỗi lần.&lt;/p&gt;
+&lt;h3 id="4-reasoning-alignment--căn-chỉnh-suy-luận-bằng-constitution"&gt;4️⃣ Reasoning Alignment – Căn chỉnh suy luận bằng &amp;ldquo;Constitution&amp;rdquo;
+&lt;/h3&gt;&lt;p&gt;SpecKit định nghĩa bộ nguyên tắc trong file &lt;code&gt;constitution.md&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;Ví dụ:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;span class="lnt"&gt;3
+&lt;/span&gt;&lt;span class="lnt"&gt;4
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-markdown" data-lang="markdown"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="gu"&gt;## Principle VI: Clean Architecture with SOLID
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="gu"&gt;&lt;/span&gt;&lt;span class="k"&gt;-&lt;/span&gt; 4 layers: Presentation, Application, Domain, Infrastructure
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="k"&gt;-&lt;/span&gt; Repository pattern bắt buộc
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="k"&gt;-&lt;/span&gt; Hooks chỉ phụ thuộc interface, không phụ thuộc implementation
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;Mỗi lần AI lên plan, SpecKit chạy &lt;strong&gt;Constitution Check&lt;/strong&gt; – nếu có vi phạm, quy trình dừng lại ngay.&lt;/p&gt;
+&lt;p&gt;Ví dụ: feature 003 ban đầu dùng Redux → bị chặn vì &amp;ldquo;Redux không nằm trong approved dependencies&amp;rdquo;.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Kết quả&lt;/strong&gt;: dùng lại React Query, đảm bảo consistency.&lt;/p&gt;
+&lt;h2 id="5-kết-quả-khi-ai-làm-việc-như-một-kỹ-sư-thật"&gt;5. Kết quả: Khi AI làm việc như một kỹ sư thật
+&lt;/h2&gt;&lt;p&gt;Sau khi áp dụng Context Engineering với SpecKit:&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Lợi ích&lt;/th&gt;
+&lt;th&gt;Mô tả&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;Consistency&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;5 features cùng tuân theo Clean Architecture, không sai lệch.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;Traceability&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;Mọi quyết định đều có rationale rõ ràng trong &lt;code&gt;research.md&lt;/code&gt;.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;Quality&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;3 tầng validation – từ nội dung đến tiêu chí chấp nhận.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;Efficiency&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;Giảm token usage mỗi iteration.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;Scalability&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;Dễ mở rộng dự án, dễ cập nhật principles và templates.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h2 id="6-kết-luận"&gt;6. Kết luận
+&lt;/h2&gt;&lt;p&gt;AI Agents không chỉ cần &amp;ldquo;prompt hay&amp;rdquo; – mà cần &lt;strong&gt;context tốt&lt;/strong&gt;.&lt;/p&gt;
+&lt;p&gt;Và để có context tốt, chúng ta phải &lt;strong&gt;kỹ sư hóa&lt;/strong&gt; cách AI hiểu và ghi nhớ.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Context Engineering&lt;/strong&gt; chính là bước tiến đó.&lt;/p&gt;
+&lt;p&gt;Còn &lt;strong&gt;SpecKit&lt;/strong&gt; là công cụ để biến lý thuyết ấy thành hành động — giúp AI phát triển phần mềm một cách có cấu trúc, có kỷ luật, và có trí nhớ.&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;✳️ Tóm lại&lt;/strong&gt;: Prompt Engineering giúp AI hiểu, nhưng Context Engineering giúp AI hành động nhất quán.&lt;/p&gt;</description></item></channel></rss>

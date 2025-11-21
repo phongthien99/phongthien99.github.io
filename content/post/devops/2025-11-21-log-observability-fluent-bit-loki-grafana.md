@@ -1,5 +1,5 @@
 ---
-title: "Log Observability with Fluent Bit, Loki, and Grafana"
+title: "Log Observability with Fluent Bit, Loki and Grafana"
 date: "2025-11-21T00:00:00Z"
 draft: false
 tags:
@@ -10,7 +10,7 @@ categories:
   - Devops
 author: "phongthien"
 ---
-# Log Observability with Fluent Bit, Loki, and Grafana
+# Log Observability with Fluent Bit, Loki and Grafana
 
 ## **1. Đặt vấn đề**
 

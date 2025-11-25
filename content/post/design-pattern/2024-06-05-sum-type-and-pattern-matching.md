@@ -1,7 +1,7 @@
 ---
 title: Sum Type and Pattern Matching
 author: phongthien99
-date: 2025-11-31 00:40:00 +0800
+date: 2025-11-25 00:40:00 +0800
 categories: [Design-pattern]
 tags: []
 math: true

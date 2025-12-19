@@ -1,7 +1,7 @@
 ---
 title: "JavaScript Bundle Size as a Frontend Architecture Concern"
 author: phongthien99
-date: 2025-11-19 11:09:00 +0700
+date: 2025-12-20 11:09:00 +0700
 categories: [Fe]
 tags: [micro-frontend]
 math: true

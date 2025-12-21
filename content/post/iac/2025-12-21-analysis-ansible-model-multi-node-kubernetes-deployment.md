@@ -335,8 +335,8 @@ classDiagram
     K8sTasks ..> K8sHandlers : notifies
     CNITasks ..> CNIDefaults : uses
 
-    
-{{< /mermaid >}}
+
+{{</mermaid >}}
 
 ### Kết luận
 

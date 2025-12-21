@@ -100,7 +100,7 @@ Sơ đồ thiết kế triển khai cho thấy **cấu trúc phân lớp rõ rà
     - `workers`: join node
 
 
-{{< mermaid >}}
+```
 classDiagram
     %% Root Files
     class AnsibleConfig["ansible.cfg"] {
@@ -334,7 +334,7 @@ classDiagram
     K8sTasks ..> K8sHandlers : notifies
     CNITasks ..> CNIDefaults : uses
 
-{{</ mermaid >}}
+```
 ### Kết luận
 
 Kết quả nghiên cứu cho thấy việc triển khai Kubernetes bằng **Ansible kết hợp kubeadm** mang lại nhiều lợi ích rõ rệt so với phương pháp thủ công.

@@ -99,6 +99,7 @@ Sơ đồ thiết kế triển khai cho thấy **cấu trúc phân lớp rõ rà
     - `cni`: triển khai mạng
     - `workers`: join node
 
+
 {{< mermaid >}}
 classDiagram
     %% Root Files
@@ -108,7 +109,6 @@ classDiagram
         +roles_path = ./roles
         +host_key_checking = False
     }
-
     class Makefile["Makefile"] {
         <<commands>>
         +ping: Test connectivity
@@ -120,7 +120,6 @@ classDiagram
         +verify: Check cluster
         +reset: Reset cluster
     }
-
     %% Inventory Package
     namespace inventory {
         class HostsIni["hosts.ini"] {
@@ -336,7 +335,6 @@ classDiagram
     CNITasks ..> CNIDefaults : uses
 
 {{</ mermaid >}}
-
 ### Kết luận
 
 Kết quả nghiên cứu cho thấy việc triển khai Kubernetes bằng **Ansible kết hợp kubeadm** mang lại nhiều lợi ích rõ rệt so với phương pháp thủ công.

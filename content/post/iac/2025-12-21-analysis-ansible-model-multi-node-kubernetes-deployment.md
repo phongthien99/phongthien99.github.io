@@ -334,6 +334,8 @@ classDiagram
     K8sTasks ..> K8sTemplates : uses
     K8sTasks ..> K8sHandlers : notifies
     CNITasks ..> CNIDefaults : uses
+
+    
 {{< /mermaid >}}
 
 ### Kết luận

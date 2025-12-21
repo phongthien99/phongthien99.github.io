@@ -336,7 +336,7 @@ classDiagram
     CNITasks ..> CNIDefaults : uses
 
 
-{{</mermaid >}}
+{{</ mermaid >}}
 
 ### Kết luận
 

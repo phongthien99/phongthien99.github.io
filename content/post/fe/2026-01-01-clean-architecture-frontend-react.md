@@ -137,7 +137,7 @@ flowchart TD
 | React Components | Xây dựng UI, tách nhỏ theo component |
 | Custom Hooks | Đóng gói logic tương tác giữa UI và domain |
 | TanStack Query | Quản lý lifecycle của async mutation |
-| Zustand (read-only) | Đọc trạng thái global (auth state) |
+| Zustand | Trạng thái global (auth state) |
 
 
 ### 5.1.3 Vai trò của TanStack Query

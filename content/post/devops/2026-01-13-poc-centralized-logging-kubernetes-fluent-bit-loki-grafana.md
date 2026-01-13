@@ -39,7 +39,7 @@ Do đó, cần một giải pháp **centralized logging** có khả năng:
     nhằm cải thiện khả năng quan sát và rút ngắn thời gian xử lý sự cố.
     
 
----
+
 
 ## 2. Objectives
 
@@ -67,7 +67,6 @@ POC này nhằm đánh giá tính khả thi của giải pháp centralized loggi
 
 Giải pháp được đề xuất sử dụng mô hình **centralized logging** dựa trên bộ công cụ **Fluent Bit – Grafana Loki – Grafana**, triển khai trên nền tảng Kubernetes nhằm giải quyết vấn đề log phân tán và khó truy vết.
 
----
 
 ### Kiến trúc tổng thể
 
@@ -160,9 +159,8 @@ Giải pháp được đề xuất sử dụng mô hình **centralized logging**
         ```
         
 
----
 
-## 4. Công nghệ & Tool sử dụng
+## 4. Tech Stack
 
 | Nhóm | Công cụ / Thành phần | Image container | Mô tả |
 | --- | --- | --- | --- |
@@ -193,12 +191,12 @@ Giải pháp được đề xuất sử dụng mô hình **centralized logging**
 | `logging-agent` | Fluent Bit | `grafana/fluent-bit` | Thu thập log từ node/pod |
 | `monitoring` | Grafana | `grafana/grafana` | Truy vấn & hiển thị log |
 
-## 6. Kết quả & Đánh giá (Results)
+## 6. Results
 
 - Hệ thống **đạt mục tiêu chính**: thu thập, lưu trữ và **truy vấn log tập trung** trên Kubernetes.
 - Log từ các ứng dụng được ingest và hiển thị đầy đủ trên Grafana thông qua Loki.
 
 
-## 7. Kết luận
+## 7. Conclusion 
 
 POC chứng minh hệ thống Loki đáp ứng tốt nhu cầu xem và truy vấn log tập trung trong phạm vi thử nghiệm, là nền tảng phù hợp để mở rộng sang môi trường production khi cần.

@@ -161,8 +161,6 @@ export class DeleteItemCommand implements Command {
 
 Nó quản lý một danh sách lịch sử các command đã chạy.
 
-`cursor` xác định command hiện tại đã được thực thi tới đâu.
-
 Executor không chứa logic nghiệp vụ.
 
 ```tsx

@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Pnpm on phongthien</title><link>https://phongthien99.github.io/tags/pnpm/</link><description>Recent content in Pnpm on phongthien</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Sun, 13 Jul 2025 00:00:00 +0000</lastBuildDate><atom:link href="https://phongthien99.github.io/tags/pnpm/index.xml" rel="self" type="application/rss+xml"/><item><title>Sharing JS Code Made Easy with pnpm Workspaces &amp; Git Submodules</title><link>https://phongthien99.github.io/posts/sharing-js-code-made-easy-with-pnpm-workspaces-git-submodules/</link><pubDate>Sun, 13 Jul 2025 00:00:00 +0000</pubDate><guid>https://phongthien99.github.io/posts/sharing-js-code-made-easy-with-pnpm-workspaces-git-submodules/</guid><description>&lt;h1 id="sharing-js-code-made-easy-with-pnpm-workspaces--git-submodules"&gt;Sharing JS Code Made Easy with pnpm Workspaces &amp;amp; Git Submodules
+&lt;/h1&gt;&lt;h2 id="-đặt-vấn-đề"&gt;🎯 Đặt Vấn Đề:
+&lt;/h2&gt;&lt;p&gt;Hãy tưởng tượng bạn có nhiều dự án front-end (ví dụ: một ứng dụng web chính, một cổng admin, một landing page riêng) và nhiều dự án back-end (API Gateway, microservices). Tất cả những dự án này đều cần dùng chung một số thành phần như:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;UI Components:&lt;/strong&gt; Các thành phần giao diện tái sử dụng (button, modal, form input…).&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Utility Functions:&lt;/strong&gt; Các hàm tiện ích (validation, format ngày giờ, helpers gọi API…).&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Type Definitions:&lt;/strong&gt; Các định nghĩa kiểu TypeScript chung (interfaces, enums…).&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Business Logic:&lt;/strong&gt; Các module xử lý nghiệp vụ lõi.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Nếu không có chiến lược quản lý tốt, bạn sẽ gặp phải những vấn đề sau:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;Sao chép mã nguồn (Code Duplication):&lt;/strong&gt; Phải copy-paste code giữa nhiều dự án. Khi sửa bug hay update logic, phải sửa nhiều nơi, dễ sót hoặc gây lỗi mới.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Khó khăn khi cập nhật (Difficult Updates):&lt;/strong&gt; Mỗi lần cần cập nhật thư viện chung, phải update thủ công từng dự án, dễ quên và dễ phá vỡ.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Quản lý phiên bản phức tạp (Version Management):&lt;/strong&gt; Làm sao đảm bảo tất cả dự án chạy ổn định với các version phù hợp?&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2 id="-giải-pháp-kết-hợp-pnpm-workspace-và-git-submodule"&gt;💡 Giải Pháp: Kết Hợp &lt;code&gt;pnpm workspace&lt;/code&gt; và &lt;code&gt;git submodule&lt;/code&gt;
+&lt;/h2&gt;&lt;p&gt;Để giải quyết triệt để, chúng ta có thể kết hợp &lt;strong&gt;pnpm workspace&lt;/strong&gt; và &lt;strong&gt;git submodule&lt;/strong&gt;.&lt;/p&gt;
+&lt;h3 id="-pnpm-workspace"&gt;🟢 &lt;code&gt;pnpm workspace&lt;/code&gt;
+&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;Cho phép quản lý nhiều package (dự án con hoặc thư viện) trong cùng một repo hoặc các folder con.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="-git-submodule"&gt;🔵 &lt;code&gt;git submodule&lt;/code&gt;
+&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;Cho phép nhúng một repository Git khác vào như một thư mục con, nhưng vẫn giữ commit và lịch sử riêng.&lt;/li&gt;
+&lt;li&gt;Bạn có thể lock từng dự án vào một commit cụ thể của shared lib.&lt;/li&gt;
+&lt;li&gt;Tách biệt rõ ràng trách nhiệm giữa repo chính và repo thư viện.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h3 id="-cơ-chế-hoạt-động"&gt;⚙️ Cơ Chế Hoạt Động
+&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;Tạo repo riêng cho shared libraries, ví dụ: &lt;code&gt;shared-libs&lt;/code&gt;.&lt;/li&gt;
+&lt;li&gt;Trong mỗi dự án chính, thêm &lt;code&gt;shared-libs&lt;/code&gt; làm submodule nếu cần dùng .&lt;/li&gt;
+&lt;li&gt;Cấu hình &lt;code&gt;pnpm workspace&lt;/code&gt; để nhận diện các package con bên trong &lt;code&gt;shared-libs&lt;/code&gt;.&lt;/li&gt;
+&lt;li&gt;Các dự án sử dụng thư viện bằng cách khai báo trực tiếp trong &lt;code&gt;package.json&lt;/code&gt;.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id="-thực-hiện-chi-tiết"&gt;🚀 Thực Hiện Chi Tiết
+&lt;/h2&gt;&lt;h3 id="bước-1-thêm-shared-libs-vào-dự-án-chính-bằng-git-submodule"&gt;Bước 1️⃣: Thêm &lt;code&gt;shared-libs&lt;/code&gt; vào dự án chính bằng &lt;code&gt;git submodule&lt;/code&gt;
+&lt;/h3&gt;&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;span class="lnt"&gt;3
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-bash" data-lang="bash"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;git submodule add https://github.com/your-org/shared-libs lib/shared-libs
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;git submodule update --init --recursive
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;blockquote&gt;
+&lt;p&gt;📁 Sau bước này, thư mục lib/shared-libs chứa toàn bộ mã nguồn thư viện dùng chung.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;hr&gt;
+&lt;h3 id="bước-2-cấu-hình-pnpm-workspace"&gt;Bước 2️⃣: Cấu hình &lt;code&gt;pnpm workspace&lt;/code&gt;
+&lt;/h3&gt;&lt;p&gt;Tại thư mục gốc dự án chính, thêm file &lt;code&gt;pnpm-workspace.yaml&lt;/code&gt; (hoặc chỉnh sửa nếu đã có):&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;span class="lnt"&gt;3
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-yaml" data-lang="yaml"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nt"&gt;packages&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;- &lt;span class="s1"&gt;&amp;#39;lib/shared-libs/packages/*&amp;#39;&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;blockquote&gt;
+&lt;p&gt;✅ pnpm sẽ tự nhận diện các package bên trong lib/shared-libs/packages như các package nội bộ.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;hr&gt;
+&lt;h3 id="bước-3-khai-báo-dependency-trong-packagejson"&gt;Bước 3️⃣: Khai báo dependency trong &lt;code&gt;package.json&lt;/code&gt;
+&lt;/h3&gt;&lt;p&gt;Mở file &lt;code&gt;package.json&lt;/code&gt; của dự án chính, chỉnh &lt;code&gt;dependencies&lt;/code&gt; (hoặc &lt;code&gt;devDependencies&lt;/code&gt;) như sau:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt; 1
+&lt;/span&gt;&lt;span class="lnt"&gt; 2
+&lt;/span&gt;&lt;span class="lnt"&gt; 3
+&lt;/span&gt;&lt;span class="lnt"&gt; 4
+&lt;/span&gt;&lt;span class="lnt"&gt; 5
+&lt;/span&gt;&lt;span class="lnt"&gt; 6
+&lt;/span&gt;&lt;span class="lnt"&gt; 7
+&lt;/span&gt;&lt;span class="lnt"&gt; 8
+&lt;/span&gt;&lt;span class="lnt"&gt; 9
+&lt;/span&gt;&lt;span class="lnt"&gt;10
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-json" data-lang="json"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="p"&gt;{&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="nt"&gt;&amp;#34;name&amp;#34;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;web-app&amp;#34;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="nt"&gt;&amp;#34;version&amp;#34;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;1.0.0&amp;#34;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="nt"&gt;&amp;#34;private&amp;#34;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="kc"&gt;true&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="nt"&gt;&amp;#34;dependencies&amp;#34;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="nt"&gt;&amp;#34;@shared/utils&amp;#34;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;workspace:*&amp;#34;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="nt"&gt;&amp;#34;@shared/ui-components&amp;#34;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;workspace:*&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;blockquote&gt;
+&lt;p&gt;🔥 Dòng &amp;ldquo;workspace:*&amp;rdquo; có nghĩa: pnpm sẽ liên kết trực tiếp package nội bộ (không dùng bản publish trên npm), tiện cho phát triển song song.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;hr&gt;
+&lt;h3 id="bước-4-cài-đặt"&gt;Bước 4️⃣: Cài đặt
+&lt;/h3&gt;&lt;p&gt;Sau khi chỉnh xong &lt;code&gt;package.json&lt;/code&gt;, chạy:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-bash" data-lang="bash"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;pnpm install
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;hr&gt;
+&lt;h3 id="bước-5-làm-việc-với-submodule"&gt;Bước 5️⃣: Làm việc với submodule
+&lt;/h3&gt;&lt;h4 id="clone-dự-án-mới"&gt;Clone dự án mới
+&lt;/h4&gt;&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;span class="lnt"&gt;3
+&lt;/span&gt;&lt;span class="lnt"&gt;4
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-bash" data-lang="bash"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;git clone &amp;lt;your-main-project-url&amp;gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;git submodule update --init --recursive
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;pnpm install
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;h4 id="khi-cần-cập-nhật-shared-libs"&gt;Khi cần cập nhật &lt;code&gt;shared-libs&lt;/code&gt;
+&lt;/h4&gt;&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;span class="lnt"&gt;3
+&lt;/span&gt;&lt;span class="lnt"&gt;4
+&lt;/span&gt;&lt;span class="lnt"&gt;5
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-bash" data-lang="bash"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nb"&gt;cd&lt;/span&gt; lib/shared-libs
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;git pull origin main
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nb"&gt;cd&lt;/span&gt; ../..
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;git add lib/shared-libs
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;git commit -m &lt;span class="s2"&gt;&amp;#34;Update shared-libs to latest commit&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;hr&gt;
+&lt;h2 id="-một-số-lệnh-hữu-ích-với-git-submodule"&gt;🛠️ Một số lệnh hữu ích với &lt;code&gt;git submodule&lt;/code&gt;
+&lt;/h2&gt;&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Lệnh&lt;/th&gt;
+&lt;th&gt;Mục đích&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;git submodule&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;Liệt kê submodule hiện có&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;git submodule update --init&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;Khởi tạo và đồng bộ submodule sau khi clone&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;git submodule add &amp;lt;repo&amp;gt; &amp;lt;path&amp;gt;&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;Thêm submodule mới&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;cd lib/shared-libs &amp;amp;&amp;amp; git pull&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;Lấy version mới nhất của submodule&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;git add lib/shared-libs &amp;amp;&amp;amp; git commit&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;Commit thay đổi submodule&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;hr&gt;
+&lt;h2 id="-kết-luận"&gt;🏁 Kết Luận
+&lt;/h2&gt;&lt;hr&gt;
+&lt;h3 id="-lợi-ích-khi-kết-hợp"&gt;💥 Lợi Ích Khi Kết Hợp
+&lt;/h3&gt;&lt;p&gt;✅ &lt;strong&gt;Giảm trùng lặp mã nguồn&lt;/strong&gt; — không còn copy-paste.&lt;/p&gt;
+&lt;p&gt;✅ &lt;strong&gt;Quản lý dependency chính xác&lt;/strong&gt; — mỗi dự án lock commit submodule riêng, không bị vỡ.&lt;/p&gt;
+&lt;p&gt;✅ &lt;strong&gt;Phát triển nhanh &amp;amp; debug dễ&lt;/strong&gt; — sửa code shared-libs, dự án chính thấy ngay.&lt;/p&gt;
+&lt;p&gt;✅ &lt;strong&gt;Quản lý phiên bản rõ ràng&lt;/strong&gt; — submodule tách biệt, chủ động cập nhật.&lt;/p&gt;
+&lt;p&gt;Việc kết hợp &lt;strong&gt;pnpm workspace&lt;/strong&gt; và &lt;strong&gt;git submodule&lt;/strong&gt; mang đến một giải pháp cực kỳ mạnh mẽ và thực dụng để quản lý thư viện dùng chung giữa nhiều dự án JavaScript/TypeScript.&lt;/p&gt;
+&lt;p&gt;✅ Không chỉ giúp giảm rủi ro, tiết kiệm thời gian, mà còn tối ưu chi phí build, test và deploy.&lt;/p&gt;
+&lt;p&gt;Dù có thể cần thêm chút công sức ban đầu để thiết lập, nhưng về lâu dài đây là &lt;strong&gt;giải pháp rất đáng giá&lt;/strong&gt; cho những hệ thống lớn, nhiều repo, nhiều nhóm cùng phát triển.&lt;/p&gt;</description></item></channel></rss>

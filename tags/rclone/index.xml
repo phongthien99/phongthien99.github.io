@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Rclone on phongthien</title><link>https://phongthien99.github.io/tags/rclone/</link><description>Recent content in Rclone on phongthien</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Sat, 07 Sep 2024 00:40:00 +0800</lastBuildDate><atom:link href="https://phongthien99.github.io/tags/rclone/index.xml" rel="self" type="application/rss+xml"/><item><title>Combining Rclone and Temporal to Ensure High Availability and Avoid Data Duplication"</title><link>https://phongthien99.github.io/posts/combining-rclone-and-temporal-to-ensure-high-availability-and-avoid-data-duplication/</link><pubDate>Sat, 07 Sep 2024 00:40:00 +0800</pubDate><guid>https://phongthien99.github.io/posts/combining-rclone-and-temporal-to-ensure-high-availability-and-avoid-data-duplication/</guid><description>&lt;h1 id="building-an-efficient-data-synchronization-system-combining-rclone-and-temporal-to-ensure-high-availability-and-avoid-data-duplication"&gt;Building an Efficient Data Synchronization System: Combining Rclone and Temporal to Ensure High Availability and Avoid Data Duplication
+&lt;/h1&gt;&lt;h3 id="đặt-vấn-đề"&gt;Đặt Vấn Đề
+&lt;/h3&gt;&lt;p&gt;Trong một hệ thống cần đảm bảo tính sẵn sàng cao (High Availability - HA), bạn có ba máy chủ hoạt động trong một cụm. Các máy chủ này cùng chia sẻ một volume lưu trữ dữ liệu chung. Yêu cầu của hệ thống là phải đồng bộ dữ liệu từ volume chia sẻ này lên nhiều hệ lưu trữ khác nhau như AWS S3, Google Cloud Storage (GCS), và FTP.&lt;/p&gt;
+&lt;p&gt;Tuy nhiên, việc đảm bảo đồng bộ dữ liệu lên các hệ lưu trữ này mà vẫn giữ được tính HA và tránh trùng lặp dữ liệu lại đặt ra một thách thức không nhỏ.&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;Triển khai cron job trên một máy chủ duy nhất&lt;/strong&gt;: Nếu bạn chọn một máy chủ duy nhất để thực hiện đồng bộ hóa bằng cách sử dụng cron job, hệ thống sẽ gặp rủi ro nếu máy chủ này gặp sự cố. Trong trường hợp đó, việc đồng bộ dữ liệu sẽ bị gián đoạn, dẫn đến khả năng mất mát dữ liệu.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Triển khai cron job trên nhiều máy chủ&lt;/strong&gt;: Để đảm bảo tính HA, nếu bạn triển khai cron job trên cả ba máy chủ, có khả năng cả ba máy chủ sẽ thực hiện đồng bộ cùng một lúc. Điều này dẫn đến việc dữ liệu bị đồng bộ nhiều lần lên các hệ lưu trữ khác nhau, gây ra sự trùng lặp dữ liệu. Hệ quả là lãng phí băng thông và làm phức tạp hóa việc quản lý dữ liệu trên các hệ lưu trữ.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Như vậy, hệ thống cần một giải pháp có thể vừa đảm bảo đồng bộ dữ liệu lên các hệ lưu trữ một cách nhất quán, vừa tránh được việc dữ liệu bị trùng lặp, đồng thời vẫn giữ được tính sẵn sàng cao trong trường hợp có sự cố xảy ra&lt;/p&gt;
+&lt;h2 id="giải-pháp"&gt;Giải pháp
+&lt;/h2&gt;&lt;p&gt;Để giải quyết vấn đề đảm bảo tính sẵn sàng cao (HA) và tránh trùng lặp dữ liệu khi đồng bộ từ 3 máy chủ chia sẻ volume lên các hệ lưu trữ như AWS S3, Google Cloud Storage (GCS), và FTP, chúng ta có thể kết hợp Rclone với Temporal. Đây là giải pháp không chỉ tối ưu hóa quá trình đồng bộ mà còn giúp quản lý hiệu quả và tự động hóa quy trình..&lt;/p&gt;
+&lt;h3 id="1-rclone-công-cụ-đồng-bộ-dữ-liệu-linh-hoạt"&gt;1. &lt;strong&gt;Rclone: Công Cụ Đồng Bộ Dữ Liệu Linh Hoạt&lt;/strong&gt;
+&lt;/h3&gt;&lt;p&gt;Rclone là một công cụ mạnh mẽ để đồng bộ hóa dữ liệu giữa nhiều hệ lưu trữ đám mây và máy chủ cục bộ. Rclone hỗ trợ nhiều giao thức và dịch vụ lưu trữ khác nhau như AWS S3, Google Cloud Storage, FTP, và nhiều dịch vụ khác. Đặc biệt, nó hỗ trợ các tính năng như:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Đồng bộ hóa dữ liệu từ volume chia sẻ lên nhiều hệ lưu trữ&lt;/strong&gt;.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Kiểm tra sự khác biệt của dữ liệu&lt;/strong&gt; trước khi đồng bộ để tránh tải lên các dữ liệu không cần thiết.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Hỗ trợ nén và mã hóa dữ liệu&lt;/strong&gt; khi cần thiết.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="2-temporal-hệ-thống-quản-lý-workflow-đảm-bảo-ha"&gt;2. &lt;strong&gt;Temporal: Hệ Thống Quản Lý Workflow Đảm Bảo HA&lt;/strong&gt;
+&lt;/h3&gt;&lt;p&gt;Temporal là một hệ thống quản lý workflow giúp bạn điều phối các quy trình phức tạp trong môi trường phân tán. Với Temporal, bạn có thể đảm bảo rằng các tác vụ đồng bộ dữ liệu chỉ được thực hiện bởi một máy chủ tại một thời điểm nhất định, và khi máy chủ đó gặp sự cố, một máy chủ khác sẽ tự động tiếp quản quá trình đồng bộ. Temporal giúp giải quyết các vấn đề liên quan đến tính HA và tránh trùng lặp dữ liệu bằng cách:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Quản lý trạng thái&lt;/strong&gt;: Temporal giữ trạng thái của các workflow và đảm bảo chỉ có một instance của workflow đang chạy tại một thời điểm.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Failover tự động&lt;/strong&gt;: Nếu máy chủ đang thực hiện workflow gặp sự cố, Temporal sẽ tự động chuyển trách nhiệm sang một máy chủ khác.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="thực-hiện"&gt;Thực hiện
+&lt;/h2&gt;&lt;h3 id="bước-1-thiết-lập-cơ-sở-dữ-liệu-sql-chung"&gt;Bước 1: Thiết lập cơ sở dữ liệu SQL chung
+&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;Cài đặt MySQL/PostgreSQL.&lt;/li&gt;
+&lt;li&gt;Tạo bảng Temporal và cấu hình Temporal server kết nối đến cơ sở dữ liệu này.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="bước-2-cài-đặt-temporal-trên-3-server"&gt;Bước 2: Cài đặt Temporal trên 3 server
+&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;Tải Temporal server trên mỗi server.&lt;/li&gt;
+&lt;li&gt;Cấu hình Temporal để kết nối đến cơ sở dữ liệu SQL chung.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="bước-3-cài-đặt-và-cấu-hình-worker"&gt;Bước 3: Cài đặt và cấu hình Worker
+&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;Cài đặt rclone và worker Temporal trên mỗi server.&lt;/li&gt;
+&lt;li&gt;Cấu hình worker để sử dụng rclone đồng bộ dữ liệu lên S3.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="bước-4-quản-lý-đồng-bộ-và-ha"&gt;Bước 4: Quản lý đồng bộ và HA
+&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;Sử dụng Temporal workflow để quản lý tiến trình đồng bộ, chỉ cho phép một server đồng bộ tại một thời điểm.&lt;/li&gt;
+&lt;li&gt;Đảm bảo tính HA, nếu một server gặp sự cố, các server khác tiếp quản tiến trình đồng bộ.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="bước-5-chạy-và-kiểm-tra"&gt;Bước 5: Chạy và kiểm tra
+&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;Chạy Temporal server và worker trên cả 3 server.&lt;/li&gt;
+&lt;li&gt;Kiểm tra tính đồng bộ và HA của hệ thống.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;img src="https://phongthien99.github.io/2024-09-06.png"
+loading="lazy"
+alt="image.png"
+&gt;&lt;/p&gt;
+&lt;h2 id="kết-luận"&gt;Kết Luận
+&lt;/h2&gt;&lt;p&gt;Trong việc đảm bảo tính sẵn sàng cao (HA) và tránh trùng lặp dữ liệu khi đồng bộ từ một volume chia sẻ lên nhiều hệ lưu trữ như AWS S3, Google Cloud Storage (GCS), và FTP, việc sử dụng Rclone kết hợp với Temporal mang lại giải pháp tối ưu và hiệu quả. Ngoài ra chúng ta có thể thử nghiệm trên 1 máy duy nhất bằng cách sử dựng temporal kết hợp với sqlite3.&lt;/p&gt;</description></item></channel></rss>

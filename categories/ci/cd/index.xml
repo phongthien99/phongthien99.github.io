@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>CI/CD on phongthien</title><link>https://phongthien99.github.io/categories/ci/cd/</link><description>Recent content in CI/CD on phongthien</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Sat, 21 Jun 2025 00:00:00 +0000</lastBuildDate><atom:link href="https://phongthien99.github.io/categories/ci/cd/index.xml" rel="self" type="application/rss+xml"/><item><title>Guide to Running GitLab Runner Locally for Building and Testing CI/CD Pipelines</title><link>https://phongthien99.github.io/posts/guide-to-running-gitlab-runner-locally-for-building-and-testing-ci/cd-pipelines/</link><pubDate>Sat, 21 Jun 2025 00:00:00 +0000</pubDate><guid>https://phongthien99.github.io/posts/guide-to-running-gitlab-runner-locally-for-building-and-testing-ci/cd-pipelines/</guid><description>&lt;h2 id="guide-to-running-gitlab-runner-locally-for-building-and-testing-cicd-pipelines"&gt;Guide to Running GitLab Runner Locally for Building and Testing CI/CD Pipelines
+&lt;/h2&gt;&lt;h2 id="đặt-vấn-đề"&gt;&lt;strong&gt;Đặt Vấn Đề&lt;/strong&gt;
+&lt;/h2&gt;&lt;p&gt;Trong quá trình phát triển phần mềm, việc kiểm thử và triển khai ứng dụng thường xuyên là điều không thể thiếu. Tuy nhiên, việc đợi pipeline CI/CD chạy trên GitLab server có thể mất thời gian, đặc biệt khi cần thử nghiệm nhanh các thay đổi nhỏ trong cấu hình hoặc script. Điều này làm giảm hiệu quả làm việc và gây khó khăn trong việc debug.&lt;/p&gt;
+&lt;h2 id="giải-pháp"&gt;&lt;strong&gt;Giải Pháp&lt;/strong&gt;
+&lt;/h2&gt;&lt;p&gt;Chạy &lt;strong&gt;GitLab Runner&lt;/strong&gt; ngay trên máy local là một giải pháp hiệu quả. Điều này cho phép bạn kiểm thử các job CI/CD một cách nhanh chóng mà không cần push code lên GitLab, từ đó tiết kiệm thời gian và giảm thiểu rủi ro phát sinh khi deploy lên môi trường thật.&lt;/p&gt;
+&lt;h2 id="thực-hiện"&gt;&lt;strong&gt;Thực Hiện&lt;/strong&gt;
+&lt;/h2&gt;&lt;h3 id="bước-1-cài-đặt-gitlab-runner"&gt;&lt;strong&gt;Bước 1: Cài Đặt GitLab Runner&lt;/strong&gt;
+&lt;/h3&gt;&lt;p&gt;Đối với hệ điều hành Ubuntu, bạn có thể cài đặt GitLab Runner bằng cách chạy:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;span class="lnt"&gt;3
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-bash" data-lang="bash"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh &lt;span class="p"&gt;|&lt;/span&gt; sudo bash
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;sudo apt-get install gitlab-runner&lt;span class="o"&gt;=&lt;/span&gt;15.11.1
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;blockquote&gt;
+&lt;p&gt;⚠️ Lưu ý: Bạn có thể chọn phiên bản mới nhất hoặc giữ cố định một phiên bản ổn định tùy theo yêu cầu dự án.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;hr&gt;
+&lt;h3 id="bước-2-viết-file"&gt;&lt;strong&gt;Bước 2: Viết File &lt;code&gt;gitlab-ci.yaml&lt;/code&gt;&lt;/strong&gt;
+&lt;/h3&gt;&lt;p&gt;Đây là file định nghĩa pipeline. Dưới đây là ví dụ một job đơn giản dùng để build Docker image:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt; 1
+&lt;/span&gt;&lt;span class="lnt"&gt; 2
+&lt;/span&gt;&lt;span class="lnt"&gt; 3
+&lt;/span&gt;&lt;span class="lnt"&gt; 4
+&lt;/span&gt;&lt;span class="lnt"&gt; 5
+&lt;/span&gt;&lt;span class="lnt"&gt; 6
+&lt;/span&gt;&lt;span class="lnt"&gt; 7
+&lt;/span&gt;&lt;span class="lnt"&gt; 8
+&lt;/span&gt;&lt;span class="lnt"&gt; 9
+&lt;/span&gt;&lt;span class="lnt"&gt;10
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-yaml" data-lang="yaml"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nt"&gt;image&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;docker:dind&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nt"&gt;stages&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;- &lt;span class="l"&gt;build&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nt"&gt;build-image&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;stage&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;build&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;tags&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;- &lt;span class="l"&gt;shel&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;script&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;- &lt;span class="l"&gt;echo &amp;#34;Build image&amp;#34;&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;hr&gt;
+&lt;hr&gt;
+&lt;h3 id="bước-4-chạy-gitlab-runner-local"&gt;&lt;strong&gt;Bước 4: Chạy GitLab Runner Local&lt;/strong&gt;
+&lt;/h3&gt;&lt;p&gt;Khi đã có đầy đủ file cấu hình, bạn chỉ cần chạy lệnh sau để thực thi pipeline ngay trên máy:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-bash" data-lang="bash"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;gitlab-runner &lt;span class="nb"&gt;exec&lt;/span&gt; docker build-image
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;blockquote&gt;
+&lt;p&gt;Lệnh này sẽ chạy job build-image bằng executor docker – tức là trực tiếp trên môi trường máy bạn, không cần đăng ký runner hay kết nối với GitLab server.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;hr&gt;
+&lt;h2 id="kết-luận"&gt;&lt;strong&gt;Kết Luận&lt;/strong&gt;
+&lt;/h2&gt;&lt;p&gt;Việc chạy GitLab Runner cục bộ là một công cụ cực kỳ hữu ích trong quá trình phát triển phần mềm hiện đại. Nó giúp bạn kiểm thử nhanh pipeline, tiết kiệm thời gian debug, đảm bảo cấu hình chính xác trước khi đưa code lên môi trường CI/CD chính thức. Hãy tận dụng tính năng này để tối ưu hóa quy trình phát triển và nâng cao chất lượng phần mềm của bạn.&lt;/p&gt;</description></item></channel></rss>

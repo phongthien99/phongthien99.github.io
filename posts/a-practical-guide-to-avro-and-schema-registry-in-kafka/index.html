@@ -1,0 +1,310 @@
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><meta name=description content="A Practical Guide to Avro and Schema Registry in Kafka 1. Đặt vấn đề Trong hệ thống event streaming với Kafka, dữ liệu được truyền dưới dạng message giữa producer và consumer. Một vấn đề lớn xuất hiện khi dữ liệu thay đổi cấu trúc (schema evolution):\nProducer thêm/bớt field trong message. Consumer cũ chưa được nâng cấp kịp thời. Nguy cơ consumer không đọc được dữ liệu, gây lỗi toàn hệ thống. Ví dụ: Producer ban đầu gửi {id, name}, sau đó nâng cấp thêm email. Nếu consumer chưa biết field mới thì phải làm sao?\n"><title>A Practical Guide to Avro and Schema Registry in Kafka</title><link rel=canonical href=https://phongthien99.github.io/posts/a-practical-guide-to-avro-and-schema-registry-in-kafka/><link rel=stylesheet href=/scss/style.min.769133d016a4a1944b3a27800e000cccd439a8c1a9c0c61f7c4fa0bc0e42de57.css><meta property='og:title' content="A Practical Guide to Avro and Schema Registry in Kafka"><meta property='og:description' content="A Practical Guide to Avro and Schema Registry in Kafka 1. Đặt vấn đề Trong hệ thống event streaming với Kafka, dữ liệu được truyền dưới dạng message giữa producer và consumer. Một vấn đề lớn xuất hiện khi dữ liệu thay đổi cấu trúc (schema evolution):\nProducer thêm/bớt field trong message. Consumer cũ chưa được nâng cấp kịp thời. Nguy cơ consumer không đọc được dữ liệu, gây lỗi toàn hệ thống. Ví dụ: Producer ban đầu gửi {id, name}, sau đó nâng cấp thêm email. Nếu consumer chưa biết field mới thì phải làm sao?\n"><meta property='og:url' content='https://phongthien99.github.io/posts/a-practical-guide-to-avro-and-schema-registry-in-kafka/'><meta property='og:site_name' content='phongthien'><meta property='og:type' content='article'><meta property='article:section' content='Post'><meta property='article:tag' content='kafka'><meta property='article:tag' content='avro'><meta property='article:tag' content='schema-registry'><meta property='article:published_time' content='2025-09-14T00:00:00+00:00'><meta property='article:modified_time' content='2025-09-14T00:00:00+00:00'><meta name=twitter:title content="A Practical Guide to Avro and Schema Registry in Kafka"><meta name=twitter:description content="A Practical Guide to Avro and Schema Registry in Kafka 1. Đặt vấn đề Trong hệ thống event streaming với Kafka, dữ liệu được truyền dưới dạng message giữa producer và consumer. Một vấn đề lớn xuất hiện khi dữ liệu thay đổi cấu trúc (schema evolution):\nProducer thêm/bớt field trong message. Consumer cũ chưa được nâng cấp kịp thời. Nguy cơ consumer không đọc được dữ liệu, gây lỗi toàn hệ thống. Ví dụ: Producer ban đầu gửi {id, name}, sau đó nâng cấp thêm email. Nếu consumer chưa biết field mới thì phải làm sao?\n"><link rel="shortcut icon" href=/favicon.png><script src=https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js></script><script>mermaid.initialize({startOnLoad:!0})</script></head><body class=article-page><script>(function(){const e="StackColorScheme";localStorage.getItem(e)||localStorage.setItem(e,"auto")})()</script><script>(function(){const t="StackColorScheme",e=localStorage.getItem(t),n=window.matchMedia("(prefers-color-scheme: dark)").matches===!0;e=="dark"||e==="auto"&&n?document.documentElement.dataset.scheme="dark":document.documentElement.dataset.scheme="light"})()</script><div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky"><button class="hamburger hamburger--spin" type=button id=toggle-menu aria-label="Toggle Menu">
+<span class=hamburger-box><span class=hamburger-inner></span></span></button><header><figure class=site-avatar><a href=/><img src=/img/avatar_hu_7ee69f593e8680d3.jpg width=300 height=300 class=site-logo loading=lazy alt=Avatar>
+</a><span class=emoji>🏅</span></figure><div class=site-meta><h1 class=site-name><a href=/>phongthien</a></h1><h2 class=site-description>Software Engineer</h2></div></header><ol class=menu-social><li><a href=https://github.com/phongthien99 target=_blank title=GitHub rel=me><svg class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6.0 00-1.3-3.2 4.2 4.2.0 00-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3.0 00-6.2.0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2.0 00-.1 3.2A4.6 4.6.0 004 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg></a></li><li><a href=https://twitter.com target=_blank title=linkedin rel=me><svg class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M10 14a3.5 3.5.0 005 0l4-4a3.5 3.5.0 00-5-5l-.5.5"/><path d="M14 10a3.5 3.5.0 00-5 0l-4 4a3.5 3.5.0 005 5l.5-.5"/></svg></a></li></ol><ol class=menu id=main-menu><li><a href=/><svg class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><polyline points="5 12 3 12 12 3 21 12 19 12"/><path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/><path d="M9 21v-6a2 2 0 012-2h2a2 2 0 012 2v6"/></svg>
+<span>Home</span></a></li><li><a href=/archives/><svg class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><rect x="3" y="4" width="18" height="4" rx="2"/><path d="M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+<span>Archives</span></a></li><li><a href=/search/><svg class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="10" cy="10" r="7"/><line x1="21" y1="21" x2="15" y2="15"/></svg>
+<span>Search</span></a></li><li><a href=/about-me/><svg class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="7" r="4"/><path d="M6 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/></svg>
+<span>About me</span></a></li><li class=menu-bottom-section><ol class=menu><li id=dark-mode-toggle><svg class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="8" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<svg class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="16" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<span>Dark Mode</span></li></ol></li></ol></aside><aside class="sidebar right-sidebar sticky"><section class="widget archives"><div class=widget-icon><svg class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><line x1="5" y1="9" x2="19" y2="9"/><line x1="5" y1="15" x2="19" y2="15"/><line x1="11" y1="4" x2="7" y2="20"/><line x1="17" y1="4" x2="13" y2="20"/></svg></div><h2 class="widget-title section-title">Table of contents</h2><div class=widget--toc><nav id=TableOfContents><ol><li><a href=#1-đặt-vấn-đề>1. Đặt vấn đề</a></li><li><a href=#2-cách-giải-quyết>2. Cách giải quyết</a><ol><li><a href=#21-avro-là-gì>2.1. Avro là gì?</a></li><li><a href=#22-lợi-ích-khi-sử-dụng-avro-trong-kafka>2.2. Lợi ích khi sử dụng Avro trong Kafka</a></li><li><a href=#23-schema-registry>2.3. Schema Registry</a></li><li><a href=#24-các-chế-độ-tương-thích-compatibility-modes>2.4. Các chế độ tương thích (Compatibility Modes)</a></li><li><a href=#ý-nghĩa-thực-tế>Ý nghĩa thực tế:</a></li></ol></li><li><a href=#3-thực-hiện>3. Thực hiện</a><ol><li><a href=#31-khởi-chạy-kafka--schema-registry>3.1. Khởi chạy Kafka + Schema Registry</a></li><li><a href=#33-code-mẫu-golang>3.3. Code mẫu Golang</a></li><li><a href=#producer-gửi-avro-message-với-schema-id>Producer (gửi Avro message với schema ID)</a></li><li><a href=#consumer-deserialize-theo-schema-từ-registry>Consumer (deserialize theo schema từ Registry)</a></li></ol></li><li><a href=#4-kết-luận>4. Kết luận</a></li></ol></nav></div></section></aside><main class="main full-width"><article class=main-article><header class=article-header><div class=article-details><header class=article-category><a href=/categories/tutorial/>Tutorial</a></header><div class=article-title-wrapper><h2 class=article-title><a href=/posts/a-practical-guide-to-avro-and-schema-registry-in-kafka/>A Practical Guide to Avro and Schema Registry in Kafka</a></h2></div><footer class=article-time><div><svg class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M11.795 21H5a2 2 0 01-2-2V7a2 2 0 012-2h12a2 2 0 012 2v4"/><circle cx="18" cy="18" r="4"/><path d="M15 3v4"/><path d="M7 3v4"/><path d="M3 11h16"/><path d="M18 16.496V18l1 1"/></svg>
+<time class=article-time--published datetime=2025-09-14T00:00:00Z>Sep 14, 2025</time></div><div><svg class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+<time class=article-time--reading>6 minute read</time></div></footer></div></header><section class=article-content><h1 id=a-practical-guide-to-avro-and-schema-registry-in-kafka>A Practical Guide to Avro and Schema Registry in Kafka</h1><h2 id=1-đặt-vấn-đề>1. Đặt vấn đề</h2><p>Trong hệ thống <strong>event streaming</strong> với Kafka, dữ liệu được truyền dưới dạng message giữa producer và consumer. Một vấn đề lớn xuất hiện khi <strong>dữ liệu thay đổi cấu trúc (schema evolution)</strong>:</p><ul><li>Producer thêm/bớt field trong message.</li><li>Consumer cũ chưa được nâng cấp kịp thời.</li><li>Nguy cơ consumer không đọc được dữ liệu, gây lỗi toàn hệ thống.</li></ul><p>Ví dụ: Producer ban đầu gửi <code>{id, name}</code>, sau đó nâng cấp thêm <code>email</code>. Nếu consumer chưa biết field mới thì phải làm sao?</p><h2 id=2-cách-giải-quyết>2. Cách giải quyết</h2><h3 id=21-avro-là-gì>2.1. Avro là gì?</h3><p><strong>Apache Avro</strong> là một <strong>serialization framework</strong> mã nguồn mở, tối ưu cho việc lưu trữ và truyền tải dữ liệu:</p><ul><li><strong>Dựa trên schema</strong>: định nghĩa bằng JSON.</li><li><strong>Hiệu năng cao</strong>: nhị phân, nhỏ gọn hơn JSON/XML.</li><li><strong>Đa ngôn ngữ</strong>: sinh code cho Java, Go, Python, C#…</li><li><strong>Hỗ trợ schema evolution</strong>: thêm/bớt field vẫn đọc được dữ liệu cũ nếu có <code>default</code>.</li></ul><p>Ví dụ schema Avro:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span><span class=lnt>8
+</span><span class=lnt>9
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-json data-lang=json><span class=line><span class=cl><span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=nt>&#34;type&#34;</span><span class=p>:</span> <span class=s2>&#34;record&#34;</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>  <span class=nt>&#34;name&#34;</span><span class=p>:</span> <span class=s2>&#34;User&#34;</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>  <span class=nt>&#34;fields&#34;</span><span class=p>:</span> <span class=p>[</span>
+</span></span><span class=line><span class=cl>    <span class=p>{</span><span class=nt>&#34;name&#34;</span><span class=p>:</span> <span class=s2>&#34;id&#34;</span><span class=p>,</span> <span class=nt>&#34;type&#34;</span><span class=p>:</span> <span class=s2>&#34;int&#34;</span><span class=p>},</span>
+</span></span><span class=line><span class=cl>    <span class=p>{</span><span class=nt>&#34;name&#34;</span><span class=p>:</span> <span class=s2>&#34;name&#34;</span><span class=p>,</span> <span class=nt>&#34;type&#34;</span><span class=p>:</span> <span class=s2>&#34;string&#34;</span><span class=p>},</span>
+</span></span><span class=line><span class=cl>    <span class=p>{</span><span class=nt>&#34;name&#34;</span><span class=p>:</span> <span class=s2>&#34;email&#34;</span><span class=p>,</span> <span class=nt>&#34;type&#34;</span><span class=p>:</span> <span class=p>[</span><span class=s2>&#34;null&#34;</span><span class=p>,</span><span class=s2>&#34;string&#34;</span><span class=p>],</span> <span class=nt>&#34;default&#34;</span><span class=p>:</span> <span class=kc>null</span><span class=p>}</span>
+</span></span><span class=line><span class=cl>  <span class=p>]</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><h3 id=22-lợi-ích-khi-sử-dụng-avro-trong-kafka>2.2. Lợi ích khi sử dụng Avro trong Kafka</h3><ul><li><strong>Hiệu năng & tiết kiệm</strong>: dữ liệu nhị phân gọn nhẹ, giảm chi phí lưu trữ và băng thông.</li><li><strong>Đảm bảo tính nhất quán</strong>: tất cả dữ liệu đều theo schema đã định nghĩa.</li><li><strong>Hỗ trợ nâng cấp linh hoạt</strong>: dễ dàng thêm/bớt field mà không phá vỡ hệ thống.</li><li><strong>Ngôn ngữ trung lập</strong>: dễ dàng tích hợp microservices viết bằng nhiều ngôn ngữ khác nhau.</li><li><strong>Kết hợp Schema Registry</strong>: chỉ cần gửi schema ID thay vì toàn bộ schema, giúp quản lý tập trung và version hóa rõ ràng.</li></ul><h3 id=23-schema-registry>2.3. Schema Registry</h3><p>Schema Registry là một service trung tâm dùng để:</p><ul><li>Lưu trữ và quản lý <strong>version schema</strong>.</li><li>Đảm bảo <strong>tính tương thích</strong> khi schema thay đổi.</li><li>Giúp producer và consumer giao tiếp an toàn thông qua schema ID.</li></ul><h3 id=24-các-chế-độ-tương-thích-compatibility-modes>2.4. Các chế độ tương thích (Compatibility Modes)</h3><p>Khi cập nhật schema, Schema Registry sẽ kiểm tra tính tương thích dựa trên mode đã cấu hình. Có 7 chế độ chính:</p><div class=table-wrapper><table><thead><tr><th>Compatibility Type</th><th>Changes allowed</th><th>Check against which schemas</th><th>Upgrade first</th></tr></thead><tbody><tr><td><strong>BACKWARD</strong></td><td>Delete fields, Add optional fields</td><td>Last version</td><td>Consumers</td></tr><tr><td><strong>BACKWARD_TRANSITIVE</strong></td><td>Delete fields, Add optional fields</td><td>All previous versions</td><td>Consumers</td></tr><tr><td><strong>FORWARD</strong></td><td>Add fields, Delete optional fields</td><td>Last version</td><td>Producers</td></tr><tr><td><strong>FORWARD_TRANSITIVE</strong></td><td>Add fields, Delete optional fields</td><td>All previous versions</td><td>Producers</td></tr><tr><td><strong>FULL</strong></td><td>Add optional fields, Delete optional fields</td><td>Last version</td><td>Any order</td></tr><tr><td><strong>FULL_TRANSITIVE</strong></td><td>Add optional fields, Delete optional fields</td><td>All previous versions</td><td>Any order</td></tr><tr><td><strong>NONE</strong></td><td>Tất cả thay đổi đều được chấp nhận</td><td>Không kiểm tra</td><td>Tuỳ</td></tr></tbody></table></div><h3 id=ý-nghĩa-thực-tế>Ý nghĩa thực tế:</h3><ul><li><strong>BACKWARD</strong>: phổ biến nhất trong streaming (consumer upgrade chậm hơn producer).</li><li><strong>BACKWARD_TRANSITIVE</strong>: an toàn hơn, đảm bảo schema mới tương thích với toàn bộ lịch sử schema.</li><li><strong>FORWARD</strong>: phù hợp với batch/ETL (producer upgrade chậm hơn consumer).</li><li><strong>FULL</strong> và <strong>FULL_TRANSITIVE</strong>: dùng khi hệ thống yêu cầu <strong>tương thích 2 chiều tuyệt đối</strong>, upgrade producer hoặc consumer theo bất kỳ thứ tự nào.</li><li><strong>NONE</strong>: chỉ nên dùng trong <strong>dev/test</strong>, vì dễ gây crash consumer.</li></ul><h2 id=3-thực-hiện>3. Thực hiện</h2><h3 id=31-khởi-chạy-kafka--schema-registry>3.1. Khởi chạy Kafka + Schema Registry</h3><p>Ví dụ Docker Compose:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-yaml data-lang=yaml><span class=line><span class=cl><span class=nt>version</span><span class=p>:</span><span class=w> </span><span class=s1>&#39;2&#39;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=nt>services</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>kafka</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>image</span><span class=p>:</span><span class=w> </span><span class=s1>&#39;confluentinc/cp-kafka:7.6.0&#39;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>container_name</span><span class=p>:</span><span class=w> </span><span class=l>kafka</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>networks</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>dev-net</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>aliases</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span>- <span class=l>kafka.remote</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>ports</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>- <span class=s1>&#39;9092:9092&#39;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>environment</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>KAFKA_PROCESS_ROLES</span><span class=p>:</span><span class=w> </span><span class=s1>&#39;broker,controller&#39;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>KAFKA_NODE_ID</span><span class=p>:</span><span class=w> </span><span class=m>1</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>KAFKA_LISTENERS</span><span class=p>:</span><span class=w> </span><span class=s1>&#39;PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093&#39;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>KAFKA_ADVERTISED_LISTENERS</span><span class=p>:</span><span class=w> </span><span class=s1>&#39;PLAINTEXT://kafka.remote:9092&#39;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>KAFKA_LISTENER_SECURITY_PROTOCOL_MAP</span><span class=p>:</span><span class=w> </span><span class=s1>&#39;CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT&#39;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>KAFKA_INTER_BROKER_LISTENER_NAME</span><span class=p>:</span><span class=w> </span><span class=l>PLAINTEXT</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>KAFKA_CONTROLLER_LISTENER_NAMES</span><span class=p>:</span><span class=w> </span><span class=l>CONTROLLER</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>KAFKA_CONTROLLER_QUORUM_VOTERS</span><span class=p>:</span><span class=w> </span><span class=s1>&#39;1@kafka.remote:9093&#39;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      
+</span></span></span><span class=line><span class=cl><span class=w>      
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>schema-registry</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>image</span><span class=p>:</span><span class=w> </span><span class=s1>&#39;confluentinc/cp-schema-registry:latest&#39;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>environment</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS</span><span class=p>:</span><span class=w> </span><span class=s1>&#39;kafka:9092&#39;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>SCHEMA_REGISTRY_HOST_NAME</span><span class=p>:</span><span class=w> </span><span class=l>schema-registry</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>SCHEMA_REGISTRY_LISTENERS</span><span class=p>:</span><span class=w> </span><span class=s1>&#39;http://0.0.0.0:8081&#39;</span><span class=w>
+</span></span></span></code></pre></td></tr></table></div></div><h3 id=33-code-mẫu-golang>3.3. Code mẫu Golang</h3><h3 id=producer-gửi-avro-message-với-schema-id>Producer (gửi Avro message với schema ID)</h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span><span class=lnt>40
+</span><span class=lnt>41
+</span><span class=lnt>42
+</span><span class=lnt>43
+</span><span class=lnt>44
+</span><span class=lnt>45
+</span><span class=lnt>46
+</span><span class=lnt>47
+</span><span class=lnt>48
+</span><span class=lnt>49
+</span><span class=lnt>50
+</span><span class=lnt>51
+</span><span class=lnt>52
+</span><span class=lnt>53
+</span><span class=lnt>54
+</span><span class=lnt>55
+</span><span class=lnt>56
+</span><span class=lnt>57
+</span><span class=lnt>58
+</span><span class=lnt>59
+</span><span class=lnt>60
+</span><span class=lnt>61
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-go data-lang=go><span class=line><span class=cl><span class=kn>package</span><span class=w> </span><span class=nx>main</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=kn>import</span><span class=w> </span><span class=p>(</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=s>&#34;context&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=s>&#34;fmt&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=s>&#34;log&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=s>&#34;github.com/segmentio/kafka-go&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=s>&#34;github.com/riferrei/srclient&#34;</span><span class=w> </span><span class=c1>// Schema Registry client</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nx>avro</span><span class=w> </span><span class=s>&#34;github.com/hamba/avro/v2&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=p>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=kd>func</span><span class=w> </span><span class=nf>main</span><span class=p>()</span><span class=w> </span><span class=p>{</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=c1>// Tạo client schema registry</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nx>client</span><span class=w> </span><span class=o>:=</span><span class=w> </span><span class=nx>srclient</span><span class=p>.</span><span class=nf>CreateSchemaRegistryClient</span><span class=p>(</span><span class=s>&#34;http://localhost:8081&#34;</span><span class=p>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nx>schema</span><span class=p>,</span><span class=w> </span><span class=nx>err</span><span class=w> </span><span class=o>:=</span><span class=w> </span><span class=nx>client</span><span class=p>.</span><span class=nf>GetLatestSchema</span><span class=p>(</span><span class=s>&#34;user-value&#34;</span><span class=p>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=k>if</span><span class=w> </span><span class=nx>err</span><span class=w> </span><span class=o>!=</span><span class=w> </span><span class=kc>nil</span><span class=w> </span><span class=p>{</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nx>log</span><span class=p>.</span><span class=nf>Fatal</span><span class=p>(</span><span class=nx>err</span><span class=p>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=p>}</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nx>codec</span><span class=p>,</span><span class=w> </span><span class=nx>err</span><span class=w> </span><span class=o>:=</span><span class=w> </span><span class=nx>avro</span><span class=p>.</span><span class=nf>Parse</span><span class=p>(</span><span class=nx>schema</span><span class=p>.</span><span class=nf>Schema</span><span class=p>())</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=k>if</span><span class=w> </span><span class=nx>err</span><span class=w> </span><span class=o>!=</span><span class=w> </span><span class=kc>nil</span><span class=w> </span><span class=p>{</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nx>log</span><span class=p>.</span><span class=nf>Fatal</span><span class=p>(</span><span class=nx>err</span><span class=p>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=p>}</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=c1>// Serialize dữ liệu</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nx>user</span><span class=w> </span><span class=o>:=</span><span class=w> </span><span class=kd>map</span><span class=p>[</span><span class=kt>string</span><span class=p>]</span><span class=kd>interface</span><span class=p>{}{</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=s>&#34;id&#34;</span><span class=p>:</span><span class=w>    </span><span class=mi>1</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=s>&#34;name&#34;</span><span class=p>:</span><span class=w>  </span><span class=s>&#34;Alice&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=s>&#34;email&#34;</span><span class=p>:</span><span class=w> </span><span class=s>&#34;alice@example.com&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=p>}</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nx>value</span><span class=p>,</span><span class=w> </span><span class=nx>err</span><span class=w> </span><span class=o>:=</span><span class=w> </span><span class=nx>avro</span><span class=p>.</span><span class=nf>Marshal</span><span class=p>(</span><span class=nx>codec</span><span class=p>,</span><span class=w> </span><span class=nx>user</span><span class=p>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=k>if</span><span class=w> </span><span class=nx>err</span><span class=w> </span><span class=o>!=</span><span class=w> </span><span class=kc>nil</span><span class=w> </span><span class=p>{</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nx>log</span><span class=p>.</span><span class=nf>Fatal</span><span class=p>(</span><span class=nx>err</span><span class=p>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=p>}</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=c1>// Prefix magic byte (0) + schema ID (4 bytes)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nx>encoded</span><span class=w> </span><span class=o>:=</span><span class=w> </span><span class=nb>make</span><span class=p>([]</span><span class=kt>byte</span><span class=p>,</span><span class=w> </span><span class=mi>5</span><span class=o>+</span><span class=nb>len</span><span class=p>(</span><span class=nx>value</span><span class=p>))</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nx>encoded</span><span class=p>[</span><span class=mi>0</span><span class=p>]</span><span class=w> </span><span class=p>=</span><span class=w> </span><span class=mi>0</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nx>encoded</span><span class=p>[</span><span class=mi>1</span><span class=p>]</span><span class=w> </span><span class=p>=</span><span class=w> </span><span class=nb>byte</span><span class=p>(</span><span class=nx>schema</span><span class=p>.</span><span class=nf>ID</span><span class=p>()</span><span class=w> </span><span class=o>&gt;&gt;</span><span class=w> </span><span class=mi>24</span><span class=p>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nx>encoded</span><span class=p>[</span><span class=mi>2</span><span class=p>]</span><span class=w> </span><span class=p>=</span><span class=w> </span><span class=nb>byte</span><span class=p>(</span><span class=nx>schema</span><span class=p>.</span><span class=nf>ID</span><span class=p>()</span><span class=w> </span><span class=o>&gt;&gt;</span><span class=w> </span><span class=mi>16</span><span class=p>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nx>encoded</span><span class=p>[</span><span class=mi>3</span><span class=p>]</span><span class=w> </span><span class=p>=</span><span class=w> </span><span class=nb>byte</span><span class=p>(</span><span class=nx>schema</span><span class=p>.</span><span class=nf>ID</span><span class=p>()</span><span class=w> </span><span class=o>&gt;&gt;</span><span class=w> </span><span class=mi>8</span><span class=p>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nx>encoded</span><span class=p>[</span><span class=mi>4</span><span class=p>]</span><span class=w> </span><span class=p>=</span><span class=w> </span><span class=nb>byte</span><span class=p>(</span><span class=nx>schema</span><span class=p>.</span><span class=nf>ID</span><span class=p>())</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nb>copy</span><span class=p>(</span><span class=nx>encoded</span><span class=p>[</span><span class=mi>5</span><span class=p>:],</span><span class=w> </span><span class=nx>value</span><span class=p>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=c1>// Kafka producer</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nx>w</span><span class=w> </span><span class=o>:=</span><span class=w> </span><span class=o>&amp;</span><span class=nx>kafka</span><span class=p>.</span><span class=nx>Writer</span><span class=p>{</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nx>Addr</span><span class=p>:</span><span class=w>  </span><span class=nx>kafka</span><span class=p>.</span><span class=nf>TCP</span><span class=p>(</span><span class=s>&#34;localhost:9092&#34;</span><span class=p>),</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nx>Topic</span><span class=p>:</span><span class=w> </span><span class=s>&#34;user-topic&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=p>}</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nx>err</span><span class=w> </span><span class=p>=</span><span class=w> </span><span class=nx>w</span><span class=p>.</span><span class=nf>WriteMessages</span><span class=p>(</span><span class=nx>context</span><span class=p>.</span><span class=nf>Background</span><span class=p>(),</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nx>kafka</span><span class=p>.</span><span class=nx>Message</span><span class=p>{</span><span class=nx>Value</span><span class=p>:</span><span class=w> </span><span class=nx>encoded</span><span class=p>},</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=p>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=k>if</span><span class=w> </span><span class=nx>err</span><span class=w> </span><span class=o>!=</span><span class=w> </span><span class=kc>nil</span><span class=w> </span><span class=p>{</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nx>log</span><span class=p>.</span><span class=nf>Fatal</span><span class=p>(</span><span class=nx>err</span><span class=p>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=p>}</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nx>fmt</span><span class=p>.</span><span class=nf>Println</span><span class=p>(</span><span class=s>&#34;Sent user:&#34;</span><span class=p>,</span><span class=w> </span><span class=nx>user</span><span class=p>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=p>}</span><span class=w>
+</span></span></span></code></pre></td></tr></table></div></div><h3 id=consumer-deserialize-theo-schema-từ-registry>Consumer (deserialize theo schema từ Registry)</h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span><span class=lnt>40
+</span><span class=lnt>41
+</span><span class=lnt>42
+</span><span class=lnt>43
+</span><span class=lnt>44
+</span><span class=lnt>45
+</span><span class=lnt>46
+</span><span class=lnt>47
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-go data-lang=go><span class=line><span class=cl><span class=kn>package</span><span class=w> </span><span class=nx>main</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=kn>import</span><span class=w> </span><span class=p>(</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=s>&#34;context&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=s>&#34;fmt&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=s>&#34;log&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=s>&#34;github.com/segmentio/kafka-go&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=s>&#34;github.com/riferrei/srclient&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nx>avro</span><span class=w> </span><span class=s>&#34;github.com/hamba/avro/v2&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=p>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=kd>func</span><span class=w> </span><span class=nf>main</span><span class=p>()</span><span class=w> </span><span class=p>{</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nx>client</span><span class=w> </span><span class=o>:=</span><span class=w> </span><span class=nx>srclient</span><span class=p>.</span><span class=nf>CreateSchemaRegistryClient</span><span class=p>(</span><span class=s>&#34;http://localhost:8081&#34;</span><span class=p>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nx>r</span><span class=w> </span><span class=o>:=</span><span class=w> </span><span class=nx>kafka</span><span class=p>.</span><span class=nf>NewReader</span><span class=p>(</span><span class=nx>kafka</span><span class=p>.</span><span class=nx>ReaderConfig</span><span class=p>{</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nx>Brokers</span><span class=p>:</span><span class=w> </span><span class=p>[]</span><span class=kt>string</span><span class=p>{</span><span class=s>&#34;localhost:9092&#34;</span><span class=p>},</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nx>GroupID</span><span class=p>:</span><span class=w> </span><span class=s>&#34;user-group&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nx>Topic</span><span class=p>:</span><span class=w>   </span><span class=s>&#34;user-topic&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=p>})</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=k>for</span><span class=w> </span><span class=p>{</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nx>m</span><span class=p>,</span><span class=w> </span><span class=nx>err</span><span class=w> </span><span class=o>:=</span><span class=w> </span><span class=nx>r</span><span class=p>.</span><span class=nf>ReadMessage</span><span class=p>(</span><span class=nx>context</span><span class=p>.</span><span class=nf>Background</span><span class=p>())</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=k>if</span><span class=w> </span><span class=nx>err</span><span class=w> </span><span class=o>!=</span><span class=w> </span><span class=kc>nil</span><span class=w> </span><span class=p>{</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>            </span><span class=nx>log</span><span class=p>.</span><span class=nf>Fatal</span><span class=p>(</span><span class=nx>err</span><span class=p>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=p>}</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nx>schemaID</span><span class=w> </span><span class=o>:=</span><span class=w> </span><span class=nb>int</span><span class=p>(</span><span class=nx>m</span><span class=p>.</span><span class=nx>Value</span><span class=p>[</span><span class=mi>1</span><span class=p>])</span><span class=o>&lt;&lt;</span><span class=mi>24</span><span class=w> </span><span class=p>|</span><span class=w> </span><span class=nb>int</span><span class=p>(</span><span class=nx>m</span><span class=p>.</span><span class=nx>Value</span><span class=p>[</span><span class=mi>2</span><span class=p>])</span><span class=o>&lt;&lt;</span><span class=mi>16</span><span class=w> </span><span class=p>|</span><span class=w> </span><span class=nb>int</span><span class=p>(</span><span class=nx>m</span><span class=p>.</span><span class=nx>Value</span><span class=p>[</span><span class=mi>3</span><span class=p>])</span><span class=o>&lt;&lt;</span><span class=mi>8</span><span class=w> </span><span class=p>|</span><span class=w> </span><span class=nb>int</span><span class=p>(</span><span class=nx>m</span><span class=p>.</span><span class=nx>Value</span><span class=p>[</span><span class=mi>4</span><span class=p>])</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nx>schema</span><span class=p>,</span><span class=w> </span><span class=nx>err</span><span class=w> </span><span class=o>:=</span><span class=w> </span><span class=nx>client</span><span class=p>.</span><span class=nf>GetSchema</span><span class=p>(</span><span class=nx>schemaID</span><span class=p>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=k>if</span><span class=w> </span><span class=nx>err</span><span class=w> </span><span class=o>!=</span><span class=w> </span><span class=kc>nil</span><span class=w> </span><span class=p>{</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>            </span><span class=nx>log</span><span class=p>.</span><span class=nf>Fatal</span><span class=p>(</span><span class=nx>err</span><span class=p>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=p>}</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nx>codec</span><span class=p>,</span><span class=w> </span><span class=nx>err</span><span class=w> </span><span class=o>:=</span><span class=w> </span><span class=nx>avro</span><span class=p>.</span><span class=nf>Parse</span><span class=p>(</span><span class=nx>schema</span><span class=p>.</span><span class=nf>Schema</span><span class=p>())</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=k>if</span><span class=w> </span><span class=nx>err</span><span class=w> </span><span class=o>!=</span><span class=w> </span><span class=kc>nil</span><span class=w> </span><span class=p>{</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>            </span><span class=nx>log</span><span class=p>.</span><span class=nf>Fatal</span><span class=p>(</span><span class=nx>err</span><span class=p>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=p>}</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nx>payload</span><span class=w> </span><span class=o>:=</span><span class=w> </span><span class=nx>m</span><span class=p>.</span><span class=nx>Value</span><span class=p>[</span><span class=mi>5</span><span class=p>:]</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=kd>var</span><span class=w> </span><span class=nx>result</span><span class=w> </span><span class=kd>map</span><span class=p>[</span><span class=kt>string</span><span class=p>]</span><span class=kd>interface</span><span class=p>{}</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=k>if</span><span class=w> </span><span class=nx>err</span><span class=w> </span><span class=o>:=</span><span class=w> </span><span class=nx>avro</span><span class=p>.</span><span class=nf>Unmarshal</span><span class=p>(</span><span class=nx>codec</span><span class=p>,</span><span class=w> </span><span class=nx>payload</span><span class=p>,</span><span class=w> </span><span class=o>&amp;</span><span class=nx>result</span><span class=p>);</span><span class=w> </span><span class=nx>err</span><span class=w> </span><span class=o>!=</span><span class=w> </span><span class=kc>nil</span><span class=w> </span><span class=p>{</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>            </span><span class=nx>log</span><span class=p>.</span><span class=nf>Fatal</span><span class=p>(</span><span class=nx>err</span><span class=p>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=p>}</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nx>fmt</span><span class=p>.</span><span class=nf>Println</span><span class=p>(</span><span class=s>&#34;Received user:&#34;</span><span class=p>,</span><span class=w> </span><span class=nx>result</span><span class=p>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=p>}</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=p>}</span><span class=w>
+</span></span></span></code></pre></td></tr></table></div></div><h2 id=4-kết-luận>4. Kết luận</h2><p>Việc kết hợp <strong>Avro + Schema Registry</strong> trong Kafka mang lại nhiều lợi ích:</p><ul><li><strong>Avro</strong>: serialization hiệu quả, nhỏ gọn, hỗ trợ schema evolution.</li><li><strong>Schema Registry</strong>: quản lý schema tập trung, đảm bảo compatibility.</li><li>Giúp hệ thống <strong>nâng cấp dần dần</strong>, không cần update đồng loạt tất cả service.</li></ul><p>👉 Lựa chọn <strong>compatibility mode</strong> phù hợp là chìa khóa:</p><ul><li><strong>BACKWARD / BACKWARD_TRANSITIVE</strong>: event streaming, upgrade consumer chậm.</li><li><strong>FORWARD / FORWARD_TRANSITIVE</strong>: batch/ETL.</li><li><strong>FULL / FULL_TRANSITIVE</strong>: yêu cầu ổn định tuyệt đối.</li><li><strong>NONE</strong>: chỉ nên dùng trong dev/test.</li></ul></section><footer class=article-footer><section class=article-tags><a href=/tags/kafka/>Kafka</a>
+<a href=/tags/avro/>Avro</a>
+<a href=/tags/schema-registry/>Schema-Registry</a></section><section class=article-copyright><svg class="icon icon-tabler icon-tabler-copyright" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><path d="M14.5 9a3.5 4 0 100 6"/></svg>
+<span>Licensed under CC BY-NC-SA 4.0</span></section></footer></article><div class=disqus-container></div><style>.disqus-container{background-color:var(--card-background);border-radius:var(--card-border-radius);box-shadow:var(--shadow-l1);padding:var(--card-padding)}</style><script>window.addEventListener("onColorSchemeChange",e=>{typeof DISQUS=="object"&&DISQUS.reset({reload:!0})})</script><footer class=site-footer><section class=copyright>&copy;
+2026 phongthien</section><section class=powerby>Built with <a href=https://gohugo.io/ target=_blank rel=noopener>Hugo</a><br>Theme <b><a href=https://github.com/CaiJimmy/hugo-theme-stack target=_blank rel=noopener data-version=3.33.0>Stack</a></b> designed by <a href=https://jimmycai.com target=_blank rel=noopener>Jimmy</a></section></footer><div class=pswp tabindex=-1 role=dialog aria-hidden=true><div class=pswp__bg></div><div class=pswp__scroll-wrap><div class=pswp__container><div class=pswp__item></div><div class=pswp__item></div><div class=pswp__item></div></div><div class="pswp__ui pswp__ui--hidden"><div class=pswp__top-bar><div class=pswp__counter></div><button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+<button class="pswp__button pswp__button--share" title=Share></button>
+<button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+<button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button><div class=pswp__preloader><div class=pswp__preloader__icn><div class=pswp__preloader__cut><div class=pswp__preloader__donut></div></div></div></div></div><div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap"><div class=pswp__share-tooltip></div></div><button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+</button>
+<button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)"></button><div class=pswp__caption><div class=pswp__caption__center></div></div></div></div></div><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo=" crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU=" crossorigin=anonymous defer></script><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css crossorigin=anonymous><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css crossorigin=anonymous></main></div><script src=https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z+KMkF24hUW8WePSA9HM=" crossorigin=anonymous></script><script type=text/javascript src=/ts/main.c922af694cc257bf1ecc41c0dd7b0430f9114ec280ccf67cd2c6ad55f5316c4e.js defer></script><script>(function(){const e=document.createElement("link");e.href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap",e.type="text/css",e.rel="stylesheet",document.head.appendChild(e)})()</script></body></html>

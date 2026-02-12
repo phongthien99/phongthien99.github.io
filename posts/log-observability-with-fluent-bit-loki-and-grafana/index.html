@@ -1,0 +1,346 @@
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><meta name=description content="Log Observability with Fluent Bit, Loki and Grafana 1. Đặt vấn đề Trong kỷ nguyên của hệ thống phân tán và microservices, log đã trở thành “dòng máu” nuôi dưỡng khả năng quan sát của toàn bộ nền tảng. Thế nhưng, chính bởi sự phân tán của ứng dụng — mỗi container, mỗi node, mỗi dịch vụ lại sinh log ở một nơi khác nhau — việc tập trung và phân tích log trở thành một thách thức không hề nhỏ.\n"><title>Log Observability with Fluent Bit, Loki and Grafana</title><link rel=canonical href=https://phongthien99.github.io/posts/log-observability-with-fluent-bit-loki-and-grafana/><link rel=stylesheet href=/scss/style.min.769133d016a4a1944b3a27800e000cccd439a8c1a9c0c61f7c4fa0bc0e42de57.css><meta property='og:title' content="Log Observability with Fluent Bit, Loki and Grafana"><meta property='og:description' content="Log Observability with Fluent Bit, Loki and Grafana 1. Đặt vấn đề Trong kỷ nguyên của hệ thống phân tán và microservices, log đã trở thành “dòng máu” nuôi dưỡng khả năng quan sát của toàn bộ nền tảng. Thế nhưng, chính bởi sự phân tán của ứng dụng — mỗi container, mỗi node, mỗi dịch vụ lại sinh log ở một nơi khác nhau — việc tập trung và phân tích log trở thành một thách thức không hề nhỏ.\n"><meta property='og:url' content='https://phongthien99.github.io/posts/log-observability-with-fluent-bit-loki-and-grafana/'><meta property='og:site_name' content='phongthien'><meta property='og:type' content='article'><meta property='article:section' content='Post'><meta property='article:tag' content='k8s'><meta property='article:tag' content='helm'><meta property='article:tag' content='devops'><meta property='article:published_time' content='2025-11-21T00:00:00+00:00'><meta property='article:modified_time' content='2025-11-21T00:00:00+00:00'><meta name=twitter:title content="Log Observability with Fluent Bit, Loki and Grafana"><meta name=twitter:description content="Log Observability with Fluent Bit, Loki and Grafana 1. Đặt vấn đề Trong kỷ nguyên của hệ thống phân tán và microservices, log đã trở thành “dòng máu” nuôi dưỡng khả năng quan sát của toàn bộ nền tảng. Thế nhưng, chính bởi sự phân tán của ứng dụng — mỗi container, mỗi node, mỗi dịch vụ lại sinh log ở một nơi khác nhau — việc tập trung và phân tích log trở thành một thách thức không hề nhỏ.\n"><link rel="shortcut icon" href=/favicon.png><script src=https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js></script><script>mermaid.initialize({startOnLoad:!0})</script></head><body class=article-page><script>(function(){const e="StackColorScheme";localStorage.getItem(e)||localStorage.setItem(e,"auto")})()</script><script>(function(){const t="StackColorScheme",e=localStorage.getItem(t),n=window.matchMedia("(prefers-color-scheme: dark)").matches===!0;e=="dark"||e==="auto"&&n?document.documentElement.dataset.scheme="dark":document.documentElement.dataset.scheme="light"})()</script><div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky"><button class="hamburger hamburger--spin" type=button id=toggle-menu aria-label="Toggle Menu">
+<span class=hamburger-box><span class=hamburger-inner></span></span></button><header><figure class=site-avatar><a href=/><img src=/img/avatar_hu_7ee69f593e8680d3.jpg width=300 height=300 class=site-logo loading=lazy alt=Avatar>
+</a><span class=emoji>🏅</span></figure><div class=site-meta><h1 class=site-name><a href=/>phongthien</a></h1><h2 class=site-description>Software Engineer</h2></div></header><ol class=menu-social><li><a href=https://github.com/phongthien99 target=_blank title=GitHub rel=me><svg class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6.0 00-1.3-3.2 4.2 4.2.0 00-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3.0 00-6.2.0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2.0 00-.1 3.2A4.6 4.6.0 004 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg></a></li><li><a href=https://twitter.com target=_blank title=linkedin rel=me><svg class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M10 14a3.5 3.5.0 005 0l4-4a3.5 3.5.0 00-5-5l-.5.5"/><path d="M14 10a3.5 3.5.0 00-5 0l-4 4a3.5 3.5.0 005 5l.5-.5"/></svg></a></li></ol><ol class=menu id=main-menu><li><a href=/><svg class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><polyline points="5 12 3 12 12 3 21 12 19 12"/><path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/><path d="M9 21v-6a2 2 0 012-2h2a2 2 0 012 2v6"/></svg>
+<span>Home</span></a></li><li><a href=/archives/><svg class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><rect x="3" y="4" width="18" height="4" rx="2"/><path d="M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+<span>Archives</span></a></li><li><a href=/search/><svg class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="10" cy="10" r="7"/><line x1="21" y1="21" x2="15" y2="15"/></svg>
+<span>Search</span></a></li><li><a href=/about-me/><svg class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="7" r="4"/><path d="M6 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/></svg>
+<span>About me</span></a></li><li class=menu-bottom-section><ol class=menu><li id=dark-mode-toggle><svg class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="8" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<svg class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="16" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<span>Dark Mode</span></li></ol></li></ol></aside><aside class="sidebar right-sidebar sticky"><section class="widget archives"><div class=widget-icon><svg class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><line x1="5" y1="9" x2="19" y2="9"/><line x1="5" y1="15" x2="19" y2="15"/><line x1="11" y1="4" x2="7" y2="20"/><line x1="17" y1="4" x2="13" y2="20"/></svg></div><h2 class="widget-title section-title">Table of contents</h2><div class=widget--toc><nav id=TableOfContents><ol><li><a href=#1-đặt-vấn-đề><strong>1. Đặt vấn đề</strong></a></li><li><a href=#2-giải-pháp-fluent-bit--loki--grafana>2. <strong>Giải pháp: Fluent Bit → Loki → Grafana</strong></a><ol><li><a href=#21-kiến-trúc-tổng-quan><strong>2.1 Kiến trúc tổng quan</strong></a></li><li><a href=#22-vai-trò-từng-hệ-thống><strong>2.2 Vai trò từng hệ thống</strong></a></li><li><a href=#23-ưu-điểm-của-giải-pháp><strong>2.3 Ưu điểm của giải pháp</strong></a></li></ol></li><li><a href=#3-thực-nghiệm-triển-khai-bằng-docker-compose>3. <strong>Thực nghiệm triển khai bằng Docker Compose</strong></a><ol><li><a href=#31-mục-tiêu-thực-nghiệm><strong>3.1 Mục tiêu thực nghiệm</strong></a></li><li><a href=#32-cấu-hình-docker-compose><strong>3.2 Cấu hình Docker Compose</strong></a></li><li><a href=#33-cấu-hình-fluent-bit><strong>3.3 Cấu hình Fluent Bit</strong></a></li><li><a href=#34-cấu-hình-loki><strong>3.4 Cấu hình Loki</strong></a></li><li><a href=#35-quan-sát-log-trong-grafana><strong>3.5 Quan sát log trong Grafana</strong></a></li></ol></li><li><a href=#4-kết-luận>4. Kết luận</a></li></ol></nav></div></section></aside><main class="main full-width"><article class=main-article><header class=article-header><div class=article-details><header class=article-category><a href=/categories/devops/>Devops</a></header><div class=article-title-wrapper><h2 class=article-title><a href=/posts/log-observability-with-fluent-bit-loki-and-grafana/>Log Observability with Fluent Bit, Loki and Grafana</a></h2></div><footer class=article-time><div><svg class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M11.795 21H5a2 2 0 01-2-2V7a2 2 0 012-2h12a2 2 0 012 2v4"/><circle cx="18" cy="18" r="4"/><path d="M15 3v4"/><path d="M7 3v4"/><path d="M3 11h16"/><path d="M18 16.496V18l1 1"/></svg>
+<time class=article-time--published datetime=2025-11-21T00:00:00Z>Nov 21, 2025</time></div><div><svg class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+<time class=article-time--reading>5 minute read</time></div></footer></div></header><section class=article-content><h1 id=log-observability-with-fluent-bit-loki-and-grafana>Log Observability with Fluent Bit, Loki and Grafana</h1><h2 id=1-đặt-vấn-đề><strong>1. Đặt vấn đề</strong></h2><p>Trong kỷ nguyên của hệ thống phân tán và microservices, log đã trở thành “dòng máu” nuôi dưỡng khả năng quan sát của toàn bộ nền tảng. Thế nhưng, chính bởi sự phân tán của ứng dụng — mỗi container, mỗi node, mỗi dịch vụ lại sinh log ở một nơi khác nhau — việc tập trung và phân tích log trở thành một thách thức không hề nhỏ.</p><p>Nhiều tổ chức vẫn phụ thuộc vào phương pháp xem log truyền thống: truy cập từng container, đọc từng file, hoặc sử dụng những giải pháp nặng nề như ELK. Dù mạnh mẽ, ELK lại tiêu tốn lượng tài nguyên khổng lồ, khó mở rộng, và chi phí vận hành không dễ chịu.</p><p>Trong bối cảnh đó, nhu cầu về một hệ thống gọn nhẹ hơn, dễ triển khai hơn và chi phí thấp hơn trở nên cấp bách. Một giải pháp có thể thu gom log từ nhiều nguồn, lưu trữ thông minh mà không “ngốn” tài nguyên như Elasticsearch, đồng thời vẫn đem lại trải nghiệm quan sát mạnh mẽ qua giao diện trực quan. Câu trả lời cho bài toán ấy chính là sự kết hợp giữa Fluent Bit, Loki và Grafana.</p><h2 id=2-giải-pháp-fluent-bit--loki--grafana>2. <strong>Giải pháp: Fluent Bit → Loki → Grafana</strong></h2><h3 id=21-kiến-trúc-tổng-quan><strong>2.1 Kiến trúc tổng quan</strong></h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback><span class=line><span class=cl>[Application Log]
+</span></span><span class=line><span class=cl>        ↓
+</span></span><span class=line><span class=cl>   Fluent Bit
+</span></span><span class=line><span class=cl> (collector)
+</span></span><span class=line><span class=cl>        ↓
+</span></span><span class=line><span class=cl>       Loki
+</span></span><span class=line><span class=cl> (storage/index)
+</span></span><span class=line><span class=cl>        ↓
+</span></span><span class=line><span class=cl>     Grafana
+</span></span><span class=line><span class=cl> (visualization)
+</span></span></code></pre></td></tr></table></div></div><h3 id=22-vai-trò-từng-hệ-thống><strong>2.2 Vai trò từng hệ thống</strong></h3><ul><li><strong>Fluent Bit</strong>: agent nhẹ, lấy log từ file/container và gửi về Loki qua HTTP.</li><li><strong>Loki</strong>: lưu log theo mô hình index tối giản → giảm chi phí.</li><li><strong>Grafana</strong>: dashboard trực quan, query bằng LogQL.</li></ul><h3 id=23-ưu-điểm-của-giải-pháp><strong>2.3 Ưu điểm của giải pháp</strong></h3><div class=table-wrapper><table><thead><tr><th>Tiêu chí</th><th>Fluent Bit + Loki + Grafana</th></tr></thead><tbody><tr><td>Tài nguyên</td><td>Rất thấp</td></tr><tr><td>Triển khai</td><td>Dễ, chỉ cần Docker/K8s</td></tr><tr><td>Chi phí</td><td>Tối ưu hơn ELK</td></tr><tr><td>Tìm kiếm log</td><td>Mạnh với LogQL</td></tr><tr><td>Tương thích</td><td>Tuyệt vời với Kubernetes</td></tr></tbody></table></div><p>Bộ ba này đặc biệt phù hợp với doanh nghiệp muốn <strong>tối ưu tài nguyên</strong>, <strong>giảm chi phí</strong>, và <strong>tăng khả năng observability</strong>.</p><h2 id=3-thực-nghiệm-triển-khai-bằng-docker-compose>3. <strong>Thực nghiệm triển khai bằng Docker Compose</strong></h2><h3 id=31-mục-tiêu-thực-nghiệm><strong>3.1 Mục tiêu thực nghiệm</strong></h3><ul><li>Sinh log thủ công từ một container demo.</li><li>Thu gom log bằng Fluent Bit.</li><li>Lưu log tại Loki.</li><li>Hiển thị log trên Grafana.</li></ul><h3 id=32-cấu-hình-docker-compose><strong>3.2 Cấu hình Docker Compose</strong></h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span><span class=lnt>40
+</span><span class=lnt>41
+</span><span class=lnt>42
+</span><span class=lnt>43
+</span><span class=lnt>44
+</span><span class=lnt>45
+</span><span class=lnt>46
+</span><span class=lnt>47
+</span><span class=lnt>48
+</span><span class=lnt>49
+</span><span class=lnt>50
+</span><span class=lnt>51
+</span><span class=lnt>52
+</span><span class=lnt>53
+</span><span class=lnt>54
+</span><span class=lnt>55
+</span><span class=lnt>56
+</span><span class=lnt>57
+</span><span class=lnt>58
+</span><span class=lnt>59
+</span><span class=lnt>60
+</span><span class=lnt>61
+</span><span class=lnt>62
+</span><span class=lnt>63
+</span><span class=lnt>64
+</span><span class=lnt>65
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-yaml data-lang=yaml><span class=line><span class=cl><span class=nt>version</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;3.3&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=nt>networks</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>loki</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=nt>volumes</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>logs</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=nt>services</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>loki</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>image</span><span class=p>:</span><span class=w> </span><span class=l>grafana/loki:latest</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>ports</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>- <span class=s2>&#34;3100:3100&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>command</span><span class=p>:</span><span class=w> </span>-<span class=l>config.file=/etc/loki/local-config.yaml</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>networks</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>- <span class=l>loki</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>grafana</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>environment</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>- <span class=l>GF_PATHS_PROVISIONING=/etc/grafana/provisioning</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>- <span class=l>GF_AUTH_ANONYMOUS_ENABLED=true</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>- <span class=l>GF_AUTH_ANONYMOUS_ORG_ROLE=Admin</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>- <span class=l>GF_FEATURE_TOGGLES_ENABLE=alertingSimplifiedRouting,alertingQueryAndExpressionsStepMode</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>   
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>entrypoint</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>- <span class=l>sh</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>- -<span class=l>euc</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>- <span class=p>|</span><span class=sd>
+</span></span></span><span class=line><span class=cl><span class=sd>        mkdir -p /etc/grafana/provisioning/datasources
+</span></span></span><span class=line><span class=cl><span class=sd>        cat &lt;&lt;EOF &gt; /etc/grafana/provisioning/datasources/ds.yaml
+</span></span></span><span class=line><span class=cl><span class=sd>        apiVersion: 1
+</span></span></span><span class=line><span class=cl><span class=sd>        datasources:
+</span></span></span><span class=line><span class=cl><span class=sd>        - name: Loki
+</span></span></span><span class=line><span class=cl><span class=sd>          type: loki
+</span></span></span><span class=line><span class=cl><span class=sd>          access: proxy 
+</span></span></span><span class=line><span class=cl><span class=sd>          orgId: 1
+</span></span></span><span class=line><span class=cl><span class=sd>          url: http://loki:3100
+</span></span></span><span class=line><span class=cl><span class=sd>          basicAuth: false
+</span></span></span><span class=line><span class=cl><span class=sd>          isDefault: true
+</span></span></span><span class=line><span class=cl><span class=sd>          version: 1
+</span></span></span><span class=line><span class=cl><span class=sd>          editable: false
+</span></span></span><span class=line><span class=cl><span class=sd>        EOF
+</span></span></span><span class=line><span class=cl><span class=sd>        /run.sh</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>image</span><span class=p>:</span><span class=w> </span><span class=l>grafana/grafana:latest</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>ports</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>- <span class=s2>&#34;3000:3000&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>networks</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>- <span class=l>loki</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=c># App demo sinh log</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>app</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>image</span><span class=p>:</span><span class=w> </span><span class=l>busybox</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>command</span><span class=p>:</span><span class=w> </span><span class=l>sh -c &#34;while true; do echo &#39;Hello World from demo app&#39; &gt;&gt; /logs/app.log; sleep 2; done&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>volumes</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>- <span class=l>logs:/logs</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=c># Fluent Bit</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>fluent-bit</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>image</span><span class=p>:</span><span class=w> </span><span class=l>fluent/fluent-bit:2.2</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>volumes</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>- <span class=l>./fluent-bit-config:/fluent-bit/etc</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>- <span class=l>logs:/logs:ro</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>depends_on</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>- <span class=l>app</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>- <span class=l>loki</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>networks</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>- <span class=l>loki</span><span class=w>
+</span></span></span></code></pre></td></tr></table></div></div><hr><h3 id=33-cấu-hình-fluent-bit><strong>3.3 Cấu hình Fluent Bit</strong></h3><p><code>fluent-bit.conf</code>:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback><span class=line><span class=cl>[SERVICE]
+</span></span><span class=line><span class=cl>    Flush        2
+</span></span><span class=line><span class=cl>    Log_Level    info
+</span></span><span class=line><span class=cl>    Parsers_File parsers.conf
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>[INPUT]
+</span></span><span class=line><span class=cl>    Name        tail
+</span></span><span class=line><span class=cl>    Path        /logs/*.log
+</span></span><span class=line><span class=cl>    Tag         app.*
+</span></span><span class=line><span class=cl>    DB          /fluent-bit/tail.db
+</span></span><span class=line><span class=cl>    Parser      docker
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>[FILTER]
+</span></span><span class=line><span class=cl>    Name        record_modifier
+</span></span><span class=line><span class=cl>    Match       *
+</span></span><span class=line><span class=cl>    Record      stream /logs/app.log
+</span></span><span class=line><span class=cl>    Record      source app
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>[OUTPUT]
+</span></span><span class=line><span class=cl>    Name        loki
+</span></span><span class=line><span class=cl>    Match       *
+</span></span><span class=line><span class=cl>    host        loki  
+</span></span><span class=line><span class=cl>    port        3100
+</span></span><span class=line><span class=cl>    labels                 app=demo-app
+</span></span></code></pre></td></tr></table></div></div><p><strong>Ý nghĩa:</strong></p><p>Fluent Bit tail file log, gắn label <code>app=demo-app</code>, gửi về Loki.</p><hr><h3 id=34-cấu-hình-loki><strong>3.4 Cấu hình Loki</strong></h3><p><code>loki.yaml</code>:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span><span class=lnt>40
+</span><span class=lnt>41
+</span><span class=lnt>42
+</span><span class=lnt>43
+</span><span class=lnt>44
+</span><span class=lnt>45
+</span><span class=lnt>46
+</span><span class=lnt>47
+</span><span class=lnt>48
+</span><span class=lnt>49
+</span><span class=lnt>50
+</span><span class=lnt>51
+</span><span class=lnt>52
+</span><span class=lnt>53
+</span><span class=lnt>54
+</span><span class=lnt>55
+</span><span class=lnt>56
+</span><span class=lnt>57
+</span><span class=lnt>58
+</span><span class=lnt>59
+</span><span class=lnt>60
+</span><span class=lnt>61
+</span><span class=lnt>62
+</span><span class=lnt>63
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-yaml data-lang=yaml><span class=line><span class=cl><span class=nt>auth_enabled</span><span class=p>:</span><span class=w> </span><span class=kc>false</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=nt>server</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>http_listen_port</span><span class=p>:</span><span class=w> </span><span class=m>3100</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>grpc_listen_port</span><span class=p>:</span><span class=w> </span><span class=m>9096</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>log_level</span><span class=p>:</span><span class=w> </span><span class=l>debug</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>grpc_server_max_concurrent_streams</span><span class=p>:</span><span class=w> </span><span class=m>1000</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=nt>common</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>instance_addr</span><span class=p>:</span><span class=w> </span><span class=m>127.0.0.1</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>path_prefix</span><span class=p>:</span><span class=w> </span><span class=l>/tmp/loki</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>storage</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>filesystem</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>chunks_directory</span><span class=p>:</span><span class=w> </span><span class=l>/tmp/loki/chunks</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>rules_directory</span><span class=p>:</span><span class=w> </span><span class=l>/tmp/loki/rules</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>replication_factor</span><span class=p>:</span><span class=w> </span><span class=m>1</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>ring</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>kvstore</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>store</span><span class=p>:</span><span class=w> </span><span class=l>inmemory</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=nt>query_range</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>results_cache</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>cache</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>embedded_cache</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>enabled</span><span class=p>:</span><span class=w> </span><span class=kc>true</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>max_size_mb</span><span class=p>:</span><span class=w> </span><span class=m>100</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=nt>limits_config</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>metric_aggregation_enabled</span><span class=p>:</span><span class=w> </span><span class=kc>true</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=nt>schema_config</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>configs</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span>- <span class=nt>from</span><span class=p>:</span><span class=w> </span><span class=ld>2020-10-24</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>store</span><span class=p>:</span><span class=w> </span><span class=l>tsdb</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>object_store</span><span class=p>:</span><span class=w> </span><span class=l>filesystem</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>schema</span><span class=p>:</span><span class=w> </span><span class=l>v13</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>index</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>prefix</span><span class=p>:</span><span class=w> </span><span class=l>index_</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>period</span><span class=p>:</span><span class=w> </span><span class=l>24h</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=nt>pattern_ingester</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>enabled</span><span class=p>:</span><span class=w> </span><span class=kc>true</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>metric_aggregation</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>loki_address</span><span class=p>:</span><span class=w> </span><span class=l>localhost:3100</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=nt>ruler</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>alertmanager_url</span><span class=p>:</span><span class=w> </span><span class=l>http://localhost:9093</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=nt>frontend</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>encoding</span><span class=p>:</span><span class=w> </span><span class=l>protobuf</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=c># By default, Loki will send anonymous, but uniquely-identifiable usage and configuration</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=c># analytics to Grafana Labs. These statistics are sent to https://stats.grafana.org/</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=c>#</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=c># Statistics help us better understand how Loki is used, and they show us performance</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=c># levels for most users. This helps us prioritize features and documentation.</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=c># For more information on what&#39;s sent, look at</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=c># https://github.com/grafana/loki/blob/main/pkg/analytics/stats.go</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=c># Refer to the buildReport method to see what goes into a report.</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=c>#</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=c># If you would like to disable reporting, uncomment the following lines:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=c>#analytics:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=c>#  reporting_enabled: false</span><span class=w>
+</span></span></span></code></pre></td></tr></table></div></div><hr><h3 id=35-quan-sát-log-trong-grafana><strong>3.5 Quan sát log trong Grafana</strong></h3><ol><li>Truy cập Grafana tại <code>http://localhost:3000</code></li><li>Chọn Explore</li><li>Chon Loki</li><li>Query thử:</li></ol><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback><span class=line><span class=cl>Expr: {app=&#34;demo-app&#34;} |= ``
+</span></span></code></pre></td></tr></table></div></div><h2 id=4-kết-luận>4. Kết luận</h2><p>Trong bối cảnh chi phí hạ tầng luôn là mối quan tâm hàng đầu, giải pháp này mang lại sự cân bằng hiếm có giữa hiệu suất, chi phí và khả năng mở rộng. Nó không chỉ giúp đội ngũ vận hành thấy rõ hơn hoạt động của hệ thống, mà còn tạo nền tảng vững vàng cho các chiến lược quan sát sâu rộng hơn sau này, như alerting hoặc kết hợp metric–log–trace.</p><p>Nếu mục tiêu của bạn là xây dựng một hệ thống quan sát log tinh gọn, dễ quản trị và hiệu quả, bộ Fluent Bit – Loki – Grafana xứng đáng nằm trong danh sách ưu tiên hàng đầu.</p></section><footer class=article-footer><section class=article-tags><a href=/tags/k8s/>K8s</a>
+<a href=/tags/helm/>Helm</a>
+<a href=/tags/devops/>DevOps</a></section><section class=article-copyright><svg class="icon icon-tabler icon-tabler-copyright" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><path d="M14.5 9a3.5 4 0 100 6"/></svg>
+<span>Licensed under CC BY-NC-SA 4.0</span></section></footer></article><aside class=related-content--wrapper><h2 class=section-title>Related content</h2><div class=related-content><div class="flex article-list--tile"><article><a href=/posts/poc-centralized-logging-implementation-on-kubernetes-with-fluent-bit-grafana-loki-and-grafana/><div class=article-details><h2 class=article-title>POC: Centralized Logging Implementation on Kubernetes with Fluent Bit, Grafana Loki, and Grafana</h2></div></a></article><article><a href=/posts/hybrid-helm-chart-combining-dependency-charts-and-embedded-subcharts/><div class=article-details><h2 class=article-title>Hybrid Helm Chart: Combining Dependency Charts and Embedded Subcharts</h2></div></a></article><article><a href=/posts/umbrella-chart-in-kubernetes/><div class=article-details><h2 class=article-title>Umbrella Chart in Kubernetes</h2></div></a></article><article><a href=/posts/optimizing-the-development-workflow-with-taskfile-in-spring-boot/><div class=article-details><h2 class=article-title>Optimizing the Development Workflow with Taskfile in Spring Boot</h2></div></a></article><article><a href=/posts/security-and-artifact-management-with-nexus-repository/><div class=article-details><h2 class=article-title>Security and Artifact Management with Nexus Repository</h2></div></a></article></div></div></aside><div class=disqus-container></div><style>.disqus-container{background-color:var(--card-background);border-radius:var(--card-border-radius);box-shadow:var(--shadow-l1);padding:var(--card-padding)}</style><script>window.addEventListener("onColorSchemeChange",e=>{typeof DISQUS=="object"&&DISQUS.reset({reload:!0})})</script><footer class=site-footer><section class=copyright>&copy;
+2026 phongthien</section><section class=powerby>Built with <a href=https://gohugo.io/ target=_blank rel=noopener>Hugo</a><br>Theme <b><a href=https://github.com/CaiJimmy/hugo-theme-stack target=_blank rel=noopener data-version=3.33.0>Stack</a></b> designed by <a href=https://jimmycai.com target=_blank rel=noopener>Jimmy</a></section></footer><div class=pswp tabindex=-1 role=dialog aria-hidden=true><div class=pswp__bg></div><div class=pswp__scroll-wrap><div class=pswp__container><div class=pswp__item></div><div class=pswp__item></div><div class=pswp__item></div></div><div class="pswp__ui pswp__ui--hidden"><div class=pswp__top-bar><div class=pswp__counter></div><button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+<button class="pswp__button pswp__button--share" title=Share></button>
+<button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+<button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button><div class=pswp__preloader><div class=pswp__preloader__icn><div class=pswp__preloader__cut><div class=pswp__preloader__donut></div></div></div></div></div><div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap"><div class=pswp__share-tooltip></div></div><button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+</button>
+<button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)"></button><div class=pswp__caption><div class=pswp__caption__center></div></div></div></div></div><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo=" crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU=" crossorigin=anonymous defer></script><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css crossorigin=anonymous><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css crossorigin=anonymous></main></div><script src=https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z+KMkF24hUW8WePSA9HM=" crossorigin=anonymous></script><script type=text/javascript src=/ts/main.c922af694cc257bf1ecc41c0dd7b0430f9114ec280ccf67cd2c6ad55f5316c4e.js defer></script><script>(function(){const e=document.createElement("link");e.href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap",e.type="text/css",e.rel="stylesheet",document.head.appendChild(e)})()</script></body></html>

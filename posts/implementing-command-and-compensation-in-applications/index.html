@@ -1,0 +1,198 @@
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><meta name=description content="Implementing Command and Compensation in Applications 1. Problem Trong các ứng dụng frontend dạng editor hoặc CRUD-heavy UI, mỗi thao tác người dùng đều tạo ra một thay đổi mang ý nghĩa nghiệp vụ rõ ràng. Những thay đổi này thường xảy ra liên tục, có thứ tự và có thể ảnh hưởng lẫn nhau. Khi người dùng nhận ra thao tác vừa thực hiện là không mong muốn, hệ thống cần cung cấp khả năng quay về trạng thái trước đó một cách an toàn và dễ kiểm soát.\n"><title>Implementing Command and Compensation in Applications</title><link rel=canonical href=https://phongthien99.github.io/posts/implementing-command-and-compensation-in-applications/><link rel=stylesheet href=/scss/style.min.769133d016a4a1944b3a27800e000cccd439a8c1a9c0c61f7c4fa0bc0e42de57.css><meta property='og:title' content="Implementing Command and Compensation in Applications"><meta property='og:description' content="Implementing Command and Compensation in Applications 1. Problem Trong các ứng dụng frontend dạng editor hoặc CRUD-heavy UI, mỗi thao tác người dùng đều tạo ra một thay đổi mang ý nghĩa nghiệp vụ rõ ràng. Những thay đổi này thường xảy ra liên tục, có thứ tự và có thể ảnh hưởng lẫn nhau. Khi người dùng nhận ra thao tác vừa thực hiện là không mong muốn, hệ thống cần cung cấp khả năng quay về trạng thái trước đó một cách an toàn và dễ kiểm soát.\n"><meta property='og:url' content='https://phongthien99.github.io/posts/implementing-command-and-compensation-in-applications/'><meta property='og:site_name' content='phongthien'><meta property='og:type' content='article'><meta property='article:section' content='Post'><meta property='article:tag' content='frontend'><meta property='article:published_time' content='2026-01-18T00:00:00+07:00'><meta property='article:modified_time' content='2026-01-18T00:00:00+07:00'><meta name=twitter:title content="Implementing Command and Compensation in Applications"><meta name=twitter:description content="Implementing Command and Compensation in Applications 1. Problem Trong các ứng dụng frontend dạng editor hoặc CRUD-heavy UI, mỗi thao tác người dùng đều tạo ra một thay đổi mang ý nghĩa nghiệp vụ rõ ràng. Những thay đổi này thường xảy ra liên tục, có thứ tự và có thể ảnh hưởng lẫn nhau. Khi người dùng nhận ra thao tác vừa thực hiện là không mong muốn, hệ thống cần cung cấp khả năng quay về trạng thái trước đó một cách an toàn và dễ kiểm soát.\n"><link rel="shortcut icon" href=/favicon.png><script src=https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js></script><script>mermaid.initialize({startOnLoad:!0})</script></head><body class=article-page><script>(function(){const e="StackColorScheme";localStorage.getItem(e)||localStorage.setItem(e,"auto")})()</script><script>(function(){const t="StackColorScheme",e=localStorage.getItem(t),n=window.matchMedia("(prefers-color-scheme: dark)").matches===!0;e=="dark"||e==="auto"&&n?document.documentElement.dataset.scheme="dark":document.documentElement.dataset.scheme="light"})()</script><div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky"><button class="hamburger hamburger--spin" type=button id=toggle-menu aria-label="Toggle Menu">
+<span class=hamburger-box><span class=hamburger-inner></span></span></button><header><figure class=site-avatar><a href=/><img src=/img/avatar_hu_7ee69f593e8680d3.jpg width=300 height=300 class=site-logo loading=lazy alt=Avatar>
+</a><span class=emoji>🏅</span></figure><div class=site-meta><h1 class=site-name><a href=/>phongthien</a></h1><h2 class=site-description>Software Engineer</h2></div></header><ol class=menu-social><li><a href=https://github.com/phongthien99 target=_blank title=GitHub rel=me><svg class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6.0 00-1.3-3.2 4.2 4.2.0 00-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3.0 00-6.2.0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2.0 00-.1 3.2A4.6 4.6.0 004 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg></a></li><li><a href=https://twitter.com target=_blank title=linkedin rel=me><svg class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M10 14a3.5 3.5.0 005 0l4-4a3.5 3.5.0 00-5-5l-.5.5"/><path d="M14 10a3.5 3.5.0 00-5 0l-4 4a3.5 3.5.0 005 5l.5-.5"/></svg></a></li></ol><ol class=menu id=main-menu><li><a href=/><svg class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><polyline points="5 12 3 12 12 3 21 12 19 12"/><path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/><path d="M9 21v-6a2 2 0 012-2h2a2 2 0 012 2v6"/></svg>
+<span>Home</span></a></li><li><a href=/archives/><svg class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><rect x="3" y="4" width="18" height="4" rx="2"/><path d="M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+<span>Archives</span></a></li><li><a href=/search/><svg class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="10" cy="10" r="7"/><line x1="21" y1="21" x2="15" y2="15"/></svg>
+<span>Search</span></a></li><li><a href=/about-me/><svg class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="7" r="4"/><path d="M6 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/></svg>
+<span>About me</span></a></li><li class=menu-bottom-section><ol class=menu><li id=dark-mode-toggle><svg class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="8" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<svg class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="16" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<span>Dark Mode</span></li></ol></li></ol></aside><aside class="sidebar right-sidebar sticky"><section class="widget archives"><div class=widget-icon><svg class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><line x1="5" y1="9" x2="19" y2="9"/><line x1="5" y1="15" x2="19" y2="15"/><line x1="11" y1="4" x2="7" y2="20"/><line x1="17" y1="4" x2="13" y2="20"/></svg></div><h2 class="widget-title section-title">Table of contents</h2><div class=widget--toc><nav id=TableOfContents><ol><li><a href=#1-problem>1. Problem</a></li><li><a href=#2-solution>2. Solution</a></li><li><a href=#3-implement>3. Implement</a><ol><li><a href=#31-command-interface>3.1. Command interface</a></li><li><a href=#32-updatetitlecommand>3.2. UpdateTitleCommand</a></li><li><a href=#33-deleteitemcommand>3.3. DeleteItemCommand</a></li><li><a href=#34-commandexecutor>3.4. CommandExecutor</a></li><li><a href=#35-ví-dụ-sử-dụng-trong-thực-tế>3.5. Ví dụ sử dụng trong thực tế</a></li><li><a href=#khởi-tạo-executor>Khởi tạo executor</a></li><li><a href=#thực-thi-hành-động-cập-nhật-tiêu-đề>Thực thi hành động cập nhật tiêu đề</a></li><li><a href=#thực-thi-hành-động-xoá-item>Thực thi hành động xoá item</a></li><li><a href=#bù-trừ-hành-động-gần-nhất>Bù trừ hành động gần nhất</a></li><li><a href=#36-luồng-hoạt-động-tương-ứng-với-thiết-kế>3.6. Luồng hoạt động tương ứng với thiết kế</a></li></ol></li><li><a href=#4-conclusion>4. Conclusion</a></li></ol></nav></div></section></aside><main class="main full-width"><article class=main-article><header class=article-header><div class=article-details><header class=article-category><a href=/categories/fe/>Fe</a></header><div class=article-title-wrapper><h2 class=article-title><a href=/posts/implementing-command-and-compensation-in-applications/>Implementing Command and Compensation in Applications</a></h2></div><footer class=article-time><div><svg class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M11.795 21H5a2 2 0 01-2-2V7a2 2 0 012-2h12a2 2 0 012 2v4"/><circle cx="18" cy="18" r="4"/><path d="M15 3v4"/><path d="M7 3v4"/><path d="M3 11h16"/><path d="M18 16.496V18l1 1"/></svg>
+<time class=article-time--published datetime=2026-01-18T00:00:00+07:00>Jan 18, 2026</time></div><div><svg class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+<time class=article-time--reading>5 minute read</time></div></footer></div></header><section class=article-content><h1 id=implementing-command-and-compensation-in-applications>Implementing Command and Compensation in Applications</h1><h2 id=1-problem>1. Problem</h2><p>Trong các ứng dụng frontend dạng editor hoặc CRUD-heavy UI, mỗi thao tác người dùng đều tạo ra một thay đổi mang ý nghĩa nghiệp vụ rõ ràng. Những thay đổi này thường xảy ra liên tục, có thứ tự và có thể ảnh hưởng lẫn nhau. Khi người dùng nhận ra thao tác vừa thực hiện là không mong muốn, hệ thống cần cung cấp khả năng quay về trạng thái trước đó một cách an toàn và dễ kiểm soát.</p><p>Nếu không có một cơ chế rõ ràng, việc “quay lại” rất dễ trở thành logic vá víu, nằm rải rác trong nhiều nơi của codebase. Điều này làm cho hành vi hệ thống khó dự đoán, khó mở rộng và khó đảm bảo tính nhất quán khi nghiệp vụ ngày càng phức tạp. Vì vậy, bài toán đặt ra không chỉ là quay lại kết quả trước đó, mà là phải <strong>undo đúng ý nghĩa của hành động đã xảy ra</strong>.</p><h2 id=2-solution>2. Solution</h2><p>Giải pháp là mô hình hoá mỗi thao tác người dùng thành một <strong>Command</strong>, trong đó Command không chỉ biết cách thực thi hành động mà còn biết cách <strong>bù trừ lại chính tác động của hành động đó</strong>. Thay vì cố gắng điều khiển trạng thái, hệ thống chỉ cần điều phối các Command đã được thực thi theo đúng thứ tự.</p><p>Compensation được xem như một hành động nghiệp vụ hợp lệ, đại diện cho việc đảo ngược ý nghĩa của hành động ban đầu. Khi một Command được bù trừ, hệ thống không “quay ngược thời gian”, mà thực hiện một hành động khác để trung hoà tác động đã xảy ra. Cách tiếp cận này giúp đưa toàn bộ logic liên quan đến việc quay lại về đúng nơi: ngay trong hành động gây ra thay đổi.</p><pre class=mermaid>
+  ---
+config:
+  layout: dagre
+---
+classDiagram
+direction TB
+    class Command {
+	    +execute()
+	    +compensate()
+    }
+
+    class UpdateTitleCommand {
+	    -before: string
+	    -after: string
+	    +execute()
+	    +compensate()
+    }
+
+    class DeleteItemCommand {
+	    -item: Item
+	    +execute()
+	    +compensate()
+    }
+
+    class CommandExecutor {
+	    -history: Command[]
+	    +execute(cmd: Command)
+	    +compensate()
+    }
+
+	&lt;&lt;interface&gt;&gt; Command
+
+    Command &lt;|.. UpdateTitleCommand
+    Command &lt;|.. DeleteItemCommand
+    CommandExecutor --&gt; Command : execute / compensate
+</pre><h2 id=3-implement>3. Implement</h2><p>Phần này hiện thực hoá trực tiếp thiết kế lớp đã được mô hình hoá.</p><p>Mỗi class trong sơ đồ đều có trách nhiệm rõ ràng và không chồng chéo.</p><p>Command đại diện cho hành động, CommandExecutor chịu trách nhiệm điều phối.</p><p>Việc bù trừ được thực hiện thông qua cơ chế cursor trên lịch sử command.</p><h3 id=31-command-interface>3.1. Command interface</h3><p><code>Command</code> là hợp đồng chung cho mọi hành động trong hệ thống.</p><p>Nó định nghĩa hai hành vi bắt buộc: thực thi và bù trừ.</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-tsx data-lang=tsx><span class=line><span class=cl><span class=kr>export</span> <span class=kr>interface</span> <span class=nx>Command</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=nx>execute</span><span class=p>()</span><span class=o>:</span> <span class=k>void</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=nx>compensate</span><span class=p>()</span><span class=o>:</span> <span class=k>void</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><hr><h3 id=32-updatetitlecommand>3.2. UpdateTitleCommand</h3><p>Command này đại diện cho hành động cập nhật tiêu đề.</p><p>Nó lưu lại giá trị trước và sau để có thể bù trừ chính xác.</p><p>Logic thực thi và bù trừ luôn nằm trong cùng một class.</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-tsx data-lang=tsx><span class=line><span class=cl><span class=kr>export</span> <span class=kr>class</span> <span class=nx>UpdateTitleCommand</span> <span class=kr>implements</span> <span class=nx>Command</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=kr>constructor</span><span class=p>(</span>
+</span></span><span class=line><span class=cl>    <span class=kr>private</span> <span class=kr>readonly</span> <span class=nx>setState</span><span class=o>:</span> <span class=p>(</span><span class=nx>fn</span>: <span class=kt>any</span><span class=p>)</span> <span class=o>=&gt;</span> <span class=k>void</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=kr>private</span> <span class=kr>readonly</span> <span class=nx>before</span>: <span class=kt>string</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=kr>private</span> <span class=kr>readonly</span> <span class=nx>after</span>: <span class=kt>string</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>  <span class=p>)</span> <span class=p>{}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=nx>execute() {</span>
+</span></span><span class=line><span class=cl>    <span class=k>this</span><span class=p>.</span><span class=nx>setState</span><span class=p>((</span><span class=nx>s</span>: <span class=kt>any</span><span class=p>)</span> <span class=o>=&gt;</span> <span class=p>({</span>
+</span></span><span class=line><span class=cl>      <span class=p>...</span><span class=nx>s</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>      <span class=nx>title</span>: <span class=kt>this.after</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=p>}));</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=nx>compensate() {</span>
+</span></span><span class=line><span class=cl>    <span class=k>this</span><span class=p>.</span><span class=nx>setState</span><span class=p>((</span><span class=nx>s</span>: <span class=kt>any</span><span class=p>)</span> <span class=o>=&gt;</span> <span class=p>({</span>
+</span></span><span class=line><span class=cl>      <span class=p>...</span><span class=nx>s</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>      <span class=nx>title</span>: <span class=kt>this.before</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=p>}));</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><hr><h3 id=33-deleteitemcommand>3.3. DeleteItemCommand</h3><p>Command này đại diện cho hành động xoá một item.</p><p>Nó giữ lại item bị xoá để phục vụ cho việc bù trừ.</p><p>Compensation ở đây là thêm lại item đã bị xoá trước đó.</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-tsx data-lang=tsx><span class=line><span class=cl><span class=kr>export</span> <span class=kr>class</span> <span class=nx>DeleteItemCommand</span> <span class=kr>implements</span> <span class=nx>Command</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=kr>constructor</span><span class=p>(</span>
+</span></span><span class=line><span class=cl>    <span class=kr>private</span> <span class=kr>readonly</span> <span class=nx>setState</span><span class=o>:</span> <span class=p>(</span><span class=nx>fn</span>: <span class=kt>any</span><span class=p>)</span> <span class=o>=&gt;</span> <span class=k>void</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=kr>private</span> <span class=kr>readonly</span> <span class=nx>item</span><span class=o>:</span> <span class=p>{</span> <span class=nx>id</span>: <span class=kt>string</span><span class=p>;</span> <span class=p>[</span><span class=nx>key</span>: <span class=kt>string</span><span class=p>]</span><span class=o>:</span> <span class=kt>any</span> <span class=p>},</span>
+</span></span><span class=line><span class=cl>  <span class=p>)</span> <span class=p>{}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=nx>execute() {</span>
+</span></span><span class=line><span class=cl>    <span class=k>this</span><span class=p>.</span><span class=nx>setState</span><span class=p>((</span><span class=nx>s</span>: <span class=kt>any</span><span class=p>)</span> <span class=o>=&gt;</span> <span class=p>({</span>
+</span></span><span class=line><span class=cl>      <span class=p>...</span><span class=nx>s</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>      <span class=nx>items</span>: <span class=kt>s.items.filter</span><span class=p>((</span><span class=nx>i</span><span class=p>)</span> <span class=o>=&gt;</span> <span class=nx>i</span><span class=p>.</span><span class=nx>id</span> <span class=o>!==</span> <span class=k>this</span><span class=p>.</span><span class=nx>item</span><span class=p>.</span><span class=nx>id</span><span class=p>),</span>
+</span></span><span class=line><span class=cl>    <span class=p>}));</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=nx>compensate() {</span>
+</span></span><span class=line><span class=cl>    <span class=k>this</span><span class=p>.</span><span class=nx>setState</span><span class=p>((</span><span class=nx>s</span>: <span class=kt>any</span><span class=p>)</span> <span class=o>=&gt;</span> <span class=p>({</span>
+</span></span><span class=line><span class=cl>      <span class=p>...</span><span class=nx>s</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>      <span class=nx>items</span><span class=o>:</span> <span class=p>[...</span><span class=nx>s</span><span class=p>.</span><span class=nx>items</span><span class=p>,</span> <span class=k>this</span><span class=p>.</span><span class=nx>item</span><span class=p>],</span>
+</span></span><span class=line><span class=cl>    <span class=p>}));</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><hr><h3 id=34-commandexecutor>3.4. CommandExecutor</h3><p><code>CommandExecutor</code> chịu trách nhiệm điều phối việc thực thi và bù trừ.</p><p>Nó quản lý một danh sách lịch sử các command đã chạy.</p><p>Executor không chứa logic nghiệp vụ.</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-tsx data-lang=tsx><span class=line><span class=cl><span class=kr>export</span> <span class=kr>class</span> <span class=nx>CommandExecutor</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=kr>private</span> <span class=nx>history</span>: <span class=kt>Command</span><span class=p>[]</span> <span class=o>=</span> <span class=p>[];</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=nx>execute</span><span class=p>(</span><span class=nx>cmd</span>: <span class=kt>Command</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=nx>cmd</span><span class=p>.</span><span class=nx>execute</span><span class=p>();</span>
+</span></span><span class=line><span class=cl>    <span class=k>this</span><span class=p>.</span><span class=nx>history</span><span class=p>.</span><span class=nx>push</span><span class=p>(</span><span class=nx>cmd</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=nx>compensate() {</span>
+</span></span><span class=line><span class=cl>    <span class=kr>const</span> <span class=nx>cmd</span> <span class=o>=</span> <span class=k>this</span><span class=p>.</span><span class=nx>history</span><span class=p>.</span><span class=nx>pop</span><span class=p>();</span>
+</span></span><span class=line><span class=cl>    <span class=k>if</span> <span class=p>(</span><span class=o>!</span><span class=nx>cmd</span><span class=p>)</span> <span class=k>return</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=nx>cmd</span><span class=p>.</span><span class=nx>compensate</span><span class=p>();</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><hr><h3 id=35-ví-dụ-sử-dụng-trong-thực-tế>3.5. Ví dụ sử dụng trong thực tế</h3><p>Ví dụ dưới đây minh hoạ cách thiết kế được dùng trong UI.</p><h3 id=khởi-tạo-executor>Khởi tạo executor</h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-tsx data-lang=tsx><span class=line><span class=cl><span class=kr>const</span> <span class=nx>executor</span> <span class=o>=</span><span class=nx>newCommandExecutor</span><span class=p>()</span>
+</span></span></code></pre></td></tr></table></div></div><hr><h3 id=thực-thi-hành-động-cập-nhật-tiêu-đề>Thực thi hành động cập nhật tiêu đề</h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-tsx data-lang=tsx><span class=line><span class=cl><span class=kd>function</span> <span class=nx>onUpdateTitle</span><span class=p>(</span><span class=nx>before</span>:<span class=kt>string</span><span class=p>,</span><span class=nx>after</span>:<span class=kt>string</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl><span class=kr>const</span> <span class=nx>cmd</span> <span class=o>=</span><span class=nx>newUpdateTitleCommand</span><span class=p>(</span><span class=nx>setState</span><span class=p>,</span> <span class=nx>before</span><span class=p>,</span> <span class=nx>after</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>  <span class=nx>executor</span><span class=p>.</span><span class=nx>execute</span><span class=p>(</span><span class=nx>cmd</span><span class=p>)</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><hr><h3 id=thực-thi-hành-động-xoá-item>Thực thi hành động xoá item</h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-tsx data-lang=tsx><span class=line><span class=cl><span class=kd>function</span> <span class=nx>onDeleteItem</span><span class=p>(</span><span class=nx>item</span>:<span class=kt>Item</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl><span class=kr>const</span> <span class=nx>cmd</span> <span class=o>=</span><span class=nx>newDeleteItemCommand</span><span class=p>(</span><span class=nx>setState</span><span class=p>,</span> <span class=nx>item</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>  <span class=nx>executor</span><span class=p>.</span><span class=nx>execute</span><span class=p>(</span><span class=nx>cmd</span><span class=p>)</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><h3 id=bù-trừ-hành-động-gần-nhất>Bù trừ hành động gần nhất</h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-tsx data-lang=tsx><span class=line><span class=cl><span class=kd>function</span> <span class=nx>onCompensate() {</span>
+</span></span><span class=line><span class=cl>  <span class=nx>executor</span><span class=p>.</span><span class=nx>compensate</span><span class=p>()</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><h3 id=36-luồng-hoạt-động-tương-ứng-với-thiết-kế>3.6. Luồng hoạt động tương ứng với thiết kế</h3><ul><li>UI tạo Command từ hành động người dùng</li><li>Executor gọi <code>execute()</code></li><li>Command được <code>push</code> vào stack</li><li>Khi Undo:<ul><li><code>pop()</code> command cuối</li><li>Gọi <code>compensate()</code></li></ul></li></ul><h2 id=4-conclusion>4. Conclusion</h2><p>Thiết kế <strong>Command + Compensation</strong> cho phép mô hình hoá mỗi thao tác người dùng thành một hành động độc lập, có khả năng tự bù trừ. Mỗi hành động có vòng đời rõ ràng, tự chịu trách nhiệm cho việc thực thi và hoàn tác của chính nó.</p><p>Việc tách <strong>Command</strong> và <strong>CommandExecutor</strong> giúp đóng gói logic nghiệp vụ gọn trong từng hành động, giữ cho hệ thống dễ hiểu và dễ kiểm soát. Cách tiếp cận này giúp luồng xử lý nhất quán, mở rộng tự nhiên khi số lượng hành động tăng</p></section><footer class=article-footer><section class=article-tags><a href=/tags/frontend/>Frontend</a></section><section class=article-copyright><svg class="icon icon-tabler icon-tabler-copyright" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><path d="M14.5 9a3.5 4 0 100 6"/></svg>
+<span>Licensed under CC BY-NC-SA 4.0</span></section></footer><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css integrity=sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV crossorigin=anonymous><script src=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js integrity=sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8 crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js integrity=sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05 crossorigin=anonymous defer></script><script>window.addEventListener("DOMContentLoaded",()=>{const e=[".main-article",".widget--toc"];e.forEach(e=>{const t=document.querySelector(e);t&&renderMathInElement(t,{delimiters:[{left:"$$",right:"$$",display:!0},{left:"$",right:"$",display:!1},{left:"\\(",right:"\\)",display:!1},{left:"\\[",right:"\\]",display:!0}],ignoredClasses:["gist"]})})})</script></article><aside class=related-content--wrapper><h2 class=section-title>Related content</h2><div class=related-content><div class="flex article-list--tile"><article><a href=/posts/clean-architecture-trong-frontend-react/><div class=article-details><h2 class=article-title>Clean Architecture trong Frontend React</h2></div></a></article><article><a href=/posts/javascript-bundle-size-as-a-frontend-architecture-concern/><div class=article-details><h2 class=article-title>JavaScript Bundle Size as a Frontend Architecture Concern</h2></div></a></article><article><a href=/posts/feature-centric-architecture-with-clean-principle/><div class=article-details><h2 class=article-title>Feature-Centric Architecture with Clean Principle</h2></div></a></article><article><a href=/posts/multi-zone-in-modern-web-development-solution-with-next.js-qiankun-and-nginx/><div class=article-details><h2 class=article-title>Multi-Zone in Modern Web Development: Solution with Next.js, Qiankun, and Nginx</h2></div></a></article><article><a href=/posts/mastering-dynamic-base-path-management-in-dockerized-vue-3--vite/><div class=article-details><h2 class=article-title>Mastering Dynamic Base Path Management in Dockerized Vue 3 + Vite</h2></div></a></article></div></div></aside><div class=disqus-container></div><style>.disqus-container{background-color:var(--card-background);border-radius:var(--card-border-radius);box-shadow:var(--shadow-l1);padding:var(--card-padding)}</style><script>window.addEventListener("onColorSchemeChange",e=>{typeof DISQUS=="object"&&DISQUS.reset({reload:!0})})</script><footer class=site-footer><section class=copyright>&copy;
+2026 phongthien</section><section class=powerby>Built with <a href=https://gohugo.io/ target=_blank rel=noopener>Hugo</a><br>Theme <b><a href=https://github.com/CaiJimmy/hugo-theme-stack target=_blank rel=noopener data-version=3.33.0>Stack</a></b> designed by <a href=https://jimmycai.com target=_blank rel=noopener>Jimmy</a></section></footer><div class=pswp tabindex=-1 role=dialog aria-hidden=true><div class=pswp__bg></div><div class=pswp__scroll-wrap><div class=pswp__container><div class=pswp__item></div><div class=pswp__item></div><div class=pswp__item></div></div><div class="pswp__ui pswp__ui--hidden"><div class=pswp__top-bar><div class=pswp__counter></div><button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+<button class="pswp__button pswp__button--share" title=Share></button>
+<button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+<button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button><div class=pswp__preloader><div class=pswp__preloader__icn><div class=pswp__preloader__cut><div class=pswp__preloader__donut></div></div></div></div></div><div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap"><div class=pswp__share-tooltip></div></div><button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+</button>
+<button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)"></button><div class=pswp__caption><div class=pswp__caption__center></div></div></div></div></div><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo=" crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU=" crossorigin=anonymous defer></script><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css crossorigin=anonymous><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css crossorigin=anonymous></main></div><script src=https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z+KMkF24hUW8WePSA9HM=" crossorigin=anonymous></script><script type=text/javascript src=/ts/main.c922af694cc257bf1ecc41c0dd7b0430f9114ec280ccf67cd2c6ad55f5316c4e.js defer></script><script>(function(){const e=document.createElement("link");e.href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap",e.type="text/css",e.rel="stylesheet",document.head.appendChild(e)})()</script></body></html>

@@ -1,0 +1,304 @@
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><meta name=description content="From Manual to Automated: Enhancing Nginx Test Workflows Problem Statement Trong quá trình phát triển và vận hành hệ thống sử dụng Nginx làm reverse proxy, việc thêm, sửa hoặc xóa các cấu hình location, rewrite, hoặc proxy_pass có thể:\nẢnh hưởng không mong muốn đến các routing khác (ví dụ: route /admin/ bị chặn khi thêm /admin/api) Gây lỗi ẩn khó phát hiện do trùng khớp thứ tự location hoặc rewrite không đúng như mong đợi Thiếu công cụ kiểm thử tự động nên việc đảm bảo tính đúng đắn phụ thuộc nhiều vào manual test hoặc sản phẩm thật Hệ quả:\n"><title>From Manual to Automated: Enhancing Nginx Test Workflows</title><link rel=canonical href=https://phongthien99.github.io/posts/from-manual-to-automated-enhancing-nginx-test-workflows/><link rel=stylesheet href=/scss/style.min.769133d016a4a1944b3a27800e000cccd439a8c1a9c0c61f7c4fa0bc0e42de57.css><meta property='og:title' content="From Manual to Automated: Enhancing Nginx Test Workflows"><meta property='og:description' content="From Manual to Automated: Enhancing Nginx Test Workflows Problem Statement Trong quá trình phát triển và vận hành hệ thống sử dụng Nginx làm reverse proxy, việc thêm, sửa hoặc xóa các cấu hình location, rewrite, hoặc proxy_pass có thể:\nẢnh hưởng không mong muốn đến các routing khác (ví dụ: route /admin/ bị chặn khi thêm /admin/api) Gây lỗi ẩn khó phát hiện do trùng khớp thứ tự location hoặc rewrite không đúng như mong đợi Thiếu công cụ kiểm thử tự động nên việc đảm bảo tính đúng đắn phụ thuộc nhiều vào manual test hoặc sản phẩm thật Hệ quả:\n"><meta property='og:url' content='https://phongthien99.github.io/posts/from-manual-to-automated-enhancing-nginx-test-workflows/'><meta property='og:site_name' content='phongthien'><meta property='og:type' content='article'><meta property='article:section' content='Post'><meta property='article:tag' content='nginx'><meta property='article:tag' content='testcontainers'><meta property='article:tag' content='ginkgo'><meta property='article:tag' content='devops'><meta property='article:published_time' content='2025-07-18T00:00:00+00:00'><meta property='article:modified_time' content='2025-07-18T00:00:00+00:00'><meta name=twitter:title content="From Manual to Automated: Enhancing Nginx Test Workflows"><meta name=twitter:description content="From Manual to Automated: Enhancing Nginx Test Workflows Problem Statement Trong quá trình phát triển và vận hành hệ thống sử dụng Nginx làm reverse proxy, việc thêm, sửa hoặc xóa các cấu hình location, rewrite, hoặc proxy_pass có thể:\nẢnh hưởng không mong muốn đến các routing khác (ví dụ: route /admin/ bị chặn khi thêm /admin/api) Gây lỗi ẩn khó phát hiện do trùng khớp thứ tự location hoặc rewrite không đúng như mong đợi Thiếu công cụ kiểm thử tự động nên việc đảm bảo tính đúng đắn phụ thuộc nhiều vào manual test hoặc sản phẩm thật Hệ quả:\n"><link rel="shortcut icon" href=/favicon.png><script src=https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js></script><script>mermaid.initialize({startOnLoad:!0})</script></head><body class=article-page><script>(function(){const e="StackColorScheme";localStorage.getItem(e)||localStorage.setItem(e,"auto")})()</script><script>(function(){const t="StackColorScheme",e=localStorage.getItem(t),n=window.matchMedia("(prefers-color-scheme: dark)").matches===!0;e=="dark"||e==="auto"&&n?document.documentElement.dataset.scheme="dark":document.documentElement.dataset.scheme="light"})()</script><div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky"><button class="hamburger hamburger--spin" type=button id=toggle-menu aria-label="Toggle Menu">
+<span class=hamburger-box><span class=hamburger-inner></span></span></button><header><figure class=site-avatar><a href=/><img src=/img/avatar_hu_7ee69f593e8680d3.jpg width=300 height=300 class=site-logo loading=lazy alt=Avatar>
+</a><span class=emoji>🏅</span></figure><div class=site-meta><h1 class=site-name><a href=/>phongthien</a></h1><h2 class=site-description>Software Engineer</h2></div></header><ol class=menu-social><li><a href=https://github.com/phongthien99 target=_blank title=GitHub rel=me><svg class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6.0 00-1.3-3.2 4.2 4.2.0 00-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3.0 00-6.2.0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2.0 00-.1 3.2A4.6 4.6.0 004 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg></a></li><li><a href=https://twitter.com target=_blank title=linkedin rel=me><svg class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M10 14a3.5 3.5.0 005 0l4-4a3.5 3.5.0 00-5-5l-.5.5"/><path d="M14 10a3.5 3.5.0 00-5 0l-4 4a3.5 3.5.0 005 5l.5-.5"/></svg></a></li></ol><ol class=menu id=main-menu><li><a href=/><svg class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><polyline points="5 12 3 12 12 3 21 12 19 12"/><path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/><path d="M9 21v-6a2 2 0 012-2h2a2 2 0 012 2v6"/></svg>
+<span>Home</span></a></li><li><a href=/archives/><svg class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><rect x="3" y="4" width="18" height="4" rx="2"/><path d="M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+<span>Archives</span></a></li><li><a href=/search/><svg class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="10" cy="10" r="7"/><line x1="21" y1="21" x2="15" y2="15"/></svg>
+<span>Search</span></a></li><li><a href=/about-me/><svg class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="7" r="4"/><path d="M6 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/></svg>
+<span>About me</span></a></li><li class=menu-bottom-section><ol class=menu><li id=dark-mode-toggle><svg class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="8" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<svg class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="16" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<span>Dark Mode</span></li></ol></li></ol></aside><aside class="sidebar right-sidebar sticky"><section class="widget archives"><div class=widget-icon><svg class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><line x1="5" y1="9" x2="19" y2="9"/><line x1="5" y1="15" x2="19" y2="15"/><line x1="11" y1="4" x2="7" y2="20"/><line x1="17" y1="4" x2="13" y2="20"/></svg></div><h2 class="widget-title section-title">Table of contents</h2><div class=widget--toc><nav id=TableOfContents><ol><li><a href=#problem-statement>Problem Statement</a></li><li><a href=#solution>Solution</a></li><li><a href=#implementation>Implementation</a><ol><li><a href=#định-nghĩa-routing-và-test-case>Định nghĩa routing và Test Case</a></li><li><a href=#mã-nguồn-ginkgo-test-nginx_testgo>Mã nguồn Ginkgo test: <code>nginx_test.go</code></a></li></ol></li><li><a href=#conclusion>Conclusion</a></li></ol></nav></div></section></aside><main class="main full-width"><article class=main-article><header class=article-header><div class=article-details><header class=article-category><a href=/categories/devops/>Devops
+</a><a href=/categories/testing/>Testing</a></header><div class=article-title-wrapper><h2 class=article-title><a href=/posts/from-manual-to-automated-enhancing-nginx-test-workflows/>From Manual to Automated: Enhancing Nginx Test Workflows</a></h2></div><footer class=article-time><div><svg class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M11.795 21H5a2 2 0 01-2-2V7a2 2 0 012-2h12a2 2 0 012 2v4"/><circle cx="18" cy="18" r="4"/><path d="M15 3v4"/><path d="M7 3v4"/><path d="M3 11h16"/><path d="M18 16.496V18l1 1"/></svg>
+<time class=article-time--published datetime=2025-07-18T00:00:00Z>Jul 18, 2025</time></div><div><svg class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+<time class=article-time--reading>5 minute read</time></div></footer></div></header><section class=article-content><h1 id=from-manual-to-automated-enhancing-nginx-test-workflows>From Manual to Automated: Enhancing Nginx Test Workflows</h1><h2 id=problem-statement>Problem Statement</h2><p>Trong quá trình phát triển và vận hành hệ thống sử dụng <strong>Nginx làm reverse proxy</strong>, việc thêm, sửa hoặc xóa các cấu hình <code>location</code>, <code>rewrite</code>, hoặc <code>proxy_pass</code> có thể:</p><ul><li><strong>Ảnh hưởng không mong muốn đến các routing khác</strong> (ví dụ: route <code>/admin/</code> bị chặn khi thêm <code>/admin/api</code>)</li><li><strong>Gây lỗi ẩn</strong> khó phát hiện do trùng khớp thứ tự <code>location</code> hoặc <code>rewrite</code> không đúng như mong đợi</li><li>Thiếu công cụ kiểm thử tự động nên việc đảm bảo tính đúng đắn phụ thuộc nhiều vào manual test hoặc sản phẩm thật</li></ul><p>Hệ quả:</p><ul><li><strong>Regression</strong>: thay đổi một route ảnh hưởng đến các route khác</li></ul><h2 id=solution>Solution</h2><p>Để giải quyết những vấn đề trên, chúng ta cần một <strong>bộ test tự động mạnh mẽ để kiểm thử routing của Nginx</strong>. Mục tiêu là đảm bảo các routing mới <strong>không ảnh hưởng</strong> đến các route hiện có, đồng thời có thể <strong>diễn giải và in ra cây routing logic</strong> giúp kiểm tra độ ưu tiên và khớp <code>location</code> một cách chính xác. Bộ test này cũng phải <strong>tái sử dụng</strong> được cho nhiều phiên bản cấu hình Nginx khác nhau trong các quy trình CI/CD, staging, hoặc kiểm tra pull request.</p><p><strong>Đề xuất kỹ thuật:</strong></p><ul><li><strong>Sử dụng <code>testcontainers</code> kết hợp <code>Ginkgo/Gomega</code></strong>: Đây là sự kết hợp lý tưởng để mô phỏng hệ thống Nginx với cấu hình cụ thể. Mỗi test case sẽ khởi tạo một Nginx container với file <code>nginx.conf</code> tương ứng, gửi các HTTP request và kiểm tra response có đúng như kỳ vọng.</li><li><strong>Xây dựng bộ test matrix (routing path → backend mong muốn)</strong>: Cách tiếp cận này giúp dễ dàng mở rộng khi có thêm route mới, đồng thời kiểm tra hiệu quả các trường hợp xung đột, rewrite sai, hoặc khớp sai thứ tự.</li></ul><h2 id=implementation>Implementation</h2><h3 id=định-nghĩa-routing-và-test-case>Định nghĩa routing và Test Case</h3><p><strong>Routing cần test:</strong></p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-nginx data-lang=nginx><span class=line><span class=cl><span class=k>server</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=kn>listen</span> <span class=mi>80</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=kn>location</span> <span class=s>/web</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=kn>proxy_pass</span> <span class=s>http://whoami.com</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=kn>location</span> <span class=s>/api/</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=kn>rewrite</span> <span class=s>^/api/(.*)</span>$ <span class=s>/</span><span class=nv>$1</span> <span class=s>break</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>        <span class=kn>proxy_pass</span> <span class=s>http://whoami.com</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><p><strong>Bảng Test Case:</strong></p><div class=table-wrapper><table><thead><tr><th>Test Case ID</th><th>Input URL</th><th>Expected URI nhận tại backend</th><th>Ghi chú</th></tr></thead><tbody><tr><td>TC001</td><td><code>/web</code></td><td><code>GET /web</code></td><td><code>proxy_pass</code> giữ nguyên URI</td></tr><tr><td>TC002</td><td><code>/api/demo</code></td><td><code>GET /demo</code></td><td><code>rewrite</code> + <code>proxy_pass</code></td></tr><tr><td>TC003</td><td><code>/api/test/x</code></td><td><code>GET /test/x</code></td><td><code>rewrite</code> sâu hơn</td></tr><tr><td>TC004</td><td><code>/api/</code></td><td><code>GET /</code></td><td><code>rewrite /api/</code> → <code>/</code></td></tr></tbody></table></div><h3 id=mã-nguồn-ginkgo-test-nginx_testgo>Mã nguồn Ginkgo test: <code>nginx_test.go</code></h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>  1
+</span><span class=lnt>  2
+</span><span class=lnt>  3
+</span><span class=lnt>  4
+</span><span class=lnt>  5
+</span><span class=lnt>  6
+</span><span class=lnt>  7
+</span><span class=lnt>  8
+</span><span class=lnt>  9
+</span><span class=lnt> 10
+</span><span class=lnt> 11
+</span><span class=lnt> 12
+</span><span class=lnt> 13
+</span><span class=lnt> 14
+</span><span class=lnt> 15
+</span><span class=lnt> 16
+</span><span class=lnt> 17
+</span><span class=lnt> 18
+</span><span class=lnt> 19
+</span><span class=lnt> 20
+</span><span class=lnt> 21
+</span><span class=lnt> 22
+</span><span class=lnt> 23
+</span><span class=lnt> 24
+</span><span class=lnt> 25
+</span><span class=lnt> 26
+</span><span class=lnt> 27
+</span><span class=lnt> 28
+</span><span class=lnt> 29
+</span><span class=lnt> 30
+</span><span class=lnt> 31
+</span><span class=lnt> 32
+</span><span class=lnt> 33
+</span><span class=lnt> 34
+</span><span class=lnt> 35
+</span><span class=lnt> 36
+</span><span class=lnt> 37
+</span><span class=lnt> 38
+</span><span class=lnt> 39
+</span><span class=lnt> 40
+</span><span class=lnt> 41
+</span><span class=lnt> 42
+</span><span class=lnt> 43
+</span><span class=lnt> 44
+</span><span class=lnt> 45
+</span><span class=lnt> 46
+</span><span class=lnt> 47
+</span><span class=lnt> 48
+</span><span class=lnt> 49
+</span><span class=lnt> 50
+</span><span class=lnt> 51
+</span><span class=lnt> 52
+</span><span class=lnt> 53
+</span><span class=lnt> 54
+</span><span class=lnt> 55
+</span><span class=lnt> 56
+</span><span class=lnt> 57
+</span><span class=lnt> 58
+</span><span class=lnt> 59
+</span><span class=lnt> 60
+</span><span class=lnt> 61
+</span><span class=lnt> 62
+</span><span class=lnt> 63
+</span><span class=lnt> 64
+</span><span class=lnt> 65
+</span><span class=lnt> 66
+</span><span class=lnt> 67
+</span><span class=lnt> 68
+</span><span class=lnt> 69
+</span><span class=lnt> 70
+</span><span class=lnt> 71
+</span><span class=lnt> 72
+</span><span class=lnt> 73
+</span><span class=lnt> 74
+</span><span class=lnt> 75
+</span><span class=lnt> 76
+</span><span class=lnt> 77
+</span><span class=lnt> 78
+</span><span class=lnt> 79
+</span><span class=lnt> 80
+</span><span class=lnt> 81
+</span><span class=lnt> 82
+</span><span class=lnt> 83
+</span><span class=lnt> 84
+</span><span class=lnt> 85
+</span><span class=lnt> 86
+</span><span class=lnt> 87
+</span><span class=lnt> 88
+</span><span class=lnt> 89
+</span><span class=lnt> 90
+</span><span class=lnt> 91
+</span><span class=lnt> 92
+</span><span class=lnt> 93
+</span><span class=lnt> 94
+</span><span class=lnt> 95
+</span><span class=lnt> 96
+</span><span class=lnt> 97
+</span><span class=lnt> 98
+</span><span class=lnt> 99
+</span><span class=lnt>100
+</span><span class=lnt>101
+</span><span class=lnt>102
+</span><span class=lnt>103
+</span><span class=lnt>104
+</span><span class=lnt>105
+</span><span class=lnt>106
+</span><span class=lnt>107
+</span><span class=lnt>108
+</span><span class=lnt>109
+</span><span class=lnt>110
+</span><span class=lnt>111
+</span><span class=lnt>112
+</span><span class=lnt>113
+</span><span class=lnt>114
+</span><span class=lnt>115
+</span><span class=lnt>116
+</span><span class=lnt>117
+</span><span class=lnt>118
+</span><span class=lnt>119
+</span><span class=lnt>120
+</span><span class=lnt>121
+</span><span class=lnt>122
+</span><span class=lnt>123
+</span><span class=lnt>124
+</span><span class=lnt>125
+</span><span class=lnt>126
+</span><span class=lnt>127
+</span><span class=lnt>128
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-go data-lang=go><span class=line><span class=cl><span class=kn>package</span><span class=w> </span><span class=nx>nginx_test</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=kn>import</span><span class=w> </span><span class=p>(</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=s>&#34;context&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=s>&#34;fmt&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=s>&#34;io&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=s>&#34;log&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=s>&#34;net/http&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=s>&#34;testing&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=s>&#34;time&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=p>.</span><span class=w> </span><span class=s>&#34;github.com/onsi/ginkgo/v2&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=p>.</span><span class=w> </span><span class=s>&#34;github.com/onsi/gomega&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=s>&#34;github.com/testcontainers/testcontainers-go&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=s>&#34;github.com/testcontainers/testcontainers-go/network&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=s>&#34;github.com/testcontainers/testcontainers-go/wait&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=p>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=kd>var</span><span class=w> </span><span class=p>(</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=nx>ctx</span><span class=w>     </span><span class=nx>context</span><span class=p>.</span><span class=nx>Context</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=nx>net</span><span class=w>     </span><span class=o>*</span><span class=nx>testcontainers</span><span class=p>.</span><span class=nx>DockerNetwork</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=nx>whoamiC</span><span class=w> </span><span class=nx>testcontainers</span><span class=p>.</span><span class=nx>Container</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=nx>nginxC</span><span class=w>  </span><span class=nx>testcontainers</span><span class=p>.</span><span class=nx>Container</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=p>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=kd>var</span><span class=w> </span><span class=nx>_</span><span class=w> </span><span class=p>=</span><span class=w> </span><span class=nf>BeforeSuite</span><span class=p>(</span><span class=kd>func</span><span class=p>()</span><span class=w> </span><span class=p>{</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=nx>log</span><span class=p>.</span><span class=nf>Print</span><span class=p>(</span><span class=s>&#34;Setting up test environment...&#34;</span><span class=p>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=nx>ctx</span><span class=w> </span><span class=p>=</span><span class=w> </span><span class=nx>context</span><span class=p>.</span><span class=nf>Background</span><span class=p>()</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=c1>// Tạo Docker network dùng chung</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=kd>var</span><span class=w> </span><span class=nx>err</span><span class=w> </span><span class=kt>error</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=nx>net</span><span class=p>,</span><span class=w> </span><span class=nx>err</span><span class=w> </span><span class=p>=</span><span class=w> </span><span class=nx>network</span><span class=p>.</span><span class=nf>New</span><span class=p>(</span><span class=nx>ctx</span><span class=p>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=nf>Expect</span><span class=p>(</span><span class=nx>err</span><span class=p>).</span><span class=nf>NotTo</span><span class=p>(</span><span class=nf>HaveOccurred</span><span class=p>())</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=c1>// Tạo container whoami</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=nx>whoamiReq</span><span class=w> </span><span class=o>:=</span><span class=w> </span><span class=nx>testcontainers</span><span class=p>.</span><span class=nx>ContainerRequest</span><span class=p>{</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=nx>Image</span><span class=p>:</span><span class=w>        </span><span class=s>&#34;traefik/whoami:latest&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=nx>Name</span><span class=p>:</span><span class=w>         </span><span class=s>&#34;whoami&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=nx>Hostname</span><span class=p>:</span><span class=w>     </span><span class=s>&#34;whoami.com&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=nx>ExposedPorts</span><span class=p>:</span><span class=w> </span><span class=p>[]</span><span class=kt>string</span><span class=p>{</span><span class=s>&#34;80/tcp&#34;</span><span class=p>},</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=nx>Networks</span><span class=p>:</span><span class=w>     </span><span class=p>[]</span><span class=kt>string</span><span class=p>{</span><span class=nx>net</span><span class=p>.</span><span class=nx>Name</span><span class=p>},</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=nx>WaitingFor</span><span class=p>:</span><span class=w>   </span><span class=nx>wait</span><span class=p>.</span><span class=nf>ForHTTP</span><span class=p>(</span><span class=s>&#34;/&#34;</span><span class=p>).</span><span class=nf>WithPort</span><span class=p>(</span><span class=s>&#34;80/tcp&#34;</span><span class=p>).</span><span class=nf>WithStartupTimeout</span><span class=p>(</span><span class=mi>10</span><span class=w> </span><span class=o>*</span><span class=w> </span><span class=nx>time</span><span class=p>.</span><span class=nx>Second</span><span class=p>),</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=p>}</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=nx>whoamiC</span><span class=p>,</span><span class=w> </span><span class=nx>err</span><span class=w> </span><span class=p>=</span><span class=w> </span><span class=nx>testcontainers</span><span class=p>.</span><span class=nf>GenericContainer</span><span class=p>(</span><span class=nx>ctx</span><span class=p>,</span><span class=w> </span><span class=nx>testcontainers</span><span class=p>.</span><span class=nx>GenericContainerRequest</span><span class=p>{</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=nx>ContainerRequest</span><span class=p>:</span><span class=w> </span><span class=nx>whoamiReq</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=nx>Started</span><span class=p>:</span><span class=w>          </span><span class=kc>true</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=p>})</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=nf>Expect</span><span class=p>(</span><span class=nx>err</span><span class=p>).</span><span class=nf>NotTo</span><span class=p>(</span><span class=nf>HaveOccurred</span><span class=p>())</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=c1>// Tạo container nginx</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=nx>nginxReq</span><span class=w> </span><span class=o>:=</span><span class=w> </span><span class=nx>testcontainers</span><span class=p>.</span><span class=nx>ContainerRequest</span><span class=p>{</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=nx>Image</span><span class=p>:</span><span class=w>        </span><span class=s>&#34;nginx:latest&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=nx>ExposedPorts</span><span class=p>:</span><span class=w> </span><span class=p>[]</span><span class=kt>string</span><span class=p>{</span><span class=s>&#34;80/tcp&#34;</span><span class=p>},</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=nx>Networks</span><span class=p>:</span><span class=w>     </span><span class=p>[]</span><span class=kt>string</span><span class=p>{</span><span class=nx>net</span><span class=p>.</span><span class=nx>Name</span><span class=p>},</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=nx>WaitingFor</span><span class=p>:</span><span class=w>   </span><span class=nx>wait</span><span class=p>.</span><span class=nf>ForHTTP</span><span class=p>(</span><span class=s>&#34;/&#34;</span><span class=p>).</span><span class=nf>WithPort</span><span class=p>(</span><span class=s>&#34;80/tcp&#34;</span><span class=p>).</span><span class=nf>WithStartupTimeout</span><span class=p>(</span><span class=mi>10</span><span class=w> </span><span class=o>*</span><span class=w> </span><span class=nx>time</span><span class=p>.</span><span class=nx>Second</span><span class=p>),</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=nx>Files</span><span class=p>:</span><span class=w> </span><span class=p>[]</span><span class=nx>testcontainers</span><span class=p>.</span><span class=nx>ContainerFile</span><span class=p>{</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>			</span><span class=p>{</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>				</span><span class=nx>HostFilePath</span><span class=p>:</span><span class=w>      </span><span class=s>&#34;nginx.conf&#34;</span><span class=p>,</span><span class=w> </span><span class=c1>// Đường dẫn đến file cấu hình nginx trên máy local</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>				</span><span class=nx>ContainerFilePath</span><span class=p>:</span><span class=w> </span><span class=s>&#34;/etc/nginx/nginx.conf&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>				</span><span class=nx>FileMode</span><span class=p>:</span><span class=w>          </span><span class=mo>0644</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>			</span><span class=p>},</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=p>},</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=p>}</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=nx>nginxC</span><span class=p>,</span><span class=w> </span><span class=nx>err</span><span class=w> </span><span class=p>=</span><span class=w> </span><span class=nx>testcontainers</span><span class=p>.</span><span class=nf>GenericContainer</span><span class=p>(</span><span class=nx>ctx</span><span class=p>,</span><span class=w> </span><span class=nx>testcontainers</span><span class=p>.</span><span class=nx>GenericContainerRequest</span><span class=p>{</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=nx>ContainerRequest</span><span class=p>:</span><span class=w> </span><span class=nx>nginxReq</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=nx>Started</span><span class=p>:</span><span class=w>          </span><span class=kc>true</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=p>})</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=nf>Expect</span><span class=p>(</span><span class=nx>err</span><span class=p>).</span><span class=nf>NotTo</span><span class=p>(</span><span class=nf>HaveOccurred</span><span class=p>())</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=p>})</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=kd>var</span><span class=w> </span><span class=nx>_</span><span class=w> </span><span class=p>=</span><span class=w> </span><span class=nf>Describe</span><span class=p>(</span><span class=s>&#34;Nginx Reverse Proxy to Whoami&#34;</span><span class=p>,</span><span class=w> </span><span class=kd>func</span><span class=p>()</span><span class=w> </span><span class=p>{</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=nx>testCases</span><span class=w> </span><span class=o>:=</span><span class=w> </span><span class=p>[]</span><span class=kd>struct</span><span class=w> </span><span class=p>{</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=nx>name</span><span class=w>          </span><span class=kt>string</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=nx>path</span><span class=w>          </span><span class=kt>string</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=nx>expectedURI</span><span class=w>   </span><span class=kt>string</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=nx>expectSuccess</span><span class=w> </span><span class=kt>bool</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=p>}{</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=p>{</span><span class=s>&#34;proxy_pass without rewrite&#34;</span><span class=p>,</span><span class=w> </span><span class=s>&#34;/web&#34;</span><span class=p>,</span><span class=w> </span><span class=s>&#34;GET /web&#34;</span><span class=p>,</span><span class=w> </span><span class=kc>true</span><span class=p>},</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=p>{</span><span class=s>&#34;rewrite + proxy_pass 1&#34;</span><span class=p>,</span><span class=w> </span><span class=s>&#34;/api/demo&#34;</span><span class=p>,</span><span class=w> </span><span class=s>&#34;GET /demo&#34;</span><span class=p>,</span><span class=w> </span><span class=kc>true</span><span class=p>},</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=p>{</span><span class=s>&#34;rewrite + proxy_pass 2&#34;</span><span class=p>,</span><span class=w> </span><span class=s>&#34;/api/test/x&#34;</span><span class=p>,</span><span class=w> </span><span class=s>&#34;GET /test/x&#34;</span><span class=p>,</span><span class=w> </span><span class=kc>true</span><span class=p>},</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=p>{</span><span class=s>&#34;rewrite + proxy_pass root&#34;</span><span class=p>,</span><span class=w> </span><span class=s>&#34;/api/&#34;</span><span class=p>,</span><span class=w> </span><span class=s>&#34;GET /&#34;</span><span class=p>,</span><span class=w> </span><span class=kc>true</span><span class=p>},</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=p>}</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=k>for</span><span class=w> </span><span class=nx>_</span><span class=p>,</span><span class=w> </span><span class=nx>tc</span><span class=w> </span><span class=o>:=</span><span class=w> </span><span class=k>range</span><span class=w> </span><span class=nx>testCases</span><span class=w> </span><span class=p>{</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=nx>tc</span><span class=w> </span><span class=o>:=</span><span class=w> </span><span class=nx>tc</span><span class=w> </span><span class=c1>// capture range variable</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=nf>It</span><span class=p>(</span><span class=nx>fmt</span><span class=p>.</span><span class=nf>Sprintf</span><span class=p>(</span><span class=s>&#34;should handle route %s → %s&#34;</span><span class=p>,</span><span class=w> </span><span class=nx>tc</span><span class=p>.</span><span class=nx>path</span><span class=p>,</span><span class=w> </span><span class=nx>tc</span><span class=p>.</span><span class=nx>expectedURI</span><span class=p>),</span><span class=w> </span><span class=kd>func</span><span class=p>()</span><span class=w> </span><span class=p>{</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>			</span><span class=nx>host</span><span class=p>,</span><span class=w> </span><span class=nx>_</span><span class=w> </span><span class=o>:=</span><span class=w> </span><span class=nx>nginxC</span><span class=p>.</span><span class=nf>Host</span><span class=p>(</span><span class=nx>ctx</span><span class=p>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>			</span><span class=nx>port</span><span class=p>,</span><span class=w> </span><span class=nx>_</span><span class=w> </span><span class=o>:=</span><span class=w> </span><span class=nx>nginxC</span><span class=p>.</span><span class=nf>MappedPort</span><span class=p>(</span><span class=nx>ctx</span><span class=p>,</span><span class=w> </span><span class=s>&#34;80&#34;</span><span class=p>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>			</span><span class=nx>url</span><span class=w> </span><span class=o>:=</span><span class=w> </span><span class=nx>fmt</span><span class=p>.</span><span class=nf>Sprintf</span><span class=p>(</span><span class=s>&#34;http://%s:%s%s&#34;</span><span class=p>,</span><span class=w> </span><span class=nx>host</span><span class=p>,</span><span class=w> </span><span class=nx>port</span><span class=p>.</span><span class=nf>Port</span><span class=p>(),</span><span class=w> </span><span class=nx>tc</span><span class=p>.</span><span class=nx>path</span><span class=p>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>			</span><span class=nx>resp</span><span class=p>,</span><span class=w> </span><span class=nx>err</span><span class=w> </span><span class=o>:=</span><span class=w> </span><span class=nx>http</span><span class=p>.</span><span class=nf>Get</span><span class=p>(</span><span class=nx>url</span><span class=p>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>			</span><span class=nf>Expect</span><span class=p>(</span><span class=nx>err</span><span class=p>).</span><span class=nf>NotTo</span><span class=p>(</span><span class=nf>HaveOccurred</span><span class=p>())</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>			</span><span class=k>defer</span><span class=w> </span><span class=nx>resp</span><span class=p>.</span><span class=nx>Body</span><span class=p>.</span><span class=nf>Close</span><span class=p>()</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>			</span><span class=nx>body</span><span class=p>,</span><span class=w> </span><span class=nx>_</span><span class=w> </span><span class=o>:=</span><span class=w> </span><span class=nx>io</span><span class=p>.</span><span class=nf>ReadAll</span><span class=p>(</span><span class=nx>resp</span><span class=p>.</span><span class=nx>Body</span><span class=p>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>			</span><span class=nx>log</span><span class=p>.</span><span class=nf>Printf</span><span class=p>(</span><span class=s>&#34;Response for %s: %s&#34;</span><span class=p>,</span><span class=w> </span><span class=nx>tc</span><span class=p>.</span><span class=nx>path</span><span class=p>,</span><span class=w> </span><span class=nb>string</span><span class=p>(</span><span class=nx>body</span><span class=p>))</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>			</span><span class=k>if</span><span class=w> </span><span class=nx>tc</span><span class=p>.</span><span class=nx>expectSuccess</span><span class=w> </span><span class=p>{</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>				</span><span class=nf>Expect</span><span class=p>(</span><span class=nx>resp</span><span class=p>.</span><span class=nx>StatusCode</span><span class=p>).</span><span class=nf>To</span><span class=p>(</span><span class=nf>Equal</span><span class=p>(</span><span class=mi>200</span><span class=p>))</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>				</span><span class=nf>Expect</span><span class=p>(</span><span class=nb>string</span><span class=p>(</span><span class=nx>body</span><span class=p>)).</span><span class=nf>To</span><span class=p>(</span><span class=nf>ContainSubstring</span><span class=p>(</span><span class=nx>tc</span><span class=p>.</span><span class=nx>expectedURI</span><span class=p>))</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>				</span><span class=nf>Expect</span><span class=p>(</span><span class=nb>string</span><span class=p>(</span><span class=nx>body</span><span class=p>)).</span><span class=nf>To</span><span class=p>(</span><span class=nf>ContainSubstring</span><span class=p>(</span><span class=s>&#34;Hostname: whoami.com&#34;</span><span class=p>))</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>			</span><span class=p>}</span><span class=w> </span><span class=k>else</span><span class=w> </span><span class=p>{</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>				</span><span class=nf>Expect</span><span class=p>(</span><span class=nb>string</span><span class=p>(</span><span class=nx>body</span><span class=p>)).</span><span class=nf>NotTo</span><span class=p>(</span><span class=nf>ContainSubstring</span><span class=p>(</span><span class=s>&#34;Hostname: whoami.com&#34;</span><span class=p>))</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>			</span><span class=p>}</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=p>})</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=p>}</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=p>})</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=kd>var</span><span class=w> </span><span class=nx>_</span><span class=w> </span><span class=p>=</span><span class=w> </span><span class=nf>AfterSuite</span><span class=p>(</span><span class=kd>func</span><span class=p>()</span><span class=w> </span><span class=p>{</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=nx>log</span><span class=p>.</span><span class=nf>Print</span><span class=p>(</span><span class=s>&#34;Tearing down test environment...&#34;</span><span class=p>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=k>if</span><span class=w> </span><span class=nx>whoamiC</span><span class=w> </span><span class=o>!=</span><span class=w> </span><span class=kc>nil</span><span class=w> </span><span class=p>{</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=nx>whoamiC</span><span class=p>.</span><span class=nf>Terminate</span><span class=p>(</span><span class=nx>ctx</span><span class=p>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=p>}</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=k>if</span><span class=w> </span><span class=nx>nginxC</span><span class=w> </span><span class=o>!=</span><span class=w> </span><span class=kc>nil</span><span class=w> </span><span class=p>{</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=nx>nginxC</span><span class=p>.</span><span class=nf>Terminate</span><span class=p>(</span><span class=nx>ctx</span><span class=p>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=p>}</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=k>if</span><span class=w> </span><span class=nx>net</span><span class=w> </span><span class=o>!=</span><span class=w> </span><span class=kc>nil</span><span class=w> </span><span class=p>{</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=nx>net</span><span class=p>.</span><span class=nf>Remove</span><span class=p>(</span><span class=nx>ctx</span><span class=p>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=p>}</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=p>})</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=kd>func</span><span class=w> </span><span class=nf>TestNginx</span><span class=p>(</span><span class=nx>t</span><span class=w> </span><span class=o>*</span><span class=nx>testing</span><span class=p>.</span><span class=nx>T</span><span class=p>)</span><span class=w> </span><span class=p>{</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=nf>RegisterFailHandler</span><span class=p>(</span><span class=nx>Fail</span><span class=p>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=nf>RunSpecs</span><span class=p>(</span><span class=nx>t</span><span class=p>,</span><span class=w> </span><span class=s>&#34;Nginx Suite&#34;</span><span class=p>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=p>}</span><span class=w>
+</span></span></span></code></pre></td></tr></table></div></div><p>Để chạy bộ test này, bạn chỉ cần lưu cấu hình Nginx vào file <code>nginx.conf</code> cùng cấp với file <code>nginx_test.go</code> và chạy lệnh trong terminal:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl>go <span class=nb>test</span> -v
+</span></span></code></pre></td></tr></table></div></div><h2 id=conclusion>Conclusion</h2><p>Việc kiểm thử cấu hình Nginx một cách tự động là một bước tiến quan trọng trong việc đảm bảo sự ổn định và chính xác của hệ thống. Bằng cách kết hợp <strong>Testcontainers</strong> và <strong>Ginkgo/Gomega</strong>, chúng ta đã xây dựng được một bộ khung mạnh mẽ, cho phép:</p><ul><li><strong>Tự động hóa kiểm thử</strong>: Giảm thiểu đáng kể rủi ro gây ra bởi các thay đổi cấu hình thủ công.</li><li><strong>Phát hiện sớm lỗi</strong>: Các vấn đề về routing, rewrite, hoặc xung đột cấu hình sẽ được nhận diện ngay trong giai đoạn phát triển hoặc CI/CD.</li><li><strong>Kiểm soát phức tạp</strong>: Giúp quản lý hiệu quả hơn các cấu hình Nginx ngày càng phức tạp, đặc biệt trong các hệ thống microservices.</li></ul></section><footer class=article-footer><section class=article-tags><a href=/tags/nginx/>Nginx</a>
+<a href=/tags/testcontainers/>Testcontainers</a>
+<a href=/tags/ginkgo/>Ginkgo</a>
+<a href=/tags/devops/>DevOps</a></section><section class=article-copyright><svg class="icon icon-tabler icon-tabler-copyright" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><path d="M14.5 9a3.5 4 0 100 6"/></svg>
+<span>Licensed under CC BY-NC-SA 4.0</span></section></footer></article><aside class=related-content--wrapper><h2 class=section-title>Related content</h2><div class=related-content><div class="flex article-list--tile"><article><a href=/posts/analysis-of-the-ansible-model-in-multi-node-kubernetes-deployment/><div class=article-details><h2 class=article-title>Analysis of the Ansible Model in Multi-Node Kubernetes Deployment</h2></div></a></article><article><a href=/posts/infrastructure-as-code-iac-automating-infrastructure-management/><div class=article-details><h2 class=article-title>Infrastructure as Code (IaC): Automating Infrastructure Management</h2></div></a></article></div></div></aside><div class=disqus-container></div><style>.disqus-container{background-color:var(--card-background);border-radius:var(--card-border-radius);box-shadow:var(--shadow-l1);padding:var(--card-padding)}</style><script>window.addEventListener("onColorSchemeChange",e=>{typeof DISQUS=="object"&&DISQUS.reset({reload:!0})})</script><footer class=site-footer><section class=copyright>&copy;
+2026 phongthien</section><section class=powerby>Built with <a href=https://gohugo.io/ target=_blank rel=noopener>Hugo</a><br>Theme <b><a href=https://github.com/CaiJimmy/hugo-theme-stack target=_blank rel=noopener data-version=3.33.0>Stack</a></b> designed by <a href=https://jimmycai.com target=_blank rel=noopener>Jimmy</a></section></footer><div class=pswp tabindex=-1 role=dialog aria-hidden=true><div class=pswp__bg></div><div class=pswp__scroll-wrap><div class=pswp__container><div class=pswp__item></div><div class=pswp__item></div><div class=pswp__item></div></div><div class="pswp__ui pswp__ui--hidden"><div class=pswp__top-bar><div class=pswp__counter></div><button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+<button class="pswp__button pswp__button--share" title=Share></button>
+<button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+<button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button><div class=pswp__preloader><div class=pswp__preloader__icn><div class=pswp__preloader__cut><div class=pswp__preloader__donut></div></div></div></div></div><div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap"><div class=pswp__share-tooltip></div></div><button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+</button>
+<button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)"></button><div class=pswp__caption><div class=pswp__caption__center></div></div></div></div></div><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo=" crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU=" crossorigin=anonymous defer></script><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css crossorigin=anonymous><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css crossorigin=anonymous></main></div><script src=https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z+KMkF24hUW8WePSA9HM=" crossorigin=anonymous></script><script type=text/javascript src=/ts/main.c922af694cc257bf1ecc41c0dd7b0430f9114ec280ccf67cd2c6ad55f5316c4e.js defer></script><script>(function(){const e=document.createElement("link");e.href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap",e.type="text/css",e.rel="stylesheet",document.head.appendChild(e)})()</script></body></html>

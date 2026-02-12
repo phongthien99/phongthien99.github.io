@@ -1,0 +1,192 @@
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><meta name=description content="1. Đặt vấn đề Trong các hệ thống phân tán hiện đại, Kafka thường được sử dụng như một nền tảng trung gian để xử lý dữ liệu theo thời gian thực. Khi triển khai CDC (Change Data Capture) nhằm đồng bộ dữ liệu giữa hai cơ sở dữ liệu, việc hiểu rõ các khái niệm Topic, Partition, Offset, Consumer Group và Key Message là cực kỳ quan trọng. Những thành phần này quyết định đến hiệu năng, khả năng mở rộng và tính toàn vẹn dữ liệu.\n"><title>Kafka Topic, Partition, Offset, Consumer Group, and Message Key in Change Data Capture (CDC)</title><link rel=canonical href=https://phongthien99.github.io/posts/kafka-topic-partition-offset-consumer-group-and-message-key-in-change-data-capture-cdc/><link rel=stylesheet href=/scss/style.min.769133d016a4a1944b3a27800e000cccd439a8c1a9c0c61f7c4fa0bc0e42de57.css><meta property='og:title' content="Kafka Topic, Partition, Offset, Consumer Group, and Message Key in Change Data Capture (CDC)"><meta property='og:description' content="1. Đặt vấn đề Trong các hệ thống phân tán hiện đại, Kafka thường được sử dụng như một nền tảng trung gian để xử lý dữ liệu theo thời gian thực. Khi triển khai CDC (Change Data Capture) nhằm đồng bộ dữ liệu giữa hai cơ sở dữ liệu, việc hiểu rõ các khái niệm Topic, Partition, Offset, Consumer Group và Key Message là cực kỳ quan trọng. Những thành phần này quyết định đến hiệu năng, khả năng mở rộng và tính toàn vẹn dữ liệu.\n"><meta property='og:url' content='https://phongthien99.github.io/posts/kafka-topic-partition-offset-consumer-group-and-message-key-in-change-data-capture-cdc/'><meta property='og:site_name' content='phongthien'><meta property='og:type' content='article'><meta property='article:section' content='Post'><meta property='article:tag' content='queue'><meta property='article:tag' content='kafka'><meta property='article:tag' content='cdc'><meta property='article:published_time' content='2025-08-30T10:17:00+08:00'><meta property='article:modified_time' content='2025-08-30T10:17:00+08:00'><meta name=twitter:title content="Kafka Topic, Partition, Offset, Consumer Group, and Message Key in Change Data Capture (CDC)"><meta name=twitter:description content="1. Đặt vấn đề Trong các hệ thống phân tán hiện đại, Kafka thường được sử dụng như một nền tảng trung gian để xử lý dữ liệu theo thời gian thực. Khi triển khai CDC (Change Data Capture) nhằm đồng bộ dữ liệu giữa hai cơ sở dữ liệu, việc hiểu rõ các khái niệm Topic, Partition, Offset, Consumer Group và Key Message là cực kỳ quan trọng. Những thành phần này quyết định đến hiệu năng, khả năng mở rộng và tính toàn vẹn dữ liệu.\n"><link rel="shortcut icon" href=/favicon.png><script src=https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js></script><script>mermaid.initialize({startOnLoad:!0})</script></head><body class=article-page><script>(function(){const e="StackColorScheme";localStorage.getItem(e)||localStorage.setItem(e,"auto")})()</script><script>(function(){const t="StackColorScheme",e=localStorage.getItem(t),n=window.matchMedia("(prefers-color-scheme: dark)").matches===!0;e=="dark"||e==="auto"&&n?document.documentElement.dataset.scheme="dark":document.documentElement.dataset.scheme="light"})()</script><div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky"><button class="hamburger hamburger--spin" type=button id=toggle-menu aria-label="Toggle Menu">
+<span class=hamburger-box><span class=hamburger-inner></span></span></button><header><figure class=site-avatar><a href=/><img src=/img/avatar_hu_7ee69f593e8680d3.jpg width=300 height=300 class=site-logo loading=lazy alt=Avatar>
+</a><span class=emoji>🏅</span></figure><div class=site-meta><h1 class=site-name><a href=/>phongthien</a></h1><h2 class=site-description>Software Engineer</h2></div></header><ol class=menu-social><li><a href=https://github.com/phongthien99 target=_blank title=GitHub rel=me><svg class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6.0 00-1.3-3.2 4.2 4.2.0 00-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3.0 00-6.2.0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2.0 00-.1 3.2A4.6 4.6.0 004 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg></a></li><li><a href=https://twitter.com target=_blank title=linkedin rel=me><svg class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M10 14a3.5 3.5.0 005 0l4-4a3.5 3.5.0 00-5-5l-.5.5"/><path d="M14 10a3.5 3.5.0 00-5 0l-4 4a3.5 3.5.0 005 5l.5-.5"/></svg></a></li></ol><ol class=menu id=main-menu><li><a href=/><svg class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><polyline points="5 12 3 12 12 3 21 12 19 12"/><path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/><path d="M9 21v-6a2 2 0 012-2h2a2 2 0 012 2v6"/></svg>
+<span>Home</span></a></li><li><a href=/archives/><svg class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><rect x="3" y="4" width="18" height="4" rx="2"/><path d="M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+<span>Archives</span></a></li><li><a href=/search/><svg class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="10" cy="10" r="7"/><line x1="21" y1="21" x2="15" y2="15"/></svg>
+<span>Search</span></a></li><li><a href=/about-me/><svg class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="7" r="4"/><path d="M6 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/></svg>
+<span>About me</span></a></li><li class=menu-bottom-section><ol class=menu><li id=dark-mode-toggle><svg class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="8" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<svg class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="16" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<span>Dark Mode</span></li></ol></li></ol></aside><aside class="sidebar right-sidebar sticky"><section class="widget archives"><div class=widget-icon><svg class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><line x1="5" y1="9" x2="19" y2="9"/><line x1="5" y1="15" x2="19" y2="15"/><line x1="11" y1="4" x2="7" y2="20"/><line x1="17" y1="4" x2="13" y2="20"/></svg></div><h2 class="widget-title section-title">Table of contents</h2><div class=widget--toc><nav id=TableOfContents><ol><li><a href=#1-đặt-vấn-đề>1. Đặt vấn đề</a></li><li><a href=#2-định-nghĩa-các-khái-niệm-quan-trọng>2. Định nghĩa các khái niệm quan trọng</a><ol><li><a href=#21-kafka-topic>2.1 Kafka Topic</a></li><li><a href=#22-partition>2.2 Partition</a></li><li><a href=#23-offset>2.3 Offset</a></li><li><a href=#24-consumer-group>2.4 Consumer Group</a></li><li><a href=#25-key-trong-message-kafka>2.5 Key trong message Kafka</a></li></ol></li><li><a href=#3-case-study-cdc-trong-hệ-thống-order-service-của-e-commerce>3. Case Study: CDC trong hệ thống Order Service của E-commerce</a></li><li><a href=#4-biểu-đồ-minh-họa>4. Biểu đồ minh họa</a><ol><li><a href=#quan-hệ-topic---partition---consumer-group>Quan hệ Topic - Partition - Consumer Group</a></li><li><a href=#luồng-message-cdc-với-key-và-offset>Luồng message CDC với Key và Offset</a></li></ol></li><li><a href=#5-kết-luận>5. Kết luận</a></li></ol></nav></div></section></aside><main class="main full-width"><article class=main-article><header class=article-header><div class=article-details><header class=article-category><a href=/categories/queue/>Queue</a></header><div class=article-title-wrapper><h2 class=article-title><a href=/posts/kafka-topic-partition-offset-consumer-group-and-message-key-in-change-data-capture-cdc/>Kafka Topic, Partition, Offset, Consumer Group, and Message Key in Change Data Capture (CDC)</a></h2></div><footer class=article-time><div><svg class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M11.795 21H5a2 2 0 01-2-2V7a2 2 0 012-2h12a2 2 0 012 2v4"/><circle cx="18" cy="18" r="4"/><path d="M15 3v4"/><path d="M7 3v4"/><path d="M3 11h16"/><path d="M18 16.496V18l1 1"/></svg>
+<time class=article-time--published datetime=2025-08-30T10:17:00+08:00>Aug 30, 2025</time></div><div><svg class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+<time class=article-time--reading>5 minute read</time></div></footer></div></header><section class=article-content><h2 id=1-đặt-vấn-đề>1. Đặt vấn đề</h2><p>Trong các hệ thống phân tán hiện đại, <strong>Kafka</strong> thường được sử dụng như một nền tảng trung gian để xử lý dữ liệu theo thời gian thực. Khi triển khai <strong>CDC (Change Data Capture)</strong> nhằm đồng bộ dữ liệu giữa hai cơ sở dữ liệu, việc hiểu rõ các khái niệm <strong>Topic, Partition, Offset, Consumer Group và Key Message</strong> là cực kỳ quan trọng. Những thành phần này quyết định đến hiệu năng, khả năng mở rộng và tính toàn vẹn dữ liệu.</p><h2 id=2-định-nghĩa-các-khái-niệm-quan-trọng>2. Định nghĩa các khái niệm quan trọng</h2><h3 id=21-kafka-topic>2.1 Kafka Topic</h3><ul><li>Là <strong>danh mục (channel)</strong> nơi producer gửi message và consumer đọc message.</li><li>Mỗi topic được chia nhỏ thành nhiều <strong>partition</strong> để hỗ trợ song song (parallelism).</li></ul><h3 id=22-partition>2.2 Partition</h3><ul><li>Mỗi partition là một <strong>log file append-only</strong> được lưu trên broker.</li><li>Partition giúp Kafka scale: nhiều consumer có thể xử lý song song dữ liệu từ nhiều partition khác nhau.</li><li><strong>Message trong 1 partition được đảm bảo thứ tự (ordering).</strong></li><li>Tổng throughput của topic = tổng throughput của các partition.</li></ul><h3 id=23-offset>2.3 Offset</h3><ul><li>Offset là <strong>chỉ số tuần tự</strong> gắn với mỗi message trong một partition.</li><li>Ví dụ: Partition P0 có message với offset 0,1,2…</li><li>Consumer khi đọc sẽ ghi nhớ offset để biết mình đã xử lý đến đâu.</li></ul><h3 id=24-consumer-group>2.4 Consumer Group</h3><ul><li>Consumer group = tập hợp nhiều consumer cùng đọc 1 topic.</li><li>Kafka phân chia mỗi partition chỉ cho <strong>1 consumer duy nhất trong group</strong>.</li><li>Nếu số consumer = số partition → mỗi consumer đọc 1 partition.</li><li>Nếu số consumer > số partition → có consumer sẽ idle (ngồi chơi).</li></ul><h3 id=25-key-trong-message-kafka>2.5 Key trong message Kafka</h3><ul><li>Key là giá trị tùy chọn gắn với mỗi message.</li><li>Kafka dùng <strong>key</strong> để quyết định message sẽ vào partition nào.</li><li><strong>Cùng key → luôn cùng partition</strong> → đảm bảo thứ tự.</li><li>Key quan trọng khi cần grouping theo entity (vd: user_id, order_id).</li></ul><h2 id=3-case-study-cdc-trong-hệ-thống-order-service-của-e-commerce>3. Case Study: CDC trong hệ thống Order Service của E-commerce</h2><p>Giả sử một hệ thống <strong>Order Service</strong> trong E-commerce cần đồng bộ dữ liệu đơn hàng từ Database A sang Database B qua Kafka:</p><ul><li>Khi đơn hàng được tạo/cập nhật/xóa, <strong>Debezium</strong> sẽ capture sự kiện và đẩy vào Kafka Topic <code>orders</code>.</li><li>Key message = <code>order_id</code> → đảm bảo toàn bộ sự kiện liên quan đến cùng một đơn hàng đều nằm trong cùng một partition.</li><li>Consumer Group “DB-Sync” (chạy ở Database B) sẽ nhận dữ liệu và áp dụng thay đổi tương ứng.</li></ul><p><strong>Lợi ích:</strong></p><ul><li>Đảm bảo <strong>tính toàn vẹn</strong> khi đồng bộ dữ liệu.</li><li>Hỗ trợ <strong>scale-out</strong> bằng cách tăng số partition và số consumer group.</li><li>Vẫn giữ được <strong>thứ tự update</strong> cho cùng một bản ghi.</li></ul><h2 id=4-biểu-đồ-minh-họa>4. Biểu đồ minh họa</h2><h3 id=quan-hệ-topic---partition---consumer-group>Quan hệ Topic - Partition - Consumer Group</h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span><span class=lnt>40
+</span><span class=lnt>41
+</span><span class=lnt>42
+</span><span class=lnt>43
+</span><span class=lnt>44
+</span><span class=lnt>45
+</span><span class=lnt>46
+</span><span class=lnt>47
+</span><span class=lnt>48
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-go data-lang=go><span class=line><span class=cl><span class=err>@</span><span class=nx>startuml</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=nx>title</span><span class=w> </span><span class=nx>Quan</span><span class=w> </span><span class=nx>hệ</span><span class=w> </span><span class=nx>Topic</span><span class=w> </span><span class=o>-</span><span class=w> </span><span class=nx>Partition</span><span class=w> </span><span class=o>-</span><span class=w> </span><span class=nx>Consumer</span><span class=w> </span><span class=nx>Group</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=nx>skinparam</span><span class=w> </span><span class=nx>componentStyle</span><span class=w> </span><span class=nx>rectangle</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=nx>skinparam</span><span class=w> </span><span class=nx>shadowing</span><span class=w> </span><span class=kc>false</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=nx>skinparam</span><span class=w> </span><span class=nx>rectangle</span><span class=w> </span><span class=p>{</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nx>BorderColor</span><span class=w> </span><span class=err>#</span><span class=mi>555</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nx>RoundCorner</span><span class=w> </span><span class=mi>12</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=p>}</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=nx>rectangle</span><span class=w> </span><span class=s>&#34;Topic: customers&#34;</span><span class=w> </span><span class=nx>as</span><span class=w> </span><span class=nx>Topic</span><span class=w> </span><span class=p>{</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nx>rectangle</span><span class=w> </span><span class=s>&#34;Partition P0\nOffsets: 0..n&#34;</span><span class=w> </span><span class=nx>as</span><span class=w> </span><span class=nx>P0</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nx>rectangle</span><span class=w> </span><span class=s>&#34;Partition P1\nOffsets: 0..n&#34;</span><span class=w> </span><span class=nx>as</span><span class=w> </span><span class=nx>P1</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nx>rectangle</span><span class=w> </span><span class=s>&#34;Partition P2\nOffsets: 0..n&#34;</span><span class=w> </span><span class=nx>as</span><span class=w> </span><span class=nx>P2</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=p>}</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=kn>package</span><span class=w> </span><span class=s>&#34;Consumer Group A&#34;</span><span class=w> </span><span class=nx>as</span><span class=w> </span><span class=nx>CGA</span><span class=w> </span><span class=p>{</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nx>rectangle</span><span class=w> </span><span class=s>&#34;Consumer A1&#34;</span><span class=w> </span><span class=nx>as</span><span class=w> </span><span class=nx>A1</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nx>rectangle</span><span class=w> </span><span class=s>&#34;Consumer A2&#34;</span><span class=w> </span><span class=nx>as</span><span class=w> </span><span class=nx>A2</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=p>}</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=kn>package</span><span class=w> </span><span class=s>&#34;Consumer Group B&#34;</span><span class=w> </span><span class=nx>as</span><span class=w> </span><span class=nx>CGB</span><span class=w> </span><span class=p>{</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nx>rectangle</span><span class=w> </span><span class=s>&#34;Consumer B1&#34;</span><span class=w> </span><span class=nx>as</span><span class=w> </span><span class=nx>B1</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nx>rectangle</span><span class=w> </span><span class=s>&#34;Consumer B2&#34;</span><span class=w> </span><span class=nx>as</span><span class=w> </span><span class=nx>B2</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nx>rectangle</span><span class=w> </span><span class=s>&#34;Consumer B3&#34;</span><span class=w> </span><span class=nx>as</span><span class=w> </span><span class=nx>B3</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=p>}</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=nx>P0</span><span class=w> </span><span class=o>-</span><span class=nx>right</span><span class=o>-</span><span class=p>&gt;</span><span class=w> </span><span class=nx>A1</span><span class=w> </span><span class=p>:</span><span class=w> </span><span class=nx>read</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=nx>P1</span><span class=w> </span><span class=o>-</span><span class=nx>right</span><span class=o>-</span><span class=p>&gt;</span><span class=w> </span><span class=nx>A2</span><span class=w> </span><span class=p>:</span><span class=w> </span><span class=nx>read</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=nx>P2</span><span class=w> </span><span class=o>-</span><span class=nx>right</span><span class=o>-</span><span class=p>&gt;</span><span class=w> </span><span class=nx>A2</span><span class=w> </span><span class=p>:</span><span class=w> </span><span class=nx>read</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=nx>P0</span><span class=w> </span><span class=o>-</span><span class=nx>right</span><span class=o>-</span><span class=p>&gt;</span><span class=w> </span><span class=nx>B1</span><span class=w> </span><span class=p>:</span><span class=w> </span><span class=nx>read</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=nx>P1</span><span class=w> </span><span class=o>-</span><span class=nx>right</span><span class=o>-</span><span class=p>&gt;</span><span class=w> </span><span class=nx>B2</span><span class=w> </span><span class=p>:</span><span class=w> </span><span class=nx>read</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=nx>P2</span><span class=w> </span><span class=o>-</span><span class=nx>right</span><span class=o>-</span><span class=p>&gt;</span><span class=w> </span><span class=nx>B3</span><span class=w> </span><span class=p>:</span><span class=w> </span><span class=nx>read</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=nx>note</span><span class=w> </span><span class=nx>bottom</span><span class=w> </span><span class=nx>of</span><span class=w> </span><span class=nx>Topic</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=o>-</span><span class=w> </span><span class=nx>Message</span><span class=w> </span><span class=nx>có</span><span class=w> </span><span class=o>**</span><span class=nx>Key</span><span class=o>**</span><span class=w> </span><span class=p>(</span><span class=nx>thường</span><span class=w> </span><span class=p>=</span><span class=w> </span><span class=nx>Primary</span><span class=w> </span><span class=nx>Key</span><span class=o>/</span><span class=nx>Unique</span><span class=w> </span><span class=nx>Key</span><span class=p>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=o>-</span><span class=w> </span><span class=nx>Partition</span><span class=w> </span><span class=p>=</span><span class=w> </span><span class=nf>hash</span><span class=p>(</span><span class=nx>Key</span><span class=p>)</span><span class=w> </span><span class=o>%</span><span class=w> </span><span class=nx>numPartitions</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=o>-</span><span class=w> </span><span class=nx>Ordering</span><span class=w> </span><span class=nx>chỉ</span><span class=w> </span><span class=nx>được</span><span class=w> </span><span class=nx>đảm</span><span class=w> </span><span class=nx>bảo</span><span class=w> </span><span class=o>**</span><span class=nx>trong</span><span class=w> </span><span class=mi>1</span><span class=w> </span><span class=nx>partition</span><span class=o>**</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=nx>end</span><span class=w> </span><span class=nx>note</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=nx>note</span><span class=w> </span><span class=nx>right</span><span class=w> </span><span class=nx>of</span><span class=w> </span><span class=nx>A2</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nx>Điều</span><span class=w> </span><span class=nx>kiện</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=o>-</span><span class=w> </span><span class=nx>Mỗi</span><span class=w> </span><span class=nx>partition</span><span class=w> </span><span class=nx>chỉ</span><span class=w> </span><span class=nx>có</span><span class=w> </span><span class=mi>1</span><span class=w> </span><span class=nx>consumer</span><span class=w> </span><span class=o>**</span><span class=nx>trong</span><span class=w> </span><span class=nx>cùng</span><span class=w> </span><span class=nx>group</span><span class=o>**</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=o>-</span><span class=w> </span><span class=nx>Consumer</span><span class=w> </span><span class=p>&gt;</span><span class=w> </span><span class=nx>Partition</span><span class=w> </span><span class=err>→</span><span class=w> </span><span class=nx>consumer</span><span class=w> </span><span class=nx>thừa</span><span class=w> </span><span class=nx>không</span><span class=w> </span><span class=nx>đọc</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=o>-</span><span class=w> </span><span class=nx>Consumer</span><span class=w> </span><span class=p>&lt;</span><span class=w> </span><span class=nx>Partition</span><span class=w> </span><span class=err>→</span><span class=w> </span><span class=nx>consumer</span><span class=w> </span><span class=nx>có</span><span class=w> </span><span class=nx>thể</span><span class=w> </span><span class=nx>đọc</span><span class=w> </span><span class=nx>nhiều</span><span class=w> </span><span class=nx>partition</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=nx>end</span><span class=w> </span><span class=nx>note</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=err>@</span><span class=nx>enduml</span><span class=w>
+</span></span></span></code></pre></td></tr></table></div></div><h3 id=luồng-message-cdc-với-key-và-offset>Luồng message CDC với Key và Offset</h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback><span class=line><span class=cl>@startuml
+</span></span><span class=line><span class=cl>title Luồng CDC: Producer -&gt; Topic/Partition -&gt; Consumer (với Key &amp; Offset)
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>actor App as Producer
+</span></span><span class=line><span class=cl>participant &#34;Topic: customers\nPartition P1&#34; as P1
+</span></span><span class=line><span class=cl>participant &#34;Consumer A2\n(Group A)&#34; as A2
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>== Publish ==
+</span></span><span class=line><span class=cl>Producer -&gt; P1 : Produce message\nKey = customer_id=123\nValue = {... after ...}
+</span></span><span class=line><span class=cl>activate P1
+</span></span><span class=line><span class=cl>P1 -&gt; P1 : Ghi log append-only\nAssign Offset = 1024
+</span></span><span class=line><span class=cl>deactivate P1
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>note over P1
+</span></span><span class=line><span class=cl>  Ví dụ:
+</span></span><span class=line><span class=cl>  - Key: 123  -&gt; hash(Key) -&gt; P1
+</span></span><span class=line><span class=cl>  - Offset tăng dần: ...1023, **1024**, 1025...
+</span></span><span class=line><span class=cl>end note
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>== Consume ==
+</span></span><span class=line><span class=cl>P1 -&gt; A2 : Deliver record @Offset=1024
+</span></span><span class=line><span class=cl>activate A2
+</span></span><span class=line><span class=cl>A2 -&gt; A2 : Xử lý &amp; commit offset=1024
+</span></span><span class=line><span class=cl>deactivate A2
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>== Tiếp theo ==
+</span></span><span class=line><span class=cl>Producer -&gt; P1 : Key=123 (update tiếp)\n-&gt; vẫn vào P1
+</span></span><span class=line><span class=cl>activate P1
+</span></span><span class=line><span class=cl>P1 -&gt; P1 : Offset=1025
+</span></span><span class=line><span class=cl>deactivate P1
+</span></span><span class=line><span class=cl>P1 -&gt; A2 : Deliver @Offset=1025
+</span></span><span class=line><span class=cl>A2 -&gt; A2 : Commit offset=1025
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>note right of A2
+</span></span><span class=line><span class=cl>  Consumer nhớ offset (commit)
+</span></span><span class=line><span class=cl>  -&gt; restart vẫn tiếp tục từ 1026
+</span></span><span class=line><span class=cl>end note
+</span></span><span class=line><span class=cl>@enduml
+</span></span></code></pre></td></tr></table></div></div><h2 id=5-kết-luận>5. Kết luận</h2><p>Trong CDC với Kafka:</p><ul><li><strong>Key message</strong> đóng vai trò then chốt trong việc đảm bảo dữ liệu cùng bản ghi được xử lý tuần tự.</li><li><strong>Partition</strong> quyết định khả năng song song.</li><li><strong>Consumer Group</strong> đảm bảo tính cân bằng tải và mở rộng quy mô.</li><li><strong>Offset</strong> là cơ chế quan trọng giúp consumer có thể tiếp tục đọc từ đúng vị trí khi xảy ra restart.</li><li><strong>Điều kiện quan trọng</strong>: số lượng consumer trong group không nên vượt quá số partition, và key cần được chọn đúng (primary/unique key) để đảm bảo tính toàn vẹn.</li></ul><p>Việc thiết kế đúng số lượng partition, cơ chế consumer group, và key trong message là nền tảng cho một hệ thống CDC đáng tin cậy và hiệu quả.</p></section><footer class=article-footer><section class=article-tags><a href=/tags/queue/>Queue</a>
+<a href=/tags/kafka/>Kafka</a>
+<a href=/tags/cdc/>Cdc</a></section><section class=article-copyright><svg class="icon icon-tabler icon-tabler-copyright" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><path d="M14.5 9a3.5 4 0 100 6"/></svg>
+<span>Licensed under CC BY-NC-SA 4.0</span></section></footer><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css integrity=sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV crossorigin=anonymous><script src=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js integrity=sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8 crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js integrity=sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05 crossorigin=anonymous defer></script><script>window.addEventListener("DOMContentLoaded",()=>{const e=[".main-article",".widget--toc"];e.forEach(e=>{const t=document.querySelector(e);t&&renderMathInElement(t,{delimiters:[{left:"$$",right:"$$",display:!0},{left:"$",right:"$",display:!1},{left:"\\(",right:"\\)",display:!1},{left:"\\[",right:"\\]",display:!0}],ignoredClasses:["gist"]})})})</script></article><div class=disqus-container></div><style>.disqus-container{background-color:var(--card-background);border-radius:var(--card-border-radius);box-shadow:var(--shadow-l1);padding:var(--card-padding)}</style><script>window.addEventListener("onColorSchemeChange",e=>{typeof DISQUS=="object"&&DISQUS.reset({reload:!0})})</script><footer class=site-footer><section class=copyright>&copy;
+2026 phongthien</section><section class=powerby>Built with <a href=https://gohugo.io/ target=_blank rel=noopener>Hugo</a><br>Theme <b><a href=https://github.com/CaiJimmy/hugo-theme-stack target=_blank rel=noopener data-version=3.33.0>Stack</a></b> designed by <a href=https://jimmycai.com target=_blank rel=noopener>Jimmy</a></section></footer><div class=pswp tabindex=-1 role=dialog aria-hidden=true><div class=pswp__bg></div><div class=pswp__scroll-wrap><div class=pswp__container><div class=pswp__item></div><div class=pswp__item></div><div class=pswp__item></div></div><div class="pswp__ui pswp__ui--hidden"><div class=pswp__top-bar><div class=pswp__counter></div><button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+<button class="pswp__button pswp__button--share" title=Share></button>
+<button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+<button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button><div class=pswp__preloader><div class=pswp__preloader__icn><div class=pswp__preloader__cut><div class=pswp__preloader__donut></div></div></div></div></div><div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap"><div class=pswp__share-tooltip></div></div><button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+</button>
+<button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)"></button><div class=pswp__caption><div class=pswp__caption__center></div></div></div></div></div><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo=" crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU=" crossorigin=anonymous defer></script><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css crossorigin=anonymous><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css crossorigin=anonymous></main></div><script src=https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z+KMkF24hUW8WePSA9HM=" crossorigin=anonymous></script><script type=text/javascript src=/ts/main.c922af694cc257bf1ecc41c0dd7b0430f9114ec280ccf67cd2c6ad55f5316c4e.js defer></script><script>(function(){const e=document.createElement("link");e.href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap",e.type="text/css",e.rel="stylesheet",document.head.appendChild(e)})()</script></body></html>

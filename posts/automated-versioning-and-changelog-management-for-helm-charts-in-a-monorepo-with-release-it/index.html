@@ -1,0 +1,154 @@
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><meta name=description content="Automated Versioning and Changelog Management for Helm Charts in a Monorepo with Release It 1. Đặt vấn đề Trong các dự án monorepo, nơi chứa nhiều Helm chart triển khai cho từng service hoặc module khác nhau (ví dụ: demo-umbrella-chart, whoami, api-gateway&mldr;), việc quản lý version và release cho từng chart riêng lẻ thường rất phức tạp.\nNếu thực hiện thủ công, bạn sẽ cần:\nSửa version trong Chart.yaml. Sinh changelog. Tạo Git tag tương ứng. Đảm bảo chart hợp lệ (helm lint). Với hàng chục chart trong cùng repo, việc này dễ sai sót, tốn thời gian, và khó tích hợp vào pipeline CI/CD.\n"><title>Automated Versioning and Changelog Management for Helm Charts in a Monorepo with Release It</title><link rel=canonical href=https://phongthien99.github.io/posts/automated-versioning-and-changelog-management-for-helm-charts-in-a-monorepo-with-release-it/><link rel=stylesheet href=/scss/style.min.769133d016a4a1944b3a27800e000cccd439a8c1a9c0c61f7c4fa0bc0e42de57.css><meta property='og:title' content="Automated Versioning and Changelog Management for Helm Charts in a Monorepo with Release It"><meta property='og:description' content="Automated Versioning and Changelog Management for Helm Charts in a Monorepo with Release It 1. Đặt vấn đề Trong các dự án monorepo, nơi chứa nhiều Helm chart triển khai cho từng service hoặc module khác nhau (ví dụ: demo-umbrella-chart, whoami, api-gateway&mldr;), việc quản lý version và release cho từng chart riêng lẻ thường rất phức tạp.\nNếu thực hiện thủ công, bạn sẽ cần:\nSửa version trong Chart.yaml. Sinh changelog. Tạo Git tag tương ứng. Đảm bảo chart hợp lệ (helm lint). Với hàng chục chart trong cùng repo, việc này dễ sai sót, tốn thời gian, và khó tích hợp vào pipeline CI/CD.\n"><meta property='og:url' content='https://phongthien99.github.io/posts/automated-versioning-and-changelog-management-for-helm-charts-in-a-monorepo-with-release-it/'><meta property='og:site_name' content='phongthien'><meta property='og:type' content='article'><meta property='article:section' content='Post'><meta property='article:tag' content='version-control'><meta property='article:published_time' content='2025-10-12T00:40:00+08:00'><meta property='article:modified_time' content='2025-10-12T00:40:00+08:00'><meta name=twitter:title content="Automated Versioning and Changelog Management for Helm Charts in a Monorepo with Release It"><meta name=twitter:description content="Automated Versioning and Changelog Management for Helm Charts in a Monorepo with Release It 1. Đặt vấn đề Trong các dự án monorepo, nơi chứa nhiều Helm chart triển khai cho từng service hoặc module khác nhau (ví dụ: demo-umbrella-chart, whoami, api-gateway&mldr;), việc quản lý version và release cho từng chart riêng lẻ thường rất phức tạp.\nNếu thực hiện thủ công, bạn sẽ cần:\nSửa version trong Chart.yaml. Sinh changelog. Tạo Git tag tương ứng. Đảm bảo chart hợp lệ (helm lint). Với hàng chục chart trong cùng repo, việc này dễ sai sót, tốn thời gian, và khó tích hợp vào pipeline CI/CD.\n"><link rel="shortcut icon" href=/favicon.png><script src=https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js></script><script>mermaid.initialize({startOnLoad:!0})</script></head><body class=article-page><script>(function(){const e="StackColorScheme";localStorage.getItem(e)||localStorage.setItem(e,"auto")})()</script><script>(function(){const t="StackColorScheme",e=localStorage.getItem(t),n=window.matchMedia("(prefers-color-scheme: dark)").matches===!0;e=="dark"||e==="auto"&&n?document.documentElement.dataset.scheme="dark":document.documentElement.dataset.scheme="light"})()</script><div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky"><button class="hamburger hamburger--spin" type=button id=toggle-menu aria-label="Toggle Menu">
+<span class=hamburger-box><span class=hamburger-inner></span></span></button><header><figure class=site-avatar><a href=/><img src=/img/avatar_hu_7ee69f593e8680d3.jpg width=300 height=300 class=site-logo loading=lazy alt=Avatar>
+</a><span class=emoji>🏅</span></figure><div class=site-meta><h1 class=site-name><a href=/>phongthien</a></h1><h2 class=site-description>Software Engineer</h2></div></header><ol class=menu-social><li><a href=https://github.com/phongthien99 target=_blank title=GitHub rel=me><svg class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6.0 00-1.3-3.2 4.2 4.2.0 00-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3.0 00-6.2.0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2.0 00-.1 3.2A4.6 4.6.0 004 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg></a></li><li><a href=https://twitter.com target=_blank title=linkedin rel=me><svg class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M10 14a3.5 3.5.0 005 0l4-4a3.5 3.5.0 00-5-5l-.5.5"/><path d="M14 10a3.5 3.5.0 00-5 0l-4 4a3.5 3.5.0 005 5l.5-.5"/></svg></a></li></ol><ol class=menu id=main-menu><li><a href=/><svg class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><polyline points="5 12 3 12 12 3 21 12 19 12"/><path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/><path d="M9 21v-6a2 2 0 012-2h2a2 2 0 012 2v6"/></svg>
+<span>Home</span></a></li><li><a href=/archives/><svg class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><rect x="3" y="4" width="18" height="4" rx="2"/><path d="M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+<span>Archives</span></a></li><li><a href=/search/><svg class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="10" cy="10" r="7"/><line x1="21" y1="21" x2="15" y2="15"/></svg>
+<span>Search</span></a></li><li><a href=/about-me/><svg class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="7" r="4"/><path d="M6 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/></svg>
+<span>About me</span></a></li><li class=menu-bottom-section><ol class=menu><li id=dark-mode-toggle><svg class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="8" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<svg class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="16" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<span>Dark Mode</span></li></ol></li></ol></aside><aside class="sidebar right-sidebar sticky"><section class="widget archives"><div class=widget-icon><svg class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><line x1="5" y1="9" x2="19" y2="9"/><line x1="5" y1="15" x2="19" y2="15"/><line x1="11" y1="4" x2="7" y2="20"/><line x1="17" y1="4" x2="13" y2="20"/></svg></div><h2 class="widget-title section-title">Table of contents</h2><div class=widget--toc><nav id=TableOfContents><ol><li><a href=#1-đặt-vấn-đề><strong>1. Đặt vấn đề</strong></a></li><li><a href=#2-giải-pháp><strong>2. Giải pháp</strong></a></li><li><a href=#3-thực-hiện><strong>3. Thực hiện</strong></a><ol><li><a href=#31-cấu-trúc-thư-mục-monorepo>3.1 Cấu trúc thư mục monorepo</a></li><li><a href=#32-cấu-hình-release-it-tổng-quát-cho-từng-chart>3.2 Cấu hình <code>release-it</code> tổng quát cho từng chart</a></li><li><a href=#33-quy-trình-release>3.3 Quy trình release</a></li></ol></li><li><a href=#4-kết-luận><strong>4. Kết luận</strong></a></li></ol></nav></div></section></aside><main class="main full-width"><article class=main-article><header class=article-header><div class=article-details><header class=article-category><a href=/categories/version-control/>Version-Control</a></header><div class=article-title-wrapper><h2 class=article-title><a href=/posts/automated-versioning-and-changelog-management-for-helm-charts-in-a-monorepo-with-release-it/>Automated Versioning and Changelog Management for Helm Charts in a Monorepo with Release It</a></h2></div><footer class=article-time><div><svg class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M11.795 21H5a2 2 0 01-2-2V7a2 2 0 012-2h12a2 2 0 012 2v4"/><circle cx="18" cy="18" r="4"/><path d="M15 3v4"/><path d="M7 3v4"/><path d="M3 11h16"/><path d="M18 16.496V18l1 1"/></svg>
+<time class=article-time--published datetime=2025-10-12T00:40:00+08:00>Oct 12, 2025</time></div><div><svg class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+<time class=article-time--reading>4 minute read</time></div></footer></div></header><section class=article-content><h1 id=automated-versioning-and-changelog-management-for-helm-charts-in-a-monorepo-with-release-it>Automated Versioning and Changelog Management for Helm Charts in a Monorepo with Release It</h1><h2 id=1-đặt-vấn-đề><strong>1. Đặt vấn đề</strong></h2><p>Trong các dự án <strong>monorepo</strong>, nơi chứa nhiều <strong>Helm chart</strong> triển khai cho từng service hoặc module khác nhau (ví dụ: <code>demo-umbrella-chart</code>, <code>whoami</code>, <code>api-gateway</code>&mldr;), việc quản lý <strong>version và release</strong> cho từng chart riêng lẻ thường rất phức tạp.</p><p>Nếu thực hiện thủ công, bạn sẽ cần:</p><ul><li>Sửa <code>version</code> trong <code>Chart.yaml</code>.</li><li>Sinh changelog.</li><li>Tạo Git tag tương ứng.</li><li>Đảm bảo chart hợp lệ (<code>helm lint</code>).</li></ul><p>Với hàng chục chart trong cùng repo, việc này dễ sai sót, tốn thời gian, và khó tích hợp vào pipeline CI/CD.</p><h2 id=2-giải-pháp><strong>2. Giải pháp</strong></h2><p>Sử dụng công cụ <a class=link href=https://github.com/release-it/release-it target=_blank rel=noopener><strong>Release It</strong></a> để tự động hóa quy trình release cho từng chart độc lập.</p><p>Mỗi Helm chart sẽ có:</p><ul><li>Một file cấu hình riêng <code>.release-it.json</code> (hoặc dùng script sinh động).</li><li>Cấu hình plugin để:<ul><li>Tự động cập nhật <code>version</code> trong <code>Chart.yaml</code>.</li><li>Sinh changelog tự động (<code>CHANGELOG.md</code>).</li><li>Tạo tag Git riêng biệt theo tên chart.</li></ul></li><li>Các hook để lint chart, commit file, và in log kết quả.</li></ul><p>Cách này giúp:</p><ul><li>Mỗi chart có <strong>chu kỳ release riêng biệt</strong>.</li><li><strong>Dễ mở rộng</strong> khi thêm chart mới.</li><li><strong>Dễ tích hợp CI/CD</strong> (GitHub Actions, GitLab CI, Jenkins,…).</li></ul><h2 id=3-thực-hiện><strong>3. Thực hiện</strong></h2><h3 id=31-cấu-trúc-thư-mục-monorepo>3.1 Cấu trúc thư mục monorepo</h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback><span class=line><span class=cl>├── demo-umbrella-chart
+</span></span><span class=line><span class=cl>│   ├── CHANGELOG.md
+</span></span><span class=line><span class=cl>│   ├── Chart.lock
+</span></span><span class=line><span class=cl>│   ├── charts
+</span></span><span class=line><span class=cl>│   │   ├── mariadb-18.0.3.tgz
+</span></span><span class=line><span class=cl>│   │   └── redis-19.0.2.tgz
+</span></span><span class=line><span class=cl>│   ├── Chart.yaml
+</span></span><span class=line><span class=cl>│   ├── templates
+</span></span><span class=line><span class=cl>│   └── values.yaml
+</span></span><span class=line><span class=cl>├── whoami
+</span></span><span class=line><span class=cl>│   ├── charts
+</span></span><span class=line><span class=cl>│   ├── Chart.yaml
+</span></span><span class=line><span class=cl>│   ├── templates
+</span></span><span class=line><span class=cl>│   └── values.yaml
+</span></span><span class=line><span class=cl>├── RELEASE.md
+</span></span><span class=line><span class=cl>├── package.json
+</span></span><span class=line><span class=cl>├── pnpm-lock.yaml
+</span></span></code></pre></td></tr></table></div></div><blockquote><p>Mỗi thư mục con như demo-umbrella-chart hay whoami đại diện cho một Helm chart độc lập.</p></blockquote><h3 id=32-cấu-hình-release-it-tổng-quát-cho-từng-chart>3.2 Cấu hình <code>release-it</code> tổng quát cho từng chart</h3><p>Tạo file:</p><p><strong><code>&lt;chart-name>/.release-it.json</code></strong></p><p>Ví dụ:</p><p><code>demo-umbrella-chart/.release-it.json</code> hoặc <code>whoami/.release-it.json</code></p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span><span class=lnt>40
+</span><span class=lnt>41
+</span><span class=lnt>42
+</span><span class=lnt>43
+</span><span class=lnt>44
+</span><span class=lnt>45
+</span><span class=lnt>46
+</span><span class=lnt>47
+</span><span class=lnt>48
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-json data-lang=json><span class=line><span class=cl><span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=nt>&#34;npm&#34;</span><span class=p>:</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=nt>&#34;publish&#34;</span><span class=p>:</span> <span class=kc>false</span><span class=p>},</span>
+</span></span><span class=line><span class=cl>  <span class=nt>&#34;git&#34;</span><span class=p>:</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=nt>&#34;tagName&#34;</span><span class=p>:</span> <span class=s2>&#34;&lt;chart-name&gt;/v${version}&#34;</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=nt>&#34;tagMatch&#34;</span><span class=p>:</span> <span class=s2>&#34;&lt;chart-name&gt;/v*&#34;</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=nt>&#34;commitMessage&#34;</span><span class=p>:</span> <span class=s2>&#34;chore(&lt;chart-name&gt;): release v${version}&#34;</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=nt>&#34;tagAnnotation&#34;</span><span class=p>:</span> <span class=s2>&#34;Release &lt;chart-name&gt; v${version}&#34;</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=nt>&#34;getLatestTagFromAllRefs&#34;</span><span class=p>:</span> <span class=kc>true</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=nt>&#34;requireCleanWorkingDir&#34;</span><span class=p>:</span> <span class=kc>false</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=nt>&#34;preset&#34;</span><span class=p>:</span> <span class=s2>&#34;angular&#34;</span>
+</span></span><span class=line><span class=cl>  <span class=p>},</span>
+</span></span><span class=line><span class=cl>  <span class=nt>&#34;github&#34;</span><span class=p>:</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=nt>&#34;release&#34;</span><span class=p>:</span> <span class=kc>false</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=nt>&#34;releaseName&#34;</span><span class=p>:</span> <span class=s2>&#34;&lt;chart-name&gt; v${version}&#34;</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=nt>&#34;releaseNotes&#34;</span><span class=p>:</span> <span class=s2>&#34;echo &#39;See CHANGELOG.md for details&#39;&#34;</span>
+</span></span><span class=line><span class=cl>  <span class=p>},</span>
+</span></span><span class=line><span class=cl>  <span class=nt>&#34;hooks&#34;</span><span class=p>:</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=nt>&#34;before:init&#34;</span><span class=p>:</span> <span class=p>[</span>
+</span></span><span class=line><span class=cl>      <span class=s2>&#34;echo &#39;🚀 Starting release for &lt;chart-name&gt;&#39;&#34;</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>      <span class=s2>&#34;helm lint ./&lt;chart-name&gt;&#34;</span>
+</span></span><span class=line><span class=cl>    <span class=p>],</span>
+</span></span><span class=line><span class=cl>    <span class=nt>&#34;after:bump&#34;</span><span class=p>:</span> <span class=p>[</span>
+</span></span><span class=line><span class=cl>      <span class=s2>&#34;git add ./&lt;chart-name&gt;/Chart.yaml&#34;</span>
+</span></span><span class=line><span class=cl>    <span class=p>],</span>
+</span></span><span class=line><span class=cl>    <span class=nt>&#34;after:git:release&#34;</span><span class=p>:</span> <span class=s2>&#34;echo &#39;✅ &lt;chart-name&gt; v${version} released successfully&#39;&#34;</span>
+</span></span><span class=line><span class=cl>  <span class=p>},</span>
+</span></span><span class=line><span class=cl>  <span class=nt>&#34;plugins&#34;</span><span class=p>:</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=nt>&#34;@release-it/bumper&#34;</span><span class=p>:</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>      <span class=nt>&#34;in&#34;</span><span class=p>:</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=nt>&#34;file&#34;</span><span class=p>:</span> <span class=s2>&#34;./&lt;chart-name&gt;/Chart.yaml&#34;</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>        <span class=nt>&#34;path&#34;</span><span class=p>:</span> <span class=s2>&#34;version&#34;</span>
+</span></span><span class=line><span class=cl>      <span class=p>},</span>
+</span></span><span class=line><span class=cl>      <span class=nt>&#34;out&#34;</span><span class=p>:</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=nt>&#34;file&#34;</span><span class=p>:</span> <span class=s2>&#34;./&lt;chart-name&gt;/Chart.yaml&#34;</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>        <span class=nt>&#34;path&#34;</span><span class=p>:</span> <span class=s2>&#34;version&#34;</span>
+</span></span><span class=line><span class=cl>      <span class=p>}</span>
+</span></span><span class=line><span class=cl>    <span class=p>},</span>
+</span></span><span class=line><span class=cl>    <span class=nt>&#34;@release-it/conventional-changelog&#34;</span><span class=p>:</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>      <span class=nt>&#34;preset&#34;</span><span class=p>:</span> <span class=s2>&#34;angular&#34;</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>      <span class=nt>&#34;infile&#34;</span><span class=p>:</span> <span class=s2>&#34;./&lt;chart-name&gt;/CHANGELOG.md&#34;</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>      <span class=nt>&#34;header&#34;</span><span class=p>:</span> <span class=s2>&#34;# Changelog\n\nAll notable changes to &lt;chart-name&gt; will be documented in this file.&#34;</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>      <span class=nt>&#34;gitRawCommitsOpts&#34;</span><span class=p>:</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=nt>&#34;path&#34;</span><span class=p>:</span> <span class=s2>&#34;./&lt;chart-name&gt;&#34;</span>
+</span></span><span class=line><span class=cl>      <span class=p>}</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><blockquote><p>🔧 Ghi chú:</p><ul><li>Thay <code>&lt;chart-name></code> bằng tên thật của chart (vd: <code>demo-umbrella-chart</code>, <code>whoami</code>).</li><li>Mỗi chart có thể copy cấu hình này và chỉ cần đổi tên là dùng được.</li><li><code>@release-it/bumper</code> sẽ tự động sửa <code>version</code> trong <code>Chart.yaml</code>.</li><li><code>@release-it/conventional-changelog</code> tạo <code>CHANGELOG.md</code> dựa trên commit Angular style.</li></ul></blockquote><hr><h3 id=33-quy-trình-release>3.3 Quy trình release</h3><p>Chạy lệnh sau cho chart cụ thể:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>npx release-it --config ./&lt;chart-name&gt;/.release-it.json
+</span></span></code></pre></td></tr></table></div></div><p>Ví dụ:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl>npx release-it --config ./demo-umbrella-chart/.release-it.json
+</span></span></code></pre></td></tr></table></div></div><p>Release It sẽ:</p><ol><li>Lint chart (<code>helm lint</code>).</li><li>Sinh <code>CHANGELOG.md</code> dựa trên commit.</li><li>Tăng version trong <code>Chart.yaml</code>.</li><li>Commit và tạo tag <code>demo-umbrella-chart/vX.Y.Z</code>.</li><li>Hiển thị log hoàn tất release.</li></ol><hr><h2 id=4-kết-luận><strong>4. Kết luận</strong></h2><p>Việc áp dụng <strong>Release It</strong> cho từng Helm chart trong monorepo giúp:</p><p>✅ <strong>Chuẩn hóa quy trình release</strong> — mọi chart đều có cấu hình thống nhất.</p><p>✅ <strong>Tách biệt version control</strong> — mỗi chart có tag riêng (<code>&lt;chart-name>/vX.Y.Z</code>).</p><p>✅ <strong>Tự động hóa 100%</strong> — từ lint, version bump, đến changelog và tag Git.</p><p>✅ <strong>Dễ mở rộng</strong> — chỉ cần copy file cấu hình, đổi <code>&lt;chart-name></code> là xong.</p><p>✅ <strong>Dễ tích hợp CI/CD</strong>, đảm bảo release luôn ổn định và lặp lại được.</p></section><footer class=article-footer><section class=article-tags><a href=/tags/version-control/>Version-Control</a></section><section class=article-copyright><svg class="icon icon-tabler icon-tabler-copyright" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><path d="M14.5 9a3.5 4 0 100 6"/></svg>
+<span>Licensed under CC BY-NC-SA 4.0</span></section></footer><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css integrity=sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV crossorigin=anonymous><script src=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js integrity=sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8 crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js integrity=sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05 crossorigin=anonymous defer></script><script>window.addEventListener("DOMContentLoaded",()=>{const e=[".main-article",".widget--toc"];e.forEach(e=>{const t=document.querySelector(e);t&&renderMathInElement(t,{delimiters:[{left:"$$",right:"$$",display:!0},{left:"$",right:"$",display:!1},{left:"\\(",right:"\\)",display:!1},{left:"\\[",right:"\\]",display:!0}],ignoredClasses:["gist"]})})})</script></article><div class=disqus-container></div><style>.disqus-container{background-color:var(--card-background);border-radius:var(--card-border-radius);box-shadow:var(--shadow-l1);padding:var(--card-padding)}</style><script>window.addEventListener("onColorSchemeChange",e=>{typeof DISQUS=="object"&&DISQUS.reset({reload:!0})})</script><footer class=site-footer><section class=copyright>&copy;
+2026 phongthien</section><section class=powerby>Built with <a href=https://gohugo.io/ target=_blank rel=noopener>Hugo</a><br>Theme <b><a href=https://github.com/CaiJimmy/hugo-theme-stack target=_blank rel=noopener data-version=3.33.0>Stack</a></b> designed by <a href=https://jimmycai.com target=_blank rel=noopener>Jimmy</a></section></footer><div class=pswp tabindex=-1 role=dialog aria-hidden=true><div class=pswp__bg></div><div class=pswp__scroll-wrap><div class=pswp__container><div class=pswp__item></div><div class=pswp__item></div><div class=pswp__item></div></div><div class="pswp__ui pswp__ui--hidden"><div class=pswp__top-bar><div class=pswp__counter></div><button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+<button class="pswp__button pswp__button--share" title=Share></button>
+<button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+<button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button><div class=pswp__preloader><div class=pswp__preloader__icn><div class=pswp__preloader__cut><div class=pswp__preloader__donut></div></div></div></div></div><div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap"><div class=pswp__share-tooltip></div></div><button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+</button>
+<button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)"></button><div class=pswp__caption><div class=pswp__caption__center></div></div></div></div></div><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo=" crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU=" crossorigin=anonymous defer></script><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css crossorigin=anonymous><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css crossorigin=anonymous></main></div><script src=https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z+KMkF24hUW8WePSA9HM=" crossorigin=anonymous></script><script type=text/javascript src=/ts/main.c922af694cc257bf1ecc41c0dd7b0430f9114ec280ccf67cd2c6ad55f5316c4e.js defer></script><script>(function(){const e=document.createElement("link");e.href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap",e.type="text/css",e.rel="stylesheet",document.head.appendChild(e)})()</script></body></html>

@@ -1,0 +1,372 @@
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><meta name=description content="Context-Aware Request Logger with Async Context for NestJS 1. The Problem Một hệ thống logging tốt không chỉ ghi nhận sự kiện mà còn cung cấp đủ thông tin để phân tích và truy vết lỗi. Trong NestJS, việc sử dụng context-aware logger giúp gắn kết dữ liệu như requestId, userAgent hoặc thông tin người dùng vào mỗi log, đảm bảo khả năng theo dõi và nhóm các request cụ thể một cách hiệu quả.\n"><title>Context-Aware Request Logger with Async Context for NestJS</title><link rel=canonical href=https://phongthien99.github.io/posts/context-aware-request-logger-with-async-context-for-nestjs/><link rel=stylesheet href=/scss/style.min.769133d016a4a1944b3a27800e000cccd439a8c1a9c0c61f7c4fa0bc0e42de57.css><meta property='og:title' content="Context-Aware Request Logger with Async Context for NestJS"><meta property='og:description' content="Context-Aware Request Logger with Async Context for NestJS 1. The Problem Một hệ thống logging tốt không chỉ ghi nhận sự kiện mà còn cung cấp đủ thông tin để phân tích và truy vết lỗi. Trong NestJS, việc sử dụng context-aware logger giúp gắn kết dữ liệu như requestId, userAgent hoặc thông tin người dùng vào mỗi log, đảm bảo khả năng theo dõi và nhóm các request cụ thể một cách hiệu quả.\n"><meta property='og:url' content='https://phongthien99.github.io/posts/context-aware-request-logger-with-async-context-for-nestjs/'><meta property='og:site_name' content='phongthien'><meta property='og:type' content='article'><meta property='article:section' content='Post'><meta property='article:tag' content='nodejs'><meta property='article:published_time' content='2025-03-22T10:17:00+08:00'><meta property='article:modified_time' content='2025-03-22T10:17:00+08:00'><meta name=twitter:title content="Context-Aware Request Logger with Async Context for NestJS"><meta name=twitter:description content="Context-Aware Request Logger with Async Context for NestJS 1. The Problem Một hệ thống logging tốt không chỉ ghi nhận sự kiện mà còn cung cấp đủ thông tin để phân tích và truy vết lỗi. Trong NestJS, việc sử dụng context-aware logger giúp gắn kết dữ liệu như requestId, userAgent hoặc thông tin người dùng vào mỗi log, đảm bảo khả năng theo dõi và nhóm các request cụ thể một cách hiệu quả.\n"><link rel="shortcut icon" href=/favicon.png><script src=https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js></script><script>mermaid.initialize({startOnLoad:!0})</script></head><body class=article-page><script>(function(){const e="StackColorScheme";localStorage.getItem(e)||localStorage.setItem(e,"auto")})()</script><script>(function(){const t="StackColorScheme",e=localStorage.getItem(t),n=window.matchMedia("(prefers-color-scheme: dark)").matches===!0;e=="dark"||e==="auto"&&n?document.documentElement.dataset.scheme="dark":document.documentElement.dataset.scheme="light"})()</script><div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky"><button class="hamburger hamburger--spin" type=button id=toggle-menu aria-label="Toggle Menu">
+<span class=hamburger-box><span class=hamburger-inner></span></span></button><header><figure class=site-avatar><a href=/><img src=/img/avatar_hu_7ee69f593e8680d3.jpg width=300 height=300 class=site-logo loading=lazy alt=Avatar>
+</a><span class=emoji>🏅</span></figure><div class=site-meta><h1 class=site-name><a href=/>phongthien</a></h1><h2 class=site-description>Software Engineer</h2></div></header><ol class=menu-social><li><a href=https://github.com/phongthien99 target=_blank title=GitHub rel=me><svg class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6.0 00-1.3-3.2 4.2 4.2.0 00-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3.0 00-6.2.0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2.0 00-.1 3.2A4.6 4.6.0 004 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg></a></li><li><a href=https://twitter.com target=_blank title=linkedin rel=me><svg class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M10 14a3.5 3.5.0 005 0l4-4a3.5 3.5.0 00-5-5l-.5.5"/><path d="M14 10a3.5 3.5.0 00-5 0l-4 4a3.5 3.5.0 005 5l.5-.5"/></svg></a></li></ol><ol class=menu id=main-menu><li><a href=/><svg class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><polyline points="5 12 3 12 12 3 21 12 19 12"/><path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/><path d="M9 21v-6a2 2 0 012-2h2a2 2 0 012 2v6"/></svg>
+<span>Home</span></a></li><li><a href=/archives/><svg class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><rect x="3" y="4" width="18" height="4" rx="2"/><path d="M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+<span>Archives</span></a></li><li><a href=/search/><svg class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="10" cy="10" r="7"/><line x1="21" y1="21" x2="15" y2="15"/></svg>
+<span>Search</span></a></li><li><a href=/about-me/><svg class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="7" r="4"/><path d="M6 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/></svg>
+<span>About me</span></a></li><li class=menu-bottom-section><ol class=menu><li id=dark-mode-toggle><svg class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="8" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<svg class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="16" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<span>Dark Mode</span></li></ol></li></ol></aside><aside class="sidebar right-sidebar sticky"><section class="widget archives"><div class=widget-icon><svg class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><line x1="5" y1="9" x2="19" y2="9"/><line x1="5" y1="15" x2="19" y2="15"/><line x1="11" y1="4" x2="7" y2="20"/><line x1="17" y1="4" x2="13" y2="20"/></svg></div><h2 class="widget-title section-title">Table of contents</h2><div class=widget--toc><nav id=TableOfContents><ol><li><a href=#1-the-problem>1. The Problem</a></li><li><a href=#2-the-solution>2. The Solution</a></li><li><a href=#3-implement>3. Implement</a><ol><li><a href=#1-loggerstorageservice-lưu-trữ-ngữ-cảnh-logging>1. <strong>LoggerStorageService</strong> (Lưu trữ ngữ cảnh logging)</a></li><li><a href=#2-gestlogger-logger-có-ngữ-cảnh>2. <strong>GestLogger</strong> (Logger có ngữ cảnh)</a></li><li><a href=#3-gestloggerfactory-factory-để-tạo-logger>3. <strong>GestLoggerFactory</strong> (Factory để tạo logger)</a></li><li><a href=#4-gestloggermodule-module-logging>4. <strong>GestLoggerModule</strong> (Module Logging)</a></li><li><a href=#5-sử-dụng-trong>5. <strong>Sử dụng trong <code>AppModule</code></strong></a></li><li><a href=#6-sử-dụng-trong>6. <strong>Sử dụng trong <code>AppService</code></strong></a></li></ol></li><li><a href=#4-the-conclusion>4. The conclusion</a></li></ol></nav></div></section></aside><main class="main full-width"><article class=main-article><header class=article-header><div class=article-details><header class=article-category><a href=/categories/nestjs/>Nestjs</a></header><div class=article-title-wrapper><h2 class=article-title><a href=/posts/context-aware-request-logger-with-async-context-for-nestjs/>Context-Aware Request Logger with Async Context for NestJS</a></h2></div><footer class=article-time><div><svg class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M11.795 21H5a2 2 0 01-2-2V7a2 2 0 012-2h12a2 2 0 012 2v4"/><circle cx="18" cy="18" r="4"/><path d="M15 3v4"/><path d="M7 3v4"/><path d="M3 11h16"/><path d="M18 16.496V18l1 1"/></svg>
+<time class=article-time--published datetime=2025-03-22T10:17:00+08:00>Mar 22, 2025</time></div><div><svg class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+<time class=article-time--reading>6 minute read</time></div></footer></div></header><section class=article-content><h1 id=context-aware-request-logger-with-async-context-for-nestjs>Context-Aware Request Logger with Async Context for NestJS</h1><h2 id=1-the-problem>1. The Problem</h2><p>Một hệ thống logging tốt không chỉ ghi nhận sự kiện mà còn cung cấp đủ thông tin để phân tích và truy vết lỗi. Trong NestJS, việc sử dụng <strong>context-aware logger</strong> giúp gắn kết dữ liệu như <code>requestId</code>, <code>userAgent</code> hoặc thông tin người dùng vào mỗi log, đảm bảo khả năng theo dõi và nhóm các request cụ thể một cách hiệu quả.</p><p>Theo nguyên tắc <strong>12-Factor App</strong>, logging đóng vai trò quan trọng trong giám sát và duy trì ứng dụng. Cụ thể:</p><ul><li><strong>Ứng dụng nên ghi log ở dạng văn bản đơn giản (<code>stdout</code> / <code>stderr</code>).</strong></li><li><strong>Không lưu trữ log trong ứng dụng, mà để môi trường vận hành xử lý.</strong></li><li><strong>Mỗi log cần có đủ ngữ cảnh để dễ dàng truy vết.</strong></li></ul><h2 id=2-the-solution>2. The Solution</h2><p>Sử dụng <code>async_hooks</code> để gán ngữ cảnh .<code>async_hooks</code> là một module trong Node.js giúp theo dõi vòng đời của các tác vụ bất đồng bộ như <strong>Promise, setTimeout, HTTP request</strong>. Một trong những ứng dụng quan trọng của nó là quản lý <strong>ngữ cảnh request</strong>, đặc biệt hữu ích khi logging hoặc theo dõi truy vết lỗi.</p><p>Trong NestJS, có thể sử dụng<code>async_hooks</code> thông qua <code>AsyncLocalStorage</code> để gán và duy trì dữ liệu theo từng request mà không cần truyền thủ công. Điều này giúp:</p><ul><li><strong>Tự động gán <code>requestId</code> vào logger</strong>, hỗ trợ truy vết request dễ dàng.</li><li><strong>Lưu thông tin người dùng trong vòng đời request</strong>, không cần global state.</li><li><strong>Duy trì trace ID để debugging hệ thống phân tán</strong>.</li></ul><p>Cách triển khai phổ biến là dùng <strong>Middleware</strong> để khởi tạo ngữ cảnh request, kết hợp với <strong>Custom Logger</strong> để tự động lấy thông tin từ <code>AsyncLocalStorage</code>.</p><h2 id=3-implement>3. Implement</h2><p>Trước tiên, hãy cài đặt NestJS và các thư viện cần thiết:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback><span class=line><span class=cl>npm install @nestjs/common @nestjs/core @nestjs/platform-express uuid
+</span></span></code></pre></td></tr></table></div></div><h3 id=1-loggerstorageservice-lưu-trữ-ngữ-cảnh-logging>1. <strong>LoggerStorageService</strong> (Lưu trữ ngữ cảnh logging)</h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-gdscript3 data-lang=gdscript3><span class=line><span class=cl><span class=n>ts</span>
+</span></span><span class=line><span class=cl><span class=n>CopyEdit</span>
+</span></span><span class=line><span class=cl><span class=n>import</span> <span class=p>{</span> <span class=n>Injectable</span> <span class=p>}</span> <span class=n>from</span> <span class=s1>&#39;@nestjs/common&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=n>import</span> <span class=p>{</span> <span class=n>AsyncLocalStorage</span> <span class=p>}</span> <span class=n>from</span> <span class=s1>&#39;async_hooks&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=err>@</span><span class=n>Injectable</span><span class=p>()</span>
+</span></span><span class=line><span class=cl><span class=k>export</span> <span class=k>class</span> <span class=n>LoggerStorageService</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=n>private</span> <span class=n>readonly</span> <span class=n>_storage</span><span class=p>:</span> <span class=n>AsyncLocalStorage</span><span class=o>&lt;</span><span class=n>Record</span><span class=o>&lt;</span><span class=n>string</span><span class=p>,</span> <span class=n>any</span><span class=o>&gt;&gt;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=n>constructor</span><span class=p>()</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=n>this</span><span class=o>.</span><span class=n>_storage</span> <span class=o>=</span> <span class=n>new</span> <span class=n>AsyncLocalStorage</span><span class=o>&lt;</span><span class=n>Record</span><span class=o>&lt;</span><span class=n>string</span><span class=p>,</span> <span class=n>any</span><span class=o>&gt;&gt;</span><span class=p>();</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=n>getStore</span><span class=p>():</span> <span class=n>Record</span><span class=o>&lt;</span><span class=n>string</span><span class=p>,</span> <span class=n>any</span><span class=o>&gt;</span> <span class=o>|</span> <span class=n>undefined</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=n>this</span><span class=o>.</span><span class=n>_storage</span><span class=o>.</span><span class=n>getStore</span><span class=p>();</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=n>run</span><span class=p>(</span><span class=n>store</span><span class=p>:</span> <span class=n>Record</span><span class=o>&lt;</span><span class=n>string</span><span class=p>,</span> <span class=n>any</span><span class=o>&gt;</span><span class=p>,</span> <span class=n>callback</span><span class=p>:</span> <span class=p>()</span> <span class=o>=&gt;</span> <span class=n>any</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=n>this</span><span class=o>.</span><span class=n>_storage</span><span class=o>.</span><span class=n>run</span><span class=p>(</span><span class=n>store</span><span class=p>,</span> <span class=n>callback</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><ul><li><code>AsyncLocalStorage</code> giúp lưu trữ ngữ cảnh của mỗi request một cách riêng biệt.</li><li><code>getStore()</code> lấy dữ liệu hiện tại trong ngữ cảnh bất đồng bộ.</li><li><code>run(store, callback)</code> thiết lập một ngữ cảnh mới và thực thi callback bên trong nó.</li></ul><hr><h3 id=2-gestlogger-logger-có-ngữ-cảnh>2. <strong>GestLogger</strong> (Logger có ngữ cảnh)</h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span><span class=lnt>40
+</span><span class=lnt>41
+</span><span class=lnt>42
+</span><span class=lnt>43
+</span><span class=lnt>44
+</span><span class=lnt>45
+</span><span class=lnt>46
+</span><span class=lnt>47
+</span><span class=lnt>48
+</span><span class=lnt>49
+</span><span class=lnt>50
+</span><span class=lnt>51
+</span><span class=lnt>52
+</span><span class=lnt>53
+</span><span class=lnt>54
+</span><span class=lnt>55
+</span><span class=lnt>56
+</span><span class=lnt>57
+</span><span class=lnt>58
+</span><span class=lnt>59
+</span><span class=lnt>60
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-gdscript3 data-lang=gdscript3><span class=line><span class=cl><span class=n>import</span> <span class=p>{</span> <span class=n>Injectable</span><span class=p>,</span> <span class=n>Logger</span><span class=p>,</span> <span class=n>LoggerService</span> <span class=p>}</span> <span class=n>from</span> <span class=s1>&#39;@nestjs/common&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=n>import</span> <span class=p>{</span> <span class=n>LoggerStorageService</span> <span class=p>}</span> <span class=n>from</span> <span class=s1>&#39;./storage.service&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=k>export</span> <span class=k>class</span> <span class=n>GestLogger</span> <span class=n>implements</span> <span class=n>LoggerService</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=n>private</span> <span class=n>readonly</span> <span class=n>_logger</span><span class=p>:</span> <span class=n>Logger</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=n>constructor</span><span class=p>(</span>
+</span></span><span class=line><span class=cl>    <span class=n>private</span> <span class=n>readonly</span> <span class=n>_storageService</span><span class=p>:</span> <span class=n>LoggerStorageService</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=n>context</span><span class=err>?</span><span class=p>:</span> <span class=n>string</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=n>options</span><span class=err>?</span><span class=p>:</span> <span class=p>{</span> <span class=n>timestamp</span><span class=err>?</span><span class=p>:</span> <span class=n>boolean</span> <span class=p>},</span>
+</span></span><span class=line><span class=cl>  <span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=n>this</span><span class=o>.</span><span class=n>_logger</span> <span class=o>=</span> <span class=n>new</span> <span class=n>Logger</span><span class=p>(</span><span class=n>context</span><span class=p>,</span> <span class=n>options</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=n>contextDetail</span><span class=p>(</span><span class=o>...</span><span class=n>fields</span><span class=p>:</span> <span class=n>string</span><span class=p>[]):</span> <span class=n>string</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=k>const</span> <span class=n>context</span> <span class=o>=</span> <span class=n>this</span><span class=o>.</span><span class=n>_storageService</span><span class=o>.</span><span class=n>getStore</span><span class=p>();</span>
+</span></span><span class=line><span class=cl>    <span class=k>if</span> <span class=p>(</span><span class=o>!</span><span class=n>context</span><span class=p>)</span> <span class=k>return</span> <span class=s1>&#39;&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=o>//</span> <span class=n>If</span> <span class=n>fields</span> <span class=n>are</span> <span class=n>specified</span><span class=p>,</span> <span class=n>only</span> <span class=n>include</span> <span class=n>those</span> <span class=n>fields</span>
+</span></span><span class=line><span class=cl>    <span class=k>if</span> <span class=p>(</span><span class=n>fields</span> <span class=o>&amp;&amp;</span> <span class=n>fields</span><span class=o>.</span><span class=n>length</span> <span class=o>&gt;</span> <span class=mi>0</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>      <span class=k>return</span> <span class=n>fields</span>
+</span></span><span class=line><span class=cl>        <span class=o>.</span><span class=n>filter</span><span class=p>((</span><span class=n>field</span><span class=p>)</span> <span class=o>=&gt;</span> <span class=n>field</span> <span class=ow>in</span> <span class=n>context</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>        <span class=o>.</span><span class=n>map</span><span class=p>((</span><span class=n>field</span><span class=p>)</span> <span class=o>=&gt;</span> <span class=err>`</span><span class=p>[</span><span class=o>$</span><span class=p>{</span><span class=n>field</span><span class=p>}:</span><span class=o>$</span><span class=p>{</span><span class=n>context</span><span class=p>[</span><span class=n>field</span><span class=p>]}]</span><span class=err>`</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>        <span class=o>.</span><span class=n>join</span><span class=p>(</span><span class=s1>&#39;&#39;</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=o>//</span> <span class=n>Otherwise</span> <span class=n>include</span> <span class=n>all</span> <span class=n>fields</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=ne>Object</span><span class=o>.</span><span class=n>entries</span><span class=p>(</span><span class=n>context</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>      <span class=o>.</span><span class=n>map</span><span class=p>(([</span><span class=n>key</span><span class=p>,</span> <span class=n>value</span><span class=p>])</span> <span class=o>=&gt;</span> <span class=err>`</span><span class=p>[</span><span class=o>$</span><span class=p>{</span><span class=n>key</span><span class=p>}:</span><span class=o>$</span><span class=p>{</span><span class=n>value</span><span class=p>}]</span><span class=err>`</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>      <span class=o>.</span><span class=n>join</span><span class=p>(</span><span class=s1>&#39;&#39;</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=nb>log</span><span class=p>(</span><span class=n>message</span><span class=p>:</span> <span class=n>any</span><span class=p>,</span> <span class=o>...</span><span class=n>optionalParams</span><span class=p>:</span> <span class=n>any</span><span class=p>[]):</span> <span class=n>void</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=n>this</span><span class=o>.</span><span class=n>_logger</span><span class=o>.</span><span class=n>log</span><span class=p>(</span><span class=n>message</span><span class=p>,</span> <span class=o>...</span><span class=n>optionalParams</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=n>error</span><span class=p>(</span><span class=n>message</span><span class=p>:</span> <span class=n>any</span><span class=p>,</span> <span class=n>stack</span><span class=err>?</span><span class=p>:</span> <span class=n>string</span><span class=p>,</span> <span class=o>...</span><span class=n>optionalParams</span><span class=p>:</span> <span class=n>any</span><span class=p>[]):</span> <span class=n>void</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=n>this</span><span class=o>.</span><span class=n>_logger</span><span class=o>.</span><span class=n>error</span><span class=p>(</span><span class=n>message</span><span class=p>,</span> <span class=o>...</span><span class=n>optionalParams</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=n>warn</span><span class=p>(</span><span class=n>message</span><span class=p>:</span> <span class=n>any</span><span class=p>,</span> <span class=o>...</span><span class=n>optionalParams</span><span class=p>:</span> <span class=n>any</span><span class=p>[]):</span> <span class=n>void</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=n>this</span><span class=o>.</span><span class=n>_logger</span><span class=o>.</span><span class=n>warn</span><span class=p>(</span><span class=n>message</span><span class=p>,</span> <span class=o>...</span><span class=n>optionalParams</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=n>debug</span><span class=p>(</span><span class=n>message</span><span class=p>:</span> <span class=n>any</span><span class=p>,</span> <span class=o>...</span><span class=n>optionalParams</span><span class=p>:</span> <span class=n>any</span><span class=p>[]):</span> <span class=n>void</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=n>this</span><span class=o>.</span><span class=n>_logger</span><span class=o>.</span><span class=n>debug</span><span class=p>(</span><span class=n>message</span><span class=p>,</span> <span class=o>...</span><span class=n>optionalParams</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=n>verbose</span><span class=p>(</span><span class=n>message</span><span class=p>:</span> <span class=n>any</span><span class=p>,</span> <span class=o>...</span><span class=n>optionalParams</span><span class=p>:</span> <span class=n>any</span><span class=p>[]):</span> <span class=n>void</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=n>this</span><span class=o>.</span><span class=n>_logger</span><span class=o>.</span><span class=n>verbose</span><span class=p>(</span><span class=n>message</span><span class=p>,</span> <span class=o>...</span><span class=n>optionalParams</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=err>@</span><span class=n>Injectable</span><span class=p>()</span>
+</span></span><span class=line><span class=cl><span class=k>export</span> <span class=k>class</span> <span class=n>GestLoggerFactory</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=n>constructor</span><span class=p>(</span><span class=n>private</span> <span class=n>readonly</span> <span class=n>_storageService</span><span class=p>:</span> <span class=n>LoggerStorageService</span><span class=p>)</span> <span class=p>{}</span>
+</span></span><span class=line><span class=cl>  <span class=n>create</span><span class=p>(</span><span class=n>context</span><span class=err>?</span><span class=p>:</span> <span class=n>string</span><span class=p>,</span> <span class=n>options</span><span class=err>?</span><span class=p>:</span> <span class=p>{</span> <span class=n>timestamp</span><span class=err>?</span><span class=p>:</span> <span class=n>boolean</span> <span class=p>}):</span> <span class=n>GestLogger</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=n>new</span> <span class=n>GestLogger</span><span class=p>(</span><span class=n>this</span><span class=o>.</span><span class=n>_storageService</span><span class=p>,</span> <span class=n>context</span><span class=p>,</span> <span class=n>options</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><ul><li><strong><code>contextDetail()</code></strong>: Lấy thông tin từ <code>AsyncLocalStorage</code> và định dạng dưới dạng <code>[key:value]</code>.</li></ul><hr><h3 id=3-gestloggerfactory-factory-để-tạo-logger>3. <strong>GestLoggerFactory</strong> (Factory để tạo logger)</h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span><span class=lnt>8
+</span><span class=lnt>9
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-gdscript3 data-lang=gdscript3><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=err>@</span><span class=n>Injectable</span><span class=p>()</span>
+</span></span><span class=line><span class=cl><span class=k>export</span> <span class=k>class</span> <span class=n>GestLoggerFactory</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=n>constructor</span><span class=p>(</span><span class=n>private</span> <span class=n>readonly</span> <span class=n>_storageService</span><span class=p>:</span> <span class=n>LoggerStorageService</span><span class=p>)</span> <span class=p>{}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=n>create</span><span class=p>(</span><span class=n>context</span><span class=err>?</span><span class=p>:</span> <span class=n>string</span><span class=p>,</span> <span class=n>options</span><span class=err>?</span><span class=p>:</span> <span class=p>{</span> <span class=n>timestamp</span><span class=err>?</span><span class=p>:</span> <span class=n>boolean</span> <span class=p>}):</span> <span class=n>GestLogger</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=n>new</span> <span class=n>GestLogger</span><span class=p>(</span><span class=n>this</span><span class=o>.</span><span class=n>_storageService</span><span class=p>,</span> <span class=n>context</span><span class=p>,</span> <span class=n>options</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><ul><li>Factory Pattern giúp tạo các instance của <code>GestLogger</code>.</li></ul><hr><h3 id=4-gestloggermodule-module-logging>4. <strong>GestLoggerModule</strong> (Module Logging)</h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span><span class=lnt>40
+</span><span class=lnt>41
+</span><span class=lnt>42
+</span><span class=lnt>43
+</span><span class=lnt>44
+</span><span class=lnt>45
+</span><span class=lnt>46
+</span><span class=lnt>47
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-gdscript3 data-lang=gdscript3><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=n>import</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=n>Global</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>  <span class=n>MiddlewareConsumer</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>  <span class=n>Module</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>  <span class=n>DynamicModule</span><span class=p>,</span>
+</span></span><span class=line><span class=cl><span class=p>}</span> <span class=n>from</span> <span class=s1>&#39;@nestjs/common&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=n>import</span> <span class=p>{</span> <span class=n>GestLoggerFactory</span> <span class=p>}</span> <span class=n>from</span> <span class=s1>&#39;./logger.service&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=n>import</span> <span class=p>{</span> <span class=n>LoggerStorageService</span> <span class=p>}</span> <span class=n>from</span> <span class=s1>&#39;./storage.service&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=n>import</span> <span class=p>{</span> <span class=n>HttpContextMiddlewareFactory</span> <span class=p>}</span> <span class=n>from</span> <span class=s1>&#39;../middleware/http-context.middleware&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=n>import</span> <span class=p>{</span> <span class=n>v4</span> <span class=n>as</span> <span class=n>uuidv4</span> <span class=p>}</span> <span class=n>from</span> <span class=s1>&#39;uuid&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=k>export</span> <span class=n>interface</span> <span class=n>LoggerModuleAsyncOptions</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=n>httpMiddleware</span><span class=err>?</span><span class=p>:</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=n>enabled</span><span class=err>?</span><span class=p>:</span> <span class=n>boolean</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=n>getContext</span><span class=err>?</span><span class=p>:</span> <span class=p>(</span><span class=n>req</span><span class=p>:</span> <span class=n>any</span><span class=p>,</span> <span class=n>res</span><span class=p>:</span> <span class=n>any</span><span class=p>)</span> <span class=o>=&gt;</span> <span class=n>any</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=p>};</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=err>@</span><span class=n>Global</span><span class=p>()</span>
+</span></span><span class=line><span class=cl><span class=err>@</span><span class=n>Module</span><span class=p>({})</span>
+</span></span><span class=line><span class=cl><span class=k>export</span> <span class=k>class</span> <span class=n>GestLoggerModule</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=n>private</span> <span class=k>static</span> <span class=n>_options</span><span class=p>:</span> <span class=n>LoggerModuleAsyncOptions</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=k>static</span> <span class=n>forRoot</span><span class=p>(</span><span class=n>options</span><span class=p>:</span> <span class=n>LoggerModuleAsyncOptions</span><span class=p>):</span> <span class=n>DynamicModule</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=n>this</span><span class=o>.</span><span class=n>_options</span> <span class=o>=</span> <span class=n>options</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>      <span class=n>module</span><span class=p>:</span> <span class=n>GestLoggerModule</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>      <span class=n>providers</span><span class=p>:</span> <span class=p>[</span><span class=n>GestLoggerFactory</span><span class=p>,</span> <span class=n>LoggerStorageService</span><span class=p>],</span>
+</span></span><span class=line><span class=cl>      <span class=n>exports</span><span class=p>:</span> <span class=p>[</span><span class=n>GestLoggerFactory</span><span class=p>,</span> <span class=n>LoggerStorageService</span><span class=p>],</span>
+</span></span><span class=line><span class=cl>    <span class=p>};</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=n>configure</span><span class=p>(</span><span class=n>consumer</span><span class=p>:</span> <span class=n>MiddlewareConsumer</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=k>const</span> <span class=n>enabled</span> <span class=o>=</span> <span class=n>GestLoggerModule</span><span class=o>.</span><span class=n>_options</span><span class=err>?</span><span class=o>.</span><span class=n>httpMiddleware</span><span class=err>?</span><span class=o>.</span><span class=n>enabled</span> <span class=err>??</span> <span class=bp>true</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=k>if</span> <span class=p>(</span><span class=o>!</span><span class=n>enabled</span><span class=p>)</span> <span class=k>return</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=k>const</span> <span class=n>getContext</span> <span class=o>=</span>
+</span></span><span class=line><span class=cl>      <span class=n>GestLoggerModule</span><span class=o>.</span><span class=n>_options</span><span class=err>?</span><span class=o>.</span><span class=n>httpMiddleware</span><span class=err>?</span><span class=o>.</span><span class=n>getContext</span> <span class=o>||</span>
+</span></span><span class=line><span class=cl>      <span class=p>((</span><span class=n>req</span><span class=p>,</span> <span class=n>res</span><span class=p>)</span> <span class=o>=&gt;</span> <span class=p>({</span>
+</span></span><span class=line><span class=cl>        <span class=n>requestId</span><span class=p>:</span> <span class=n>req</span><span class=o>.</span><span class=n>headers</span><span class=p>[</span><span class=s1>&#39;x-request-id&#39;</span><span class=p>]</span> <span class=o>||</span> <span class=n>uuidv4</span><span class=p>(),</span>
+</span></span><span class=line><span class=cl>        <span class=n>userAgent</span><span class=p>:</span> <span class=n>req</span><span class=o>.</span><span class=n>headers</span><span class=p>[</span><span class=s1>&#39;user-agent&#39;</span><span class=p>]</span> <span class=o>||</span> <span class=n>null</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>      <span class=p>}));</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=n>consumer</span><span class=o>.</span><span class=n>apply</span><span class=p>(</span><span class=n>HttpContextMiddlewareFactory</span><span class=p>(</span><span class=n>getContext</span><span class=p>))</span><span class=o>.</span><span class=n>forRoutes</span><span class=p>(</span><span class=s1>&#39;*&#39;</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><ul><li><code>forRoot()</code> cấu hình module với middleware tùy chỉnh.</li><li><code>configure()</code> tự động thêm <code>requestId</code> vào mỗi request.</li></ul><hr><h3 id=5-sử-dụng-trong>5. <strong>Sử dụng trong <code>AppModule</code></strong></h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-gdscript3 data-lang=gdscript3><span class=line><span class=cl><span class=n>ts</span>
+</span></span><span class=line><span class=cl><span class=n>CopyEdit</span>
+</span></span><span class=line><span class=cl><span class=n>import</span> <span class=p>{</span> <span class=n>Module</span> <span class=p>}</span> <span class=n>from</span> <span class=s1>&#39;@nestjs/common&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=n>import</span> <span class=p>{</span> <span class=n>GestLoggerModule</span> <span class=p>}</span> <span class=n>from</span> <span class=s1>&#39;./logger/logger.module&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=n>import</span> <span class=p>{</span> <span class=n>AppService</span> <span class=p>}</span> <span class=n>from</span> <span class=s1>&#39;./app.service&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=err>@</span><span class=n>Module</span><span class=p>({</span>
+</span></span><span class=line><span class=cl>  <span class=n>imports</span><span class=p>:</span> <span class=p>[</span>
+</span></span><span class=line><span class=cl>    <span class=n>GestLoggerModule</span><span class=o>.</span><span class=n>forRoot</span><span class=p>({</span>
+</span></span><span class=line><span class=cl>      <span class=n>httpMiddleware</span><span class=p>:</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=n>enabled</span><span class=p>:</span> <span class=bp>true</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>        <span class=n>getContext</span><span class=p>:</span> <span class=p>(</span><span class=n>req</span><span class=p>,</span> <span class=n>res</span><span class=p>)</span> <span class=o>=&gt;</span> <span class=p>({</span>
+</span></span><span class=line><span class=cl>          <span class=n>requestId</span><span class=p>:</span> <span class=n>req</span><span class=o>.</span><span class=n>headers</span><span class=p>[</span><span class=s1>&#39;x-request-id&#39;</span><span class=p>]</span> <span class=o>||</span> <span class=n>uuidv4</span><span class=p>(),</span>
+</span></span><span class=line><span class=cl>          <span class=n>userAgent</span><span class=p>:</span> <span class=n>req</span><span class=o>.</span><span class=n>headers</span><span class=p>[</span><span class=s1>&#39;user-agent&#39;</span><span class=p>]</span> <span class=o>||</span> <span class=n>null</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>        <span class=p>}),</span>
+</span></span><span class=line><span class=cl>      <span class=p>},</span>
+</span></span><span class=line><span class=cl>    <span class=p>}),</span>
+</span></span><span class=line><span class=cl>  <span class=p>],</span>
+</span></span><span class=line><span class=cl>  <span class=n>providers</span><span class=p>:</span> <span class=p>[</span><span class=n>AppService</span><span class=p>],</span>
+</span></span><span class=line><span class=cl><span class=p>})</span>
+</span></span><span class=line><span class=cl><span class=k>export</span> <span class=k>class</span> <span class=n>AppModule</span> <span class=p>{}</span>
+</span></span></code></pre></td></tr></table></div></div><ul><li>Import <code>GestLoggerModule</code> vào ứng dụng chính.</li><li>Kích hoạt middleware tự động thêm <code>requestId</code>.</li></ul><hr><h3 id=6-sử-dụng-trong>6. <strong>Sử dụng trong <code>AppService</code></strong></h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-gdscript3 data-lang=gdscript3><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=n>import</span> <span class=p>{</span> <span class=n>Injectable</span> <span class=p>}</span> <span class=n>from</span> <span class=s1>&#39;@nestjs/common&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=n>import</span> <span class=p>{</span> <span class=n>GestLoggerFactory</span> <span class=p>}</span> <span class=n>from</span> <span class=s1>&#39;./logger/logger.service&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=n>import</span> <span class=p>{</span> <span class=n>GestLogger</span> <span class=p>}</span> <span class=n>from</span> <span class=s1>&#39;./logger/gest-logger&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=err>@</span><span class=n>Injectable</span><span class=p>()</span>
+</span></span><span class=line><span class=cl><span class=k>export</span> <span class=k>class</span> <span class=n>AppService</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=n>private</span> <span class=n>_logger</span><span class=p>:</span> <span class=n>GestLogger</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=n>constructor</span><span class=p>(</span><span class=n>private</span> <span class=n>readonly</span> <span class=n>gestLoggerFactory</span><span class=p>:</span> <span class=n>GestLoggerFactory</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=n>this</span><span class=o>.</span><span class=n>_logger</span> <span class=o>=</span> <span class=n>gestLoggerFactory</span><span class=o>.</span><span class=n>create</span><span class=p>(</span><span class=n>AppService</span><span class=o>.</span><span class=n>name</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=n>getHello</span><span class=p>():</span> <span class=n>string</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=n>this</span><span class=o>.</span><span class=n>_logger</span><span class=o>.</span><span class=n>log</span><span class=p>(</span><span class=err>`</span><span class=o>$</span><span class=p>{</span><span class=n>this</span><span class=o>.</span><span class=n>_logger</span><span class=o>.</span><span class=n>contextDetail</span><span class=p>(</span><span class=s1>&#39;requestId&#39;</span><span class=p>)}</span> <span class=n>Hello</span> <span class=ne>World</span><span class=o>!</span><span class=err>`</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=s1>&#39;Hello World!&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><ul><li><code>this._logger.log()</code> sẽ tự động kèm theo <code>requestId</code> từ <code>AsyncLocalStorage</code>.</li></ul><p><strong>Kết quả:</strong></p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-jsx data-lang=jsx><span class=line><span class=cl><span class=p>[</span><span class=nx>Nest</span><span class=p>]</span> <span class=mi>800395</span>  <span class=o>-</span> <span class=mi>22</span><span class=o>/</span><span class=mi>03</span><span class=o>/</span><span class=mi>2025</span><span class=p>,</span> <span class=mi>03</span><span class=o>:</span><span class=mi>28</span><span class=o>:</span><span class=mi>44</span>     <span class=nx>LOG</span> <span class=p>[</span><span class=nx>AppService</span><span class=p>]</span> <span class=p>[</span><span class=nx>requestId</span><span class=o>:</span><span class=nx>c003fca7</span><span class=o>-</span><span class=mi>4</span><span class=nx>d48</span><span class=o>-</span><span class=mi>4</span><span class=nx>ce3</span><span class=o>-</span><span class=nx>ae3d</span><span class=o>-</span><span class=mi>979</span><span class=nx>a693eaf0d</span><span class=p>]</span> <span class=nx>Hello</span> <span class=nx>World</span><span class=o>!</span>
+</span></span></code></pre></td></tr></table></div></div><h2 id=4-the-conclusion>4. The conclusion</h2><p>Với việc sử dụng <code>async_hooks</code> và <code>AsyncLocalStorage</code>, chúng ta có thể duy trì ngữ cảnh logging xuyên suốt các request trong NestJS. Điều này giúp việc debug trở nên dễ dàng hơn và tăng cường khả năng theo dõi request trong hệ thống.</p></section><footer class=article-footer><section class=article-tags><a href=/tags/nodejs/>Nodejs</a></section><section class=article-copyright><svg class="icon icon-tabler icon-tabler-copyright" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><path d="M14.5 9a3.5 4 0 100 6"/></svg>
+<span>Licensed under CC BY-NC-SA 4.0</span></section></footer><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css integrity=sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV crossorigin=anonymous><script src=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js integrity=sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8 crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js integrity=sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05 crossorigin=anonymous defer></script><script>window.addEventListener("DOMContentLoaded",()=>{const e=[".main-article",".widget--toc"];e.forEach(e=>{const t=document.querySelector(e);t&&renderMathInElement(t,{delimiters:[{left:"$$",right:"$$",display:!0},{left:"$",right:"$",display:!1},{left:"\\(",right:"\\)",display:!1},{left:"\\[",right:"\\]",display:!0}],ignoredClasses:["gist"]})})})</script></article><aside class=related-content--wrapper><h2 class=section-title>Related content</h2><div class=related-content><div class="flex article-list--tile"><article><a href=/posts/monkey-patch-in-typescript/><div class=article-details><h2 class=article-title>Monkey Patch In TypeScript</h2></div></a></article><article><a href=/posts/implementing-i18n-in-nestjs-using-in-memory-storage/><div class=article-details><h2 class=article-title>Implementing i18n in NestJS Using In-Memory Storage</h2></div></a></article><article><a href=/posts/efficient-configuration-management-in-nestjs/><div class=article-details><h2 class=article-title>Efficient Configuration Management in NestJS</h2></div></a></article></div></div></aside><div class=disqus-container></div><style>.disqus-container{background-color:var(--card-background);border-radius:var(--card-border-radius);box-shadow:var(--shadow-l1);padding:var(--card-padding)}</style><script>window.addEventListener("onColorSchemeChange",e=>{typeof DISQUS=="object"&&DISQUS.reset({reload:!0})})</script><footer class=site-footer><section class=copyright>&copy;
+2026 phongthien</section><section class=powerby>Built with <a href=https://gohugo.io/ target=_blank rel=noopener>Hugo</a><br>Theme <b><a href=https://github.com/CaiJimmy/hugo-theme-stack target=_blank rel=noopener data-version=3.33.0>Stack</a></b> designed by <a href=https://jimmycai.com target=_blank rel=noopener>Jimmy</a></section></footer><div class=pswp tabindex=-1 role=dialog aria-hidden=true><div class=pswp__bg></div><div class=pswp__scroll-wrap><div class=pswp__container><div class=pswp__item></div><div class=pswp__item></div><div class=pswp__item></div></div><div class="pswp__ui pswp__ui--hidden"><div class=pswp__top-bar><div class=pswp__counter></div><button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+<button class="pswp__button pswp__button--share" title=Share></button>
+<button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+<button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button><div class=pswp__preloader><div class=pswp__preloader__icn><div class=pswp__preloader__cut><div class=pswp__preloader__donut></div></div></div></div></div><div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap"><div class=pswp__share-tooltip></div></div><button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+</button>
+<button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)"></button><div class=pswp__caption><div class=pswp__caption__center></div></div></div></div></div><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo=" crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU=" crossorigin=anonymous defer></script><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css crossorigin=anonymous><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css crossorigin=anonymous></main></div><script src=https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z+KMkF24hUW8WePSA9HM=" crossorigin=anonymous></script><script type=text/javascript src=/ts/main.c922af694cc257bf1ecc41c0dd7b0430f9114ec280ccf67cd2c6ad55f5316c4e.js defer></script><script>(function(){const e=document.createElement("link");e.href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap",e.type="text/css",e.rel="stylesheet",document.head.appendChild(e)})()</script></body></html>

@@ -7,9 +7,8 @@ tags: [Design-pattern]
 math: true
 
 ---
-# Transactional Outbox Pattern — Giải pháp đảm bảo tính nhất quán dữ liệu trong Microservices
+# Transactional Outbox Pattern
 
----
 
 ## 1. Đặt vấn đề — Dual Write Problem
 
@@ -55,7 +54,7 @@ sequenceDiagram
 > **💡 Lưu ý:** Ngay cả khi bạn đặt publish message *trước* commit database, vấn đề vẫn tồn tại — chỉ là theo chiều ngược lại. Không có thứ tự nào giải quyết được vấn đề này nếu không thay đổi cách tiếp cận.
 > 
 
----
+
 
 ## 2. Giải pháp — Outbox Pattern là gì?
 
@@ -93,7 +92,7 @@ Outbox Pattern hoạt động dựa trên một nguyên tắc đơn giản nhưn
 - **Guaranteed delivery:** Một tiến trình riêng (Polling Publisher hoặc CDC) liên tục quét bảng outbox và publish message. Nếu Broker down, message vẫn nằm trong outbox, chờ được gửi lại.
 - **At-least-once semantics:** Message sẽ được gửi *ít nhất một lần*. Consumer phía nhận cần xử lý idempotent.
 
----
+
 
 ## 3. Thiết kế hệ thống (Design)
 
@@ -211,7 +210,6 @@ flowchart LR
 | **Phù hợp** | Hệ thống nhỏ, traffic thấp | Hệ thống lớn, yêu cầu latency thấp |
 | **Rủi ro** | Duplicate nếu crash giữa publish và update | Cần quản lý offset Kafka Connect |
 
----
 
 ## 5. Kết luận
 

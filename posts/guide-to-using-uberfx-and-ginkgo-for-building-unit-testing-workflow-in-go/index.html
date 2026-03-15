@@ -1,0 +1,381 @@
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><meta name=description content="Guide to Using Uberfx and Ginkgo for Building Unit Testing Workflow in Go Đặt vấn đề Để đảm bảo chất lượng mã nguồn trong phát triển phần mềm, unit testing là một yếu tố không thể thiếu. Việc viết và tổ chức các bài kiểm tra đơn vị một cách hiệu quả là điều quan trọng, đặc biệt khi làm việc với các ứng dụng phức tạp. Tuy nhiên, việc này thường gặp khó khăn trong việc quản lý các phụ thuộc và duy trì cấu trúc kiểm tra rõ ràng..\n"><title>Guide to Using Uberfx and Ginkgo for Building Unit Testing Workflow in Go</title><link rel=canonical href=https://phongthien99.github.io/posts/guide-to-using-uberfx-and-ginkgo-for-building-unit-testing-workflow-in-go/><link rel=stylesheet href=/scss/style.min.769133d016a4a1944b3a27800e000cccd439a8c1a9c0c61f7c4fa0bc0e42de57.css><meta property='og:title' content="Guide to Using Uberfx and Ginkgo for Building Unit Testing Workflow in Go"><meta property='og:description' content="Guide to Using Uberfx and Ginkgo for Building Unit Testing Workflow in Go Đặt vấn đề Để đảm bảo chất lượng mã nguồn trong phát triển phần mềm, unit testing là một yếu tố không thể thiếu. Việc viết và tổ chức các bài kiểm tra đơn vị một cách hiệu quả là điều quan trọng, đặc biệt khi làm việc với các ứng dụng phức tạp. Tuy nhiên, việc này thường gặp khó khăn trong việc quản lý các phụ thuộc và duy trì cấu trúc kiểm tra rõ ràng..\n"><meta property='og:url' content='https://phongthien99.github.io/posts/guide-to-using-uberfx-and-ginkgo-for-building-unit-testing-workflow-in-go/'><meta property='og:site_name' content='phongthien'><meta property='og:type' content='article'><meta property='article:section' content='Post'><meta property='article:tag' content='go'><meta property='article:tag' content='test'><meta property='article:published_time' content='2024-09-13T21:17:00+08:00'><meta property='article:modified_time' content='2024-09-13T21:17:00+08:00'><meta name=twitter:title content="Guide to Using Uberfx and Ginkgo for Building Unit Testing Workflow in Go"><meta name=twitter:description content="Guide to Using Uberfx and Ginkgo for Building Unit Testing Workflow in Go Đặt vấn đề Để đảm bảo chất lượng mã nguồn trong phát triển phần mềm, unit testing là một yếu tố không thể thiếu. Việc viết và tổ chức các bài kiểm tra đơn vị một cách hiệu quả là điều quan trọng, đặc biệt khi làm việc với các ứng dụng phức tạp. Tuy nhiên, việc này thường gặp khó khăn trong việc quản lý các phụ thuộc và duy trì cấu trúc kiểm tra rõ ràng..\n"><link rel="shortcut icon" href=/favicon.png><script src=https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js></script><script>mermaid.initialize({startOnLoad:!0})</script></head><body class=article-page><script>(function(){const e="StackColorScheme";localStorage.getItem(e)||localStorage.setItem(e,"auto")})()</script><script>(function(){const t="StackColorScheme",e=localStorage.getItem(t),n=window.matchMedia("(prefers-color-scheme: dark)").matches===!0;e=="dark"||e==="auto"&&n?document.documentElement.dataset.scheme="dark":document.documentElement.dataset.scheme="light"})()</script><div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky"><button class="hamburger hamburger--spin" type=button id=toggle-menu aria-label="Toggle Menu">
+<span class=hamburger-box><span class=hamburger-inner></span></span></button><header><figure class=site-avatar><a href=/><img src=/img/avatar_hu_7ee69f593e8680d3.jpg width=300 height=300 class=site-logo loading=lazy alt=Avatar>
+</a><span class=emoji>🏅</span></figure><div class=site-meta><h1 class=site-name><a href=/>phongthien</a></h1><h2 class=site-description>Software Engineer</h2></div></header><ol class=menu-social><li><a href=https://github.com/phongthien99 target=_blank title=GitHub rel=me><svg class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6.0 00-1.3-3.2 4.2 4.2.0 00-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3.0 00-6.2.0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2.0 00-.1 3.2A4.6 4.6.0 004 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg></a></li><li><a href=https://twitter.com target=_blank title=linkedin rel=me><svg class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M10 14a3.5 3.5.0 005 0l4-4a3.5 3.5.0 00-5-5l-.5.5"/><path d="M14 10a3.5 3.5.0 00-5 0l-4 4a3.5 3.5.0 005 5l.5-.5"/></svg></a></li></ol><ol class=menu id=main-menu><li><a href=/><svg class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><polyline points="5 12 3 12 12 3 21 12 19 12"/><path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/><path d="M9 21v-6a2 2 0 012-2h2a2 2 0 012 2v6"/></svg>
+<span>Home</span></a></li><li><a href=/archives/><svg class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><rect x="3" y="4" width="18" height="4" rx="2"/><path d="M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+<span>Archives</span></a></li><li><a href=/search/><svg class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="10" cy="10" r="7"/><line x1="21" y1="21" x2="15" y2="15"/></svg>
+<span>Search</span></a></li><li><a href=/about-me/><svg class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="7" r="4"/><path d="M6 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/></svg>
+<span>About me</span></a></li><li class=menu-bottom-section><ol class=menu><li id=dark-mode-toggle><svg class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="8" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<svg class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="16" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<span>Dark Mode</span></li></ol></li></ol></aside><aside class="sidebar right-sidebar sticky"><section class="widget archives"><div class=widget-icon><svg class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><line x1="5" y1="9" x2="19" y2="9"/><line x1="5" y1="15" x2="19" y2="15"/><line x1="11" y1="4" x2="7" y2="20"/><line x1="17" y1="4" x2="13" y2="20"/></svg></div><h2 class="widget-title section-title">Table of contents</h2><div class=widget--toc><nav id=TableOfContents><ol><li><a href=#đặt-vấn-đề>Đặt vấn đề</a></li><li><a href=#giải-pháp>Giải pháp</a></li><li><a href=#thực-hiện>Thực hiện</a><ol><li><a href=#bước-1-tạo-module-với-uberfx>Bước 1: Tạo module với Uberfx</a></li><li><a href=#bước-2-viết-testcase--với-ginkgo>Bước 2: Viết testcase với ginkgo</a></li><li><a href=#bước-3-chạy-test>Bước 3: Chạy test</a></li></ol></li><li><a href=#kết-luận>Kết Luận</a></li><li><a href=#tài-liệu-tham-khảo>Tài liệu tham khảo</a></li></ol></nav></div></section></aside><main class="main full-width"><article class=main-article><header class=article-header><div class=article-details><header class=article-category><a href=/categories/test/>Test</a></header><div class=article-title-wrapper><h2 class=article-title><a href=/posts/guide-to-using-uberfx-and-ginkgo-for-building-unit-testing-workflow-in-go/>Guide to Using Uberfx and Ginkgo for Building Unit Testing Workflow in Go</a></h2></div><footer class=article-time><div><svg class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M11.795 21H5a2 2 0 01-2-2V7a2 2 0 012-2h12a2 2 0 012 2v4"/><circle cx="18" cy="18" r="4"/><path d="M15 3v4"/><path d="M7 3v4"/><path d="M3 11h16"/><path d="M18 16.496V18l1 1"/></svg>
+<time class=article-time--published datetime=2024-09-13T21:17:00+08:00>Sep 13, 2024</time></div><div><svg class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+<time class=article-time--reading>7 minute read</time></div></footer></div></header><section class=article-content><h1 id=guide-to-using-uberfx-and-ginkgo-for-building-unit-testing-workflow-in-go>Guide to Using Uberfx and Ginkgo for Building Unit Testing Workflow in Go</h1><h2 id=đặt-vấn-đề>Đặt vấn đề</h2><p>Để đảm bảo chất lượng mã nguồn trong phát triển phần mềm, unit testing là một yếu tố không thể thiếu. Việc viết và tổ chức các bài kiểm tra đơn vị một cách hiệu quả là điều quan trọng, đặc biệt khi làm việc với các ứng dụng phức tạp. Tuy nhiên, việc này thường gặp khó khăn trong việc quản lý các phụ thuộc và duy trì cấu trúc kiểm tra rõ ràng..</p><h2 id=giải-pháp>Giải pháp</h2><p>Khi làm việc với Go, việc kết hợp <a class=link href=https://github.com/uber-go/fx target=_blank rel=noopener>Uberfx</a> (framework DI) và <a class=link href=https://github.com/onsi/ginkgo target=_blank rel=noopener>Ginkgo</a> (thư viện BDD) cung cấp một phương pháp hiệu quả để giải quyết các vấn đề trên. Uberfx giúp quản lý các phụ thuộc của ứng dụng, trong khi Ginkgo hỗ trợ viết các bài kiểm tra đơn vị theo cách dễ đọc và rõ ràng.</p><p>Bài viết này sẽ hướng dẫn bạn cách sử dụng Uberfx để quản lý phụ thuộc và Ginkgo để viết các bài kiểm tra, nhằm xây dựng một quy trình phát triển mạnh mẽ và dễ bảo trì.</p><h2 id=thực-hiện>Thực hiện</h2><h3 id=bước-1-tạo-module-với-uberfx>Bước 1: Tạo module với Uberfx</h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span><span class=lnt>40
+</span><span class=lnt>41
+</span><span class=lnt>42
+</span><span class=lnt>43
+</span><span class=lnt>44
+</span><span class=lnt>45
+</span><span class=lnt>46
+</span><span class=lnt>47
+</span><span class=lnt>48
+</span><span class=lnt>49
+</span><span class=lnt>50
+</span><span class=lnt>51
+</span><span class=lnt>52
+</span><span class=lnt>53
+</span><span class=lnt>54
+</span><span class=lnt>55
+</span><span class=lnt>56
+</span><span class=lnt>57
+</span><span class=lnt>58
+</span><span class=lnt>59
+</span><span class=lnt>60
+</span><span class=lnt>61
+</span><span class=lnt>62
+</span><span class=lnt>63
+</span><span class=lnt>64
+</span><span class=lnt>65
+</span><span class=lnt>66
+</span><span class=lnt>67
+</span><span class=lnt>68
+</span><span class=lnt>69
+</span><span class=lnt>70
+</span><span class=lnt>71
+</span><span class=lnt>72
+</span><span class=lnt>73
+</span><span class=lnt>74
+</span><span class=lnt>75
+</span><span class=lnt>76
+</span><span class=lnt>77
+</span><span class=lnt>78
+</span><span class=lnt>79
+</span><span class=lnt>80
+</span><span class=lnt>81
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-yaml data-lang=yaml><span class=line><span class=cl><span class=l>package example</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=l>import (</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=s2>&#34;errors&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=s2>&#34;sync&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=s2>&#34;go.uber.org/fx&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=l>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=l>type User struct {</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>ID    int    `json:&#34;id&#34;`</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>Name  string `json:&#34;name&#34;`</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>Email string `json:&#34;email&#34;`</span><span class=w>
+</span></span></span><span class=line><span class=cl>}<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=l>type UserService interface {</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>Create(user *User) (*User, error)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>Get(id int) (*User, error)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>Update(id int, user *User) (*User, error)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>Delete(id int) error</span><span class=w>
+</span></span></span><span class=line><span class=cl>}<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=l>type userService struct {</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>users map[int]*User</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>lock  sync.RWMutex</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>idSeq int</span><span class=w>
+</span></span></span><span class=line><span class=cl>}<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=l>func NewUserService() UserService {</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>return &amp;userService{</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=nt>users</span><span class=p>:</span><span class=w> </span><span class=l>make(map[int]*User),</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=nt>idSeq</span><span class=p>:</span><span class=w> </span><span class=m>1</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span>}<span class=w>
+</span></span></span><span class=line><span class=cl>}<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=l>func (s *userService) Create(user *User) (*User, error) {</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>s.lock.Lock()</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>defer s.lock.Unlock()</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>user.ID = s.idSeq</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>s.idSeq++</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>s.users[user.ID] = user</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>return user, nil</span><span class=w>
+</span></span></span><span class=line><span class=cl>}<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=l>func (s *userService) Get(id int) (*User, error) {</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>s.lock.RLock()</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>defer s.lock.RUnlock()</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>user, ok := s.users[id]</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>if !ok {</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=l>return nil, errors.New(&#34;user not found&#34;)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span>}<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>return user, nil</span><span class=w>
+</span></span></span><span class=line><span class=cl>}<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=l>func (s *userService) Update(id int, updatedUser *User) (*User, error) {</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>s.lock.Lock()</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>defer s.lock.Unlock()</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>user, ok := s.users[id]</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>if !ok {</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=l>return nil, errors.New(&#34;user not found&#34;)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span>}<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>user.Name = updatedUser.Name</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>user.Email = updatedUser.Email</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>return user, nil</span><span class=w>
+</span></span></span><span class=line><span class=cl>}<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=l>func (s *userService) Delete(id int) error {</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>s.lock.Lock()</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>defer s.lock.Unlock()</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>if _, ok := s.users[id]; !ok {</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=l>return errors.New(&#34;user not found&#34;)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span>}<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>delete(s.users, id)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>return nil</span><span class=w>
+</span></span></span><span class=line><span class=cl>}<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=l>func Module() fx.Option {</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>var Module = fx.Provide(NewUserService)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>return Module</span><span class=w>
+</span></span></span><span class=line><span class=cl>}<span class=w>
+</span></span></span></code></pre></td></tr></table></div></div><p>Giải thích</p><ul><li><code>Module() fx.Option</code>: Hàm này sử dụng <code>fx.Provide</code> của Uberfx để cung cấp một thể hiện của <code>userService</code> như là một dịch vụ cho các phần khác của ứng dụng. Đây là cách để Uberfx quản lý và cung cấp dịch vụ thông qua DI.</li></ul><p>Cách Hoạt Động</p><ul><li><strong>Khởi tạo:</strong> Khi ứng dụng khởi động, <code>Module()</code> sẽ được gọi để cung cấp <code>userService</code> qua Uberfx. Điều này cho phép các phần khác của ứng dụng có thể yêu cầu dịch vụ này mà không cần phải khởi tạo nó trực tiếp.</li><li><strong>Quản lý Người Dùng:</strong> Các phương thức trong <code>userService</code> cho phép tạo, lấy, cập nhật và xóa người dùng trong một bản đồ, với sự đồng bộ hóa cần thiết để xử lý nhiều yêu cầu đồng thời.</li><li><strong>Dependency Injection:</strong> Uberfx sẽ quản lý việc cung cấp và chia sẻ <code>userService</code> trong toàn bộ ứng dụng, giúp cải thiện cấu trúc mã và quản lý các phụ thuộc.</li></ul><h3 id=bước-2-viết-testcase--với-ginkgo>Bước 2: Viết testcase với ginkgo</h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span><span class=lnt>40
+</span><span class=lnt>41
+</span><span class=lnt>42
+</span><span class=lnt>43
+</span><span class=lnt>44
+</span><span class=lnt>45
+</span><span class=lnt>46
+</span><span class=lnt>47
+</span><span class=lnt>48
+</span><span class=lnt>49
+</span><span class=lnt>50
+</span><span class=lnt>51
+</span><span class=lnt>52
+</span><span class=lnt>53
+</span><span class=lnt>54
+</span><span class=lnt>55
+</span><span class=lnt>56
+</span><span class=lnt>57
+</span><span class=lnt>58
+</span><span class=lnt>59
+</span><span class=lnt>60
+</span><span class=lnt>61
+</span><span class=lnt>62
+</span><span class=lnt>63
+</span><span class=lnt>64
+</span><span class=lnt>65
+</span><span class=lnt>66
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-yaml data-lang=yaml><span class=line><span class=cl><span class=l>package example_test</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=l>import (</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=s2>&#34;context&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=s2>&#34;testing&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=s2>&#34;unit-test-example/module/example&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>model &#34;unit-test-example/module/example&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>service &#34;unit-test-example/module/example&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>. &#34;github.com/onsi/ginkgo/v2&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>. &#34;github.com/onsi/gomega&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=s2>&#34;go.uber.org/fx&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=l>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=l>var _ = Describe(&#34;UserService with Fx&#34;, func() {</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>var (</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=l>userService service.UserService</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>BeforeEach(func() {</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=l>// Create a new Fx application to initialize dependencies</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=l>app := fx.New(</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>			</span><span class=l>example.Module(),          // Register the UserService module</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>			</span><span class=l>fx.Populate(&amp;userService), // Automatically inject UserService into the variable</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=l>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=l>// Start the Fx application and ensure it starts without errors</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=l>Expect(app.Start(context.Background())).To(Succeed())</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span>}<span class=l>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>AfterEach(func() {</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=l>// Stop the Fx application after each test to release resources</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=l>app := fx.New()</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=l>Expect(app.Stop(context.TODO())).To(Succeed())</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span>}<span class=l>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>Describe(&#34;UserService&#34;, func() {</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=l>It(&#34;should not be nil&#34;, func() {</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>			</span><span class=l>Expect(userService).NotTo(BeNil())</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span>}<span class=l>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span>}<span class=l>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>Describe(&#34;Create User&#34;, func() {</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span><span class=l>It(&#34;should create a new user successfully&#34;, func() {</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>			</span><span class=l>// Define a new user</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>			</span><span class=l>user := &amp;model.User{Name: &#34;John Doe&#34;, Email: &#34;john@example.com&#34;}</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>			</span><span class=l>// Call the Create method from UserService</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>			</span><span class=l>createdUser, err := userService.Create(user)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>			</span><span class=l>// Verify that there are no errors</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>			</span><span class=l>Expect(err).To(BeNil())</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>			</span><span class=l>// Verify that the created user has the expected values</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>			</span><span class=l>Expect(createdUser.ID).To(Equal(1))</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>			</span><span class=l>Expect(createdUser.Name).To(Equal(&#34;John Doe&#34;))</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>			</span><span class=l>Expect(createdUser.Email).To(Equal(&#34;john@example.com&#34;))</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>		</span>}<span class=l>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span>}<span class=l>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>// Additional test cases for Get, Update, and Delete can be added similarly</span><span class=w>
+</span></span></span><span class=line><span class=cl>}<span class=l>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=l>func TestService(t *testing.T) {</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>RegisterFailHandler(Fail)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>	</span><span class=l>RunSpecs(t, &#34;UserService Suite&#34;)</span><span class=w>
+</span></span></span><span class=line><span class=cl>}<span class=w>
+</span></span></span></code></pre></td></tr></table></div></div><p>Giải thích</p><ul><li><strong><code>func TestService(t *testing.T)</code>:</strong> Đây là hàm điểm vào (entry point) cho các bài kiểm tra trong Go. Khi bạn chạy lệnh <code>go test</code>, Go sẽ tìm các hàm có tên bắt đầu bằng <code>Test</code> và thực thi chúng. Hàm <code>TestService</code> là một hàm đặc biệt được sử dụng để khởi động Ginkgo và chạy các bài kiểm tra đã được định nghĩa bằng Ginkgo.</li><li><strong><code>RegisterFailHandler(Fail)</code>:</strong> Đăng ký một hàm xử lý lỗi. Trong trường hợp có lỗi trong các bài kiểm tra, hàm <code>Fail</code> của Ginkgo sẽ được gọi, dẫn đến việc báo cáo lỗi và dừng quá trình kiểm tra.</li><li><strong><code>RunSpecs(t, "UserService Suite")</code>:</strong> Khởi động Ginkgo và thực hiện tất cả các bài kiểm tra đã được định nghĩa. Tham số đầu tiên là đối tượng <code>testing.T</code> để Ginkgo có thể tích hợp với hệ thống kiểm tra của Go. Tham số thứ hai là tên của suite kiểm tra, dùng để tổ chức và báo cáo các bài kiểm tra.</li><li><code>fx.Populate(&amp;userService)</code> yêu cầu Uberfx cung cấp một instance của <code>UserService</code> và gán nó cho biến <code>userService</code>.</li></ul><p><strong>Làm thế nào <code>fx.Populate</code> hoạt động:</strong> Khi ứng dụng Uberfx khởi động, nó tìm các dịch vụ hoặc phụ thuộc đã được đăng ký (trong ví dụ này là <code>UserService</code> thông qua <code>example.Module()</code>) và tự động cung cấp chúng cho các biến được chỉ định thông qua <code>fx.Populate</code>. Điều này giúp tách biệt việc khởi tạo các đối tượng khỏi logic của bài kiểm tra, làm cho mã nguồn trở nên sạch sẽ và dễ bảo trì hơn</p><h3 id=bước-3-chạy-test>Bước 3: Chạy test</h3><p>Chạy test bằng go test</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-yaml data-lang=yaml><span class=line><span class=cl><span class=l>go run test -v</span><span class=w>
+</span></span></span></code></pre></td></tr></table></div></div><p>Kết quả:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-yaml data-lang=yaml><span class=line><span class=cl><span class=l>=== RUN   TestService</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=nt>Running Suite</span><span class=p>:</span><span class=w> </span><span class=l>UserService Suite - /home/phongthien/Desktop/start-up/unit-test/module/example</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=l>=============================================================================================</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=nt>Random Seed</span><span class=p>:</span><span class=w> </span><span class=m>1726234713</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=l>Will run 2 of 2 specs</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=p>[</span><span class=l>Fx] PROVIDE    fx.Lifecycle &lt;= go.uber.org/fx.New.func1()</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=p>[</span><span class=l>Fx] PROVIDE    fx.Shutdowner &lt;= go.uber.org/fx.(*App).shutdowner-fm()</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=p>[</span><span class=l>Fx] PROVIDE    fx.DotGraph &lt;= go.uber.org/fx.(*App).dotGraph-fm()</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=p>[</span><span class=l>Fx] PROVIDE    example.UserService &lt;= unit-test-example/module/example.NewUserService()</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=p>[</span><span class=l>Fx] INVOKE             reflect.makeFuncStub()</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=nt>[Fx] RUN        provide</span><span class=p>:</span><span class=w> </span><span class=l>unit-test-example/module/example.NewUserService()</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=p>[</span><span class=l>Fx] RUNNING</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=p>[</span><span class=l>Fx] PROVIDE    fx.Lifecycle &lt;= go.uber.org/fx.New.func1()</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=p>[</span><span class=l>Fx] PROVIDE    fx.Shutdowner &lt;= go.uber.org/fx.(*App).shutdowner-fm()</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=p>[</span><span class=l>Fx] PROVIDE    fx.DotGraph &lt;= go.uber.org/fx.(*App).dotGraph-fm()</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=l>•[Fx] PROVIDE   fx.Lifecycle &lt;= go.uber.org/fx.New.func1()</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=p>[</span><span class=l>Fx] PROVIDE    fx.Shutdowner &lt;= go.uber.org/fx.(*App).shutdowner-fm()</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=p>[</span><span class=l>Fx] PROVIDE    fx.DotGraph &lt;= go.uber.org/fx.(*App).dotGraph-fm()</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=p>[</span><span class=l>Fx] PROVIDE    example.UserService &lt;= unit-test-example/module/example.NewUserService()</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=p>[</span><span class=l>Fx] INVOKE             reflect.makeFuncStub()</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=nt>[Fx] RUN        provide</span><span class=p>:</span><span class=w> </span><span class=l>unit-test-example/module/example.NewUserService()</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=p>[</span><span class=l>Fx] RUNNING</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=p>[</span><span class=l>Fx] PROVIDE    fx.Lifecycle &lt;= go.uber.org/fx.New.func1()</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=p>[</span><span class=l>Fx] PROVIDE    fx.Shutdowner &lt;= go.uber.org/fx.(*App).shutdowner-fm()</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=p>[</span><span class=l>Fx] PROVIDE    fx.DotGraph &lt;= go.uber.org/fx.(*App).dotGraph-fm()</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=l>•</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=l>Ran 2 of 2 Specs in 0.003 seconds</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=l>SUCCESS! -- 2 Passed | 0 Failed | 0 Pending | 0 Skipped</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=nn>---</span><span class=w> </span><span class=nt>PASS</span><span class=p>:</span><span class=w> </span><span class=l>TestService (0.00s)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=l>PASS</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=l>ok      unit-test-example/module/example        0.012s</span><span class=w>
+</span></span></span></code></pre></td></tr></table></div></div><h2 id=kết-luận>Kết Luận</h2><p>Bằng cách sử dụng Uberfx để quản lý phụ thuộc và Ginkgo để viết các bài kiểm tra, bạn có thể xây dựng một quy trình phát triển mã nguồn mạnh mẽ và dễ bảo trì hơn. Việc tổ chức mã nguồn và kiểm tra theo cách này giúp cải thiện chất lượng mã và dễ dàng phát hiện lỗi hơn trong các ứng dụng phức tạp.</p><h2 id=tài-liệu-tham-khảo>Tài liệu tham khảo</h2><ul><li><a class=link href=https://uber-go.github.io/fx/index.html target=_blank rel=noopener>Uberfx Documentation</a></li><li><a class=link href=https://github.com/onsi/ginkgo target=_blank rel=noopener>Ginkgo Documentation</a></li></ul></section><footer class=article-footer><section class=article-tags><a href=/tags/go/>Go</a>
+<a href=/tags/test/>Test</a></section><section class=article-copyright><svg class="icon icon-tabler icon-tabler-copyright" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><path d="M14.5 9a3.5 4 0 100 6"/></svg>
+<span>Licensed under CC BY-NC-SA 4.0</span></section></footer><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css integrity=sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV crossorigin=anonymous><script src=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js integrity=sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8 crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js integrity=sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05 crossorigin=anonymous defer></script><script>window.addEventListener("DOMContentLoaded",()=>{const e=[".main-article",".widget--toc"];e.forEach(e=>{const t=document.querySelector(e);t&&renderMathInElement(t,{delimiters:[{left:"$$",right:"$$",display:!0},{left:"$",right:"$",display:!1},{left:"\\(",right:"\\)",display:!1},{left:"\\[",right:"\\]",display:!0}],ignoredClasses:["gist"]})})})</script></article><div class=disqus-container></div><style>.disqus-container{background-color:var(--card-background);border-radius:var(--card-border-radius);box-shadow:var(--shadow-l1);padding:var(--card-padding)}</style><script>window.addEventListener("onColorSchemeChange",e=>{typeof DISQUS=="object"&&DISQUS.reset({reload:!0})})</script><footer class=site-footer><section class=copyright>&copy;
+2026 phongthien</section><section class=powerby>Built with <a href=https://gohugo.io/ target=_blank rel=noopener>Hugo</a><br>Theme <b><a href=https://github.com/CaiJimmy/hugo-theme-stack target=_blank rel=noopener data-version=3.33.0>Stack</a></b> designed by <a href=https://jimmycai.com target=_blank rel=noopener>Jimmy</a></section></footer><div class=pswp tabindex=-1 role=dialog aria-hidden=true><div class=pswp__bg></div><div class=pswp__scroll-wrap><div class=pswp__container><div class=pswp__item></div><div class=pswp__item></div><div class=pswp__item></div></div><div class="pswp__ui pswp__ui--hidden"><div class=pswp__top-bar><div class=pswp__counter></div><button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+<button class="pswp__button pswp__button--share" title=Share></button>
+<button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+<button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button><div class=pswp__preloader><div class=pswp__preloader__icn><div class=pswp__preloader__cut><div class=pswp__preloader__donut></div></div></div></div></div><div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap"><div class=pswp__share-tooltip></div></div><button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+</button>
+<button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)"></button><div class=pswp__caption><div class=pswp__caption__center></div></div></div></div></div><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo=" crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU=" crossorigin=anonymous defer></script><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css crossorigin=anonymous><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css crossorigin=anonymous></main></div><script src=https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z+KMkF24hUW8WePSA9HM=" crossorigin=anonymous></script><script type=text/javascript src=/ts/main.c922af694cc257bf1ecc41c0dd7b0430f9114ec280ccf67cd2c6ad55f5316c4e.js defer></script><script>(function(){const e=document.createElement("link");e.href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap",e.type="text/css",e.rel="stylesheet",document.head.appendChild(e)})()</script></body></html>

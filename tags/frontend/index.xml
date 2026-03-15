@@ -1,0 +1,963 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Frontend on phongthien</title><link>https://phongthien99.github.io/tags/frontend/</link><description>Recent content in Frontend on phongthien</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Sun, 18 Jan 2026 00:00:00 +0700</lastBuildDate><atom:link href="https://phongthien99.github.io/tags/frontend/index.xml" rel="self" type="application/rss+xml"/><item><title>Implementing Command and Compensation in Applications</title><link>https://phongthien99.github.io/posts/implementing-command-and-compensation-in-applications/</link><pubDate>Sun, 18 Jan 2026 00:00:00 +0700</pubDate><guid>https://phongthien99.github.io/posts/implementing-command-and-compensation-in-applications/</guid><description>&lt;h1 id="implementing-command-and-compensation-in-applications"&gt;Implementing Command and Compensation in Applications
+&lt;/h1&gt;&lt;h2 id="1-problem"&gt;1. Problem
+&lt;/h2&gt;&lt;p&gt;Trong các ứng dụng frontend dạng editor hoặc CRUD-heavy UI, mỗi thao tác người dùng đều tạo ra một thay đổi mang ý nghĩa nghiệp vụ rõ ràng. Những thay đổi này thường xảy ra liên tục, có thứ tự và có thể ảnh hưởng lẫn nhau. Khi người dùng nhận ra thao tác vừa thực hiện là không mong muốn, hệ thống cần cung cấp khả năng quay về trạng thái trước đó một cách an toàn và dễ kiểm soát.&lt;/p&gt;
+&lt;p&gt;Nếu không có một cơ chế rõ ràng, việc “quay lại” rất dễ trở thành logic vá víu, nằm rải rác trong nhiều nơi của codebase. Điều này làm cho hành vi hệ thống khó dự đoán, khó mở rộng và khó đảm bảo tính nhất quán khi nghiệp vụ ngày càng phức tạp. Vì vậy, bài toán đặt ra không chỉ là quay lại kết quả trước đó, mà là phải &lt;strong&gt;undo đúng ý nghĩa của hành động đã xảy ra&lt;/strong&gt;.&lt;/p&gt;
+&lt;h2 id="2-solution"&gt;2. Solution
+&lt;/h2&gt;&lt;p&gt;Giải pháp là mô hình hoá mỗi thao tác người dùng thành một &lt;strong&gt;Command&lt;/strong&gt;, trong đó Command không chỉ biết cách thực thi hành động mà còn biết cách &lt;strong&gt;bù trừ lại chính tác động của hành động đó&lt;/strong&gt;. Thay vì cố gắng điều khiển trạng thái, hệ thống chỉ cần điều phối các Command đã được thực thi theo đúng thứ tự.&lt;/p&gt;
+&lt;p&gt;Compensation được xem như một hành động nghiệp vụ hợp lệ, đại diện cho việc đảo ngược ý nghĩa của hành động ban đầu. Khi một Command được bù trừ, hệ thống không “quay ngược thời gian”, mà thực hiện một hành động khác để trung hoà tác động đã xảy ra. Cách tiếp cận này giúp đưa toàn bộ logic liên quan đến việc quay lại về đúng nơi: ngay trong hành động gây ra thay đổi.&lt;/p&gt;
+&lt;pre class="mermaid"&gt;
+---
+config:
+layout: dagre
+---
+classDiagram
+direction TB
+class Command {
++execute()
++compensate()
+}
+class UpdateTitleCommand {
+-before: string
+-after: string
++execute()
++compensate()
+}
+class DeleteItemCommand {
+-item: Item
++execute()
++compensate()
+}
+class CommandExecutor {
+-history: Command[]
++execute(cmd: Command)
++compensate()
+}
+&amp;lt;&amp;lt;interface&amp;gt;&amp;gt; Command
+Command &amp;lt;|.. UpdateTitleCommand
+Command &amp;lt;|.. DeleteItemCommand
+CommandExecutor --&amp;gt; Command : execute / compensate
+&lt;/pre&gt;
+&lt;h2 id="3-implement"&gt;3. Implement
+&lt;/h2&gt;&lt;p&gt;Phần này hiện thực hoá trực tiếp thiết kế lớp đã được mô hình hoá.&lt;/p&gt;
+&lt;p&gt;Mỗi class trong sơ đồ đều có trách nhiệm rõ ràng và không chồng chéo.&lt;/p&gt;
+&lt;p&gt;Command đại diện cho hành động, CommandExecutor chịu trách nhiệm điều phối.&lt;/p&gt;
+&lt;p&gt;Việc bù trừ được thực hiện thông qua cơ chế cursor trên lịch sử command.&lt;/p&gt;
+&lt;h3 id="31-command-interface"&gt;3.1. Command interface
+&lt;/h3&gt;&lt;p&gt;&lt;code&gt;Command&lt;/code&gt; là hợp đồng chung cho mọi hành động trong hệ thống.&lt;/p&gt;
+&lt;p&gt;Nó định nghĩa hai hành vi bắt buộc: thực thi và bù trừ.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;span class="lnt"&gt;3
+&lt;/span&gt;&lt;span class="lnt"&gt;4
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-tsx" data-lang="tsx"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="kr"&gt;export&lt;/span&gt; &lt;span class="kr"&gt;interface&lt;/span&gt; &lt;span class="nx"&gt;Command&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="nx"&gt;execute&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="k"&gt;void&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="nx"&gt;compensate&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="k"&gt;void&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;hr&gt;
+&lt;h3 id="32-updatetitlecommand"&gt;3.2. UpdateTitleCommand
+&lt;/h3&gt;&lt;p&gt;Command này đại diện cho hành động cập nhật tiêu đề.&lt;/p&gt;
+&lt;p&gt;Nó lưu lại giá trị trước và sau để có thể bù trừ chính xác.&lt;/p&gt;
+&lt;p&gt;Logic thực thi và bù trừ luôn nằm trong cùng một class.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt; 1
+&lt;/span&gt;&lt;span class="lnt"&gt; 2
+&lt;/span&gt;&lt;span class="lnt"&gt; 3
+&lt;/span&gt;&lt;span class="lnt"&gt; 4
+&lt;/span&gt;&lt;span class="lnt"&gt; 5
+&lt;/span&gt;&lt;span class="lnt"&gt; 6
+&lt;/span&gt;&lt;span class="lnt"&gt; 7
+&lt;/span&gt;&lt;span class="lnt"&gt; 8
+&lt;/span&gt;&lt;span class="lnt"&gt; 9
+&lt;/span&gt;&lt;span class="lnt"&gt;10
+&lt;/span&gt;&lt;span class="lnt"&gt;11
+&lt;/span&gt;&lt;span class="lnt"&gt;12
+&lt;/span&gt;&lt;span class="lnt"&gt;13
+&lt;/span&gt;&lt;span class="lnt"&gt;14
+&lt;/span&gt;&lt;span class="lnt"&gt;15
+&lt;/span&gt;&lt;span class="lnt"&gt;16
+&lt;/span&gt;&lt;span class="lnt"&gt;17
+&lt;/span&gt;&lt;span class="lnt"&gt;18
+&lt;/span&gt;&lt;span class="lnt"&gt;19
+&lt;/span&gt;&lt;span class="lnt"&gt;20
+&lt;/span&gt;&lt;span class="lnt"&gt;21
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-tsx" data-lang="tsx"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="kr"&gt;export&lt;/span&gt; &lt;span class="kr"&gt;class&lt;/span&gt; &lt;span class="nx"&gt;UpdateTitleCommand&lt;/span&gt; &lt;span class="kr"&gt;implements&lt;/span&gt; &lt;span class="nx"&gt;Command&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="kr"&gt;constructor&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="kr"&gt;private&lt;/span&gt; &lt;span class="kr"&gt;readonly&lt;/span&gt; &lt;span class="nx"&gt;setState&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;fn&lt;/span&gt;: &lt;span class="kt"&gt;any&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;=&amp;gt;&lt;/span&gt; &lt;span class="k"&gt;void&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="kr"&gt;private&lt;/span&gt; &lt;span class="kr"&gt;readonly&lt;/span&gt; &lt;span class="nx"&gt;before&lt;/span&gt;: &lt;span class="kt"&gt;string&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="kr"&gt;private&lt;/span&gt; &lt;span class="kr"&gt;readonly&lt;/span&gt; &lt;span class="nx"&gt;after&lt;/span&gt;: &lt;span class="kt"&gt;string&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{}&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="nx"&gt;execute() {&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="k"&gt;this&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;setState&lt;/span&gt;&lt;span class="p"&gt;((&lt;/span&gt;&lt;span class="nx"&gt;s&lt;/span&gt;: &lt;span class="kt"&gt;any&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;=&amp;gt;&lt;/span&gt; &lt;span class="p"&gt;({&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="p"&gt;...&lt;/span&gt;&lt;span class="nx"&gt;s&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="nx"&gt;title&lt;/span&gt;: &lt;span class="kt"&gt;this.after&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="p"&gt;}));&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="nx"&gt;compensate() {&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="k"&gt;this&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;setState&lt;/span&gt;&lt;span class="p"&gt;((&lt;/span&gt;&lt;span class="nx"&gt;s&lt;/span&gt;: &lt;span class="kt"&gt;any&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;=&amp;gt;&lt;/span&gt; &lt;span class="p"&gt;({&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="p"&gt;...&lt;/span&gt;&lt;span class="nx"&gt;s&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="nx"&gt;title&lt;/span&gt;: &lt;span class="kt"&gt;this.before&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="p"&gt;}));&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;hr&gt;
+&lt;h3 id="33-deleteitemcommand"&gt;3.3. DeleteItemCommand
+&lt;/h3&gt;&lt;p&gt;Command này đại diện cho hành động xoá một item.&lt;/p&gt;
+&lt;p&gt;Nó giữ lại item bị xoá để phục vụ cho việc bù trừ.&lt;/p&gt;
+&lt;p&gt;Compensation ở đây là thêm lại item đã bị xoá trước đó.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt; 1
+&lt;/span&gt;&lt;span class="lnt"&gt; 2
+&lt;/span&gt;&lt;span class="lnt"&gt; 3
+&lt;/span&gt;&lt;span class="lnt"&gt; 4
+&lt;/span&gt;&lt;span class="lnt"&gt; 5
+&lt;/span&gt;&lt;span class="lnt"&gt; 6
+&lt;/span&gt;&lt;span class="lnt"&gt; 7
+&lt;/span&gt;&lt;span class="lnt"&gt; 8
+&lt;/span&gt;&lt;span class="lnt"&gt; 9
+&lt;/span&gt;&lt;span class="lnt"&gt;10
+&lt;/span&gt;&lt;span class="lnt"&gt;11
+&lt;/span&gt;&lt;span class="lnt"&gt;12
+&lt;/span&gt;&lt;span class="lnt"&gt;13
+&lt;/span&gt;&lt;span class="lnt"&gt;14
+&lt;/span&gt;&lt;span class="lnt"&gt;15
+&lt;/span&gt;&lt;span class="lnt"&gt;16
+&lt;/span&gt;&lt;span class="lnt"&gt;17
+&lt;/span&gt;&lt;span class="lnt"&gt;18
+&lt;/span&gt;&lt;span class="lnt"&gt;19
+&lt;/span&gt;&lt;span class="lnt"&gt;20
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-tsx" data-lang="tsx"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="kr"&gt;export&lt;/span&gt; &lt;span class="kr"&gt;class&lt;/span&gt; &lt;span class="nx"&gt;DeleteItemCommand&lt;/span&gt; &lt;span class="kr"&gt;implements&lt;/span&gt; &lt;span class="nx"&gt;Command&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="kr"&gt;constructor&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="kr"&gt;private&lt;/span&gt; &lt;span class="kr"&gt;readonly&lt;/span&gt; &lt;span class="nx"&gt;setState&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;fn&lt;/span&gt;: &lt;span class="kt"&gt;any&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;=&amp;gt;&lt;/span&gt; &lt;span class="k"&gt;void&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="kr"&gt;private&lt;/span&gt; &lt;span class="kr"&gt;readonly&lt;/span&gt; &lt;span class="nx"&gt;item&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt; &lt;span class="nx"&gt;id&lt;/span&gt;: &lt;span class="kt"&gt;string&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt; &lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="nx"&gt;key&lt;/span&gt;: &lt;span class="kt"&gt;string&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="kt"&gt;any&lt;/span&gt; &lt;span class="p"&gt;},&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{}&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="nx"&gt;execute() {&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="k"&gt;this&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;setState&lt;/span&gt;&lt;span class="p"&gt;((&lt;/span&gt;&lt;span class="nx"&gt;s&lt;/span&gt;: &lt;span class="kt"&gt;any&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;=&amp;gt;&lt;/span&gt; &lt;span class="p"&gt;({&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="p"&gt;...&lt;/span&gt;&lt;span class="nx"&gt;s&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="nx"&gt;items&lt;/span&gt;: &lt;span class="kt"&gt;s.items.filter&lt;/span&gt;&lt;span class="p"&gt;((&lt;/span&gt;&lt;span class="nx"&gt;i&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;=&amp;gt;&lt;/span&gt; &lt;span class="nx"&gt;i&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;id&lt;/span&gt; &lt;span class="o"&gt;!==&lt;/span&gt; &lt;span class="k"&gt;this&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;item&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;id&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="p"&gt;}));&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="nx"&gt;compensate() {&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="k"&gt;this&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;setState&lt;/span&gt;&lt;span class="p"&gt;((&lt;/span&gt;&lt;span class="nx"&gt;s&lt;/span&gt;: &lt;span class="kt"&gt;any&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;=&amp;gt;&lt;/span&gt; &lt;span class="p"&gt;({&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="p"&gt;...&lt;/span&gt;&lt;span class="nx"&gt;s&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="nx"&gt;items&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="p"&gt;[...&lt;/span&gt;&lt;span class="nx"&gt;s&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;items&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="k"&gt;this&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;item&lt;/span&gt;&lt;span class="p"&gt;],&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="p"&gt;}));&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;hr&gt;
+&lt;h3 id="34-commandexecutor"&gt;3.4. CommandExecutor
+&lt;/h3&gt;&lt;p&gt;&lt;code&gt;CommandExecutor&lt;/code&gt; chịu trách nhiệm điều phối việc thực thi và bù trừ.&lt;/p&gt;
+&lt;p&gt;Nó quản lý một danh sách lịch sử các command đã chạy.&lt;/p&gt;
+&lt;p&gt;Executor không chứa logic nghiệp vụ.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt; 1
+&lt;/span&gt;&lt;span class="lnt"&gt; 2
+&lt;/span&gt;&lt;span class="lnt"&gt; 3
+&lt;/span&gt;&lt;span class="lnt"&gt; 4
+&lt;/span&gt;&lt;span class="lnt"&gt; 5
+&lt;/span&gt;&lt;span class="lnt"&gt; 6
+&lt;/span&gt;&lt;span class="lnt"&gt; 7
+&lt;/span&gt;&lt;span class="lnt"&gt; 8
+&lt;/span&gt;&lt;span class="lnt"&gt; 9
+&lt;/span&gt;&lt;span class="lnt"&gt;10
+&lt;/span&gt;&lt;span class="lnt"&gt;11
+&lt;/span&gt;&lt;span class="lnt"&gt;12
+&lt;/span&gt;&lt;span class="lnt"&gt;13
+&lt;/span&gt;&lt;span class="lnt"&gt;14
+&lt;/span&gt;&lt;span class="lnt"&gt;15
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-tsx" data-lang="tsx"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="kr"&gt;export&lt;/span&gt; &lt;span class="kr"&gt;class&lt;/span&gt; &lt;span class="nx"&gt;CommandExecutor&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="kr"&gt;private&lt;/span&gt; &lt;span class="nx"&gt;history&lt;/span&gt;: &lt;span class="kt"&gt;Command&lt;/span&gt;&lt;span class="p"&gt;[]&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;[];&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="nx"&gt;execute&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;cmd&lt;/span&gt;: &lt;span class="kt"&gt;Command&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="nx"&gt;cmd&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;execute&lt;/span&gt;&lt;span class="p"&gt;();&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="k"&gt;this&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;history&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;push&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;cmd&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="nx"&gt;compensate() {&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="kr"&gt;const&lt;/span&gt; &lt;span class="nx"&gt;cmd&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="k"&gt;this&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;history&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;pop&lt;/span&gt;&lt;span class="p"&gt;();&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="o"&gt;!&lt;/span&gt;&lt;span class="nx"&gt;cmd&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="k"&gt;return&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="nx"&gt;cmd&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;compensate&lt;/span&gt;&lt;span class="p"&gt;();&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;hr&gt;
+&lt;h3 id="35-ví-dụ-sử-dụng-trong-thực-tế"&gt;3.5. Ví dụ sử dụng trong thực tế
+&lt;/h3&gt;&lt;p&gt;Ví dụ dưới đây minh hoạ cách thiết kế được dùng trong UI.&lt;/p&gt;
+&lt;h3 id="khởi-tạo-executor"&gt;Khởi tạo executor
+&lt;/h3&gt;&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-tsx" data-lang="tsx"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="kr"&gt;const&lt;/span&gt; &lt;span class="nx"&gt;executor&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="nx"&gt;newCommandExecutor&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;hr&gt;
+&lt;h3 id="thực-thi-hành-động-cập-nhật-tiêu-đề"&gt;Thực thi hành động cập nhật tiêu đề
+&lt;/h3&gt;&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;span class="lnt"&gt;3
+&lt;/span&gt;&lt;span class="lnt"&gt;4
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-tsx" data-lang="tsx"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="kd"&gt;function&lt;/span&gt; &lt;span class="nx"&gt;onUpdateTitle&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;before&lt;/span&gt;:&lt;span class="kt"&gt;string&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="nx"&gt;after&lt;/span&gt;:&lt;span class="kt"&gt;string&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="kr"&gt;const&lt;/span&gt; &lt;span class="nx"&gt;cmd&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="nx"&gt;newUpdateTitleCommand&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;setState&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;before&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;after&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="nx"&gt;executor&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;execute&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;cmd&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;hr&gt;
+&lt;h3 id="thực-thi-hành-động-xoá-item"&gt;Thực thi hành động xoá item
+&lt;/h3&gt;&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;span class="lnt"&gt;3
+&lt;/span&gt;&lt;span class="lnt"&gt;4
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-tsx" data-lang="tsx"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="kd"&gt;function&lt;/span&gt; &lt;span class="nx"&gt;onDeleteItem&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;item&lt;/span&gt;:&lt;span class="kt"&gt;Item&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="kr"&gt;const&lt;/span&gt; &lt;span class="nx"&gt;cmd&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="nx"&gt;newDeleteItemCommand&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;setState&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;item&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="nx"&gt;executor&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;execute&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;cmd&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;h3 id="bù-trừ-hành-động-gần-nhất"&gt;Bù trừ hành động gần nhất
+&lt;/h3&gt;&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;span class="lnt"&gt;3
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-tsx" data-lang="tsx"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="kd"&gt;function&lt;/span&gt; &lt;span class="nx"&gt;onCompensate() {&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="nx"&gt;executor&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;compensate&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;h3 id="36-luồng-hoạt-động-tương-ứng-với-thiết-kế"&gt;3.6. Luồng hoạt động tương ứng với thiết kế
+&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;UI tạo Command từ hành động người dùng&lt;/li&gt;
+&lt;li&gt;Executor gọi &lt;code&gt;execute()&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;Command được &lt;code&gt;push&lt;/code&gt; vào stack&lt;/li&gt;
+&lt;li&gt;Khi Undo:
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;pop()&lt;/code&gt; command cuối&lt;/li&gt;
+&lt;li&gt;Gọi &lt;code&gt;compensate()&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="4-conclusion"&gt;4. Conclusion
+&lt;/h2&gt;&lt;p&gt;Thiết kế &lt;strong&gt;Command + Compensation&lt;/strong&gt; cho phép mô hình hoá mỗi thao tác người dùng thành một hành động độc lập, có khả năng tự bù trừ. Mỗi hành động có vòng đời rõ ràng, tự chịu trách nhiệm cho việc thực thi và hoàn tác của chính nó.&lt;/p&gt;
+&lt;p&gt;Việc tách &lt;strong&gt;Command&lt;/strong&gt; và &lt;strong&gt;CommandExecutor&lt;/strong&gt; giúp đóng gói logic nghiệp vụ gọn trong từng hành động, giữ cho hệ thống dễ hiểu và dễ kiểm soát. Cách tiếp cận này giúp luồng xử lý nhất quán, mở rộng tự nhiên khi số lượng hành động tăng&lt;/p&gt;</description></item><item><title>Clean Architecture trong Frontend React</title><link>https://phongthien99.github.io/posts/clean-architecture-trong-frontend-react/</link><pubDate>Thu, 01 Jan 2026 00:00:00 +0700</pubDate><guid>https://phongthien99.github.io/posts/clean-architecture-trong-frontend-react/</guid><description>&lt;h1 id="clean-architecture-trong-frontend-react"&gt;Clean Architecture trong Frontend React
+&lt;/h1&gt;&lt;h2 id="1-mục-tiêu"&gt;1. Mục tiêu
+&lt;/h2&gt;&lt;p&gt;Trình bày kết quả của một &lt;strong&gt;Proof of Concept (POC)&lt;/strong&gt; nhằm:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Đánh giá khả năng áp dụng &lt;strong&gt;Clean Architecture&lt;/strong&gt; cho Frontend (React / Next.js)&lt;/li&gt;
+&lt;li&gt;Xác định cách tổ chức code &lt;strong&gt;tách biệt rõ business logic và UI&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;Kiểm chứng hiệu quả của việc &lt;strong&gt;tách mutation state và persistent state&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;Đề xuất một mô hình kiến trúc có thể &lt;strong&gt;mở rộng và tái sử dụng&lt;/strong&gt; cho các feature liên quan đến Authentication&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="2-phạm-vi-và-đối-tượng-áp-dụng"&gt;2. Phạm vi và đối tượng áp dụng
+&lt;/h2&gt;&lt;h3 id="21-phạm-vi"&gt;2.1 Phạm vi
+&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;Feature: &lt;strong&gt;Login&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;Nền tảng: &lt;strong&gt;Next.js 15 + TypeScript&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;Trạng thái xác thực: &lt;strong&gt;Client-side (POC)&lt;/strong&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="22-đối-tượng"&gt;2.2 Đối tượng
+&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;Frontend Engineer&lt;/li&gt;
+&lt;li&gt;Tech Lead / Software Architect&lt;/li&gt;
+&lt;li&gt;Nhóm phát triển đang cân nhắc áp dụng Clean Architecture cho FE&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="3-tổng-quan-kiến-trúc"&gt;3. Tổng quan kiến trúc
+&lt;/h2&gt;&lt;h3 id="31-mô-hình-kiến-trúc"&gt;3.1 Mô hình kiến trúc
+&lt;/h3&gt;&lt;p&gt;POC sử dụng mô hình &lt;strong&gt;3-layer&lt;/strong&gt; theo tinh thần Clean Architecture (dependency):&lt;/p&gt;
+&lt;pre class="mermaid"&gt;
+flowchart TD
+Presentation[&amp;#34;Presentation Layer&amp;#34;]
+Domain[&amp;#34;Domain Layer&amp;#34;]
+Infrastructure[&amp;#34;Infrastructure Layer&amp;#34;]
+Presentation --&amp;gt; Domain
+Infrastructure --&amp;gt; Domain
+&lt;/pre&gt;
+&lt;h3 id="32-nguyên-tắc-thiết-kế-chính"&gt;3.2 Nguyên tắc thiết kế chính
+&lt;/h3&gt;&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Kỹ thuật&lt;/th&gt;
+&lt;th&gt;Vấn đề gặp phải&lt;/th&gt;
+&lt;th&gt;Cách giải quyết&lt;/th&gt;
+&lt;th&gt;Lợi ích&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;Separation of Concerns&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;UI, business, data access trộn lẫn&lt;/td&gt;
+&lt;td&gt;Tách Presentation / Use Case / Domain / Infrastructure&lt;/td&gt;
+&lt;td&gt;Code rõ ràng, dễ test, dễ bảo trì&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;Dependency Inversion&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;Business phụ thuộc framework, API&lt;/td&gt;
+&lt;td&gt;Phụ thuộc vào &lt;strong&gt;interface&lt;/strong&gt;, inject implementation&lt;/td&gt;
+&lt;td&gt;Thay đổi hạ tầng không ảnh hưởng logic&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;Use Case–centric Design&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;Code tổ chức theo technical&lt;/td&gt;
+&lt;td&gt;Tổ chức theo &lt;strong&gt;hành vi nghiệp vụ (Use Case)&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;Bám sát nghiệp vụ, dễ đọc&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;Framework-agnostic Domain Logic&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;Logic bị lock vào React/Next&lt;/td&gt;
+&lt;td&gt;Domain không import framework&lt;/td&gt;
+&lt;td&gt;Tái sử dụng, độc lập công nghệ&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h2 id="4-các-concept-kỹ-thuật-được-sử-dụng"&gt;4. Các concept kỹ thuật được sử dụng
+&lt;/h2&gt;&lt;h3 id="41-clean-architecture"&gt;4.1 Clean Architecture
+&lt;/h3&gt;&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Nội dung&lt;/th&gt;
+&lt;th&gt;Mô tả&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Định nghĩa&lt;/td&gt;
+&lt;td&gt;Clean Architecture tổ chức hệ thống theo các vòng tròn phụ thuộc&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Quy tắc phụ thuộc&lt;/td&gt;
+&lt;td&gt;Domain Layer không phụ thuộc Presentation hay Infrastructure&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Hướng phụ thuộc&lt;/td&gt;
+&lt;td&gt;Dependency luôn hướng từ ngoài vào trong&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Áp dụng trong POC&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;LoginUseCase&lt;/code&gt; không phụ thuộc React, Next.js&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;Repository được inject thông qua interface&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h3 id="42-use-case-pattern"&gt;4.2 Use Case Pattern
+&lt;/h3&gt;&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Nội dung&lt;/th&gt;
+&lt;th&gt;Mô tả&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Khái niệm&lt;/td&gt;
+&lt;td&gt;Use Case đại diện cho một hành vi nghiệp vụ cụ thể&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Use Case trong POC&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;LoginUseCase.execute(credentials)&lt;/code&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Trách nhiệm&lt;/td&gt;
+&lt;td&gt;Validate dữ liệu đầu vào&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;Gọi Repository&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;Trả về &lt;code&gt;AuthSession&lt;/code&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h3 id="43-dependency-injection-qua-react-context"&gt;4.3 Dependency Injection qua React Context
+&lt;/h3&gt;&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Nội dung&lt;/th&gt;
+&lt;th&gt;Mô tả&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Cách tiếp cận&lt;/td&gt;
+&lt;td&gt;Sử dụng React Context như DI container nhẹ&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Dependency được inject&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;LoginUseCase&lt;/code&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;AuthStore&lt;/code&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Lợi ích&lt;/td&gt;
+&lt;td&gt;Dependency rõ ràng (explicit)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;Dễ mock khi test&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;Không phụ thuộc DI framework bên ngoài&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h3 id="44-quản-lý-state-theo-vòng-đời"&gt;4.4 Quản lý State theo vòng đời
+&lt;/h3&gt;&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Loại State&lt;/th&gt;
+&lt;th&gt;Đặc điểm&lt;/th&gt;
+&lt;th&gt;Công cụ&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Temporary State&lt;/td&gt;
+&lt;td&gt;Ngắn hạn, gắn với request&lt;/td&gt;
+&lt;td&gt;TanStack Query&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Persistent State&lt;/td&gt;
+&lt;td&gt;Lâu dài, dùng toàn app&lt;/td&gt;
+&lt;td&gt;Zustand&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h3 id="45-interface-segregation"&gt;4.5 Interface Segregation
+&lt;/h3&gt;&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Nội dung&lt;/th&gt;
+&lt;th&gt;Mô tả&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Nguyên tắc&lt;/td&gt;
+&lt;td&gt;Feature chỉ phụ thuộc vào interface tối thiểu cần thiết&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Áp dụng trong Login&lt;/td&gt;
+&lt;td&gt;Login feature chỉ phụ thuộc &lt;code&gt;AuthStore&lt;/code&gt; interface&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Lợi ích&lt;/td&gt;
+&lt;td&gt;Giảm coupling với store implementation&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;Dễ thay đổi hoặc mở rộng store&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h2 id="5-phân-tích-từng-layer"&gt;5. Phân tích từng Layer
+&lt;/h2&gt;&lt;h3 id="511-trách-nhiệm"&gt;5.1.1 Trách nhiệm
+&lt;/h3&gt;&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Trách nhiệm&lt;/th&gt;
+&lt;th&gt;Mô tả&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Render UI&lt;/td&gt;
+&lt;td&gt;Hiển thị giao diện người dùng (form login, message, layout)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Nhận input người dùng&lt;/td&gt;
+&lt;td&gt;Thu thập dữ liệu từ form (email, password, submit)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Hiển thị trạng thái&lt;/td&gt;
+&lt;td&gt;Xử lý và hiển thị loading, error, success&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Kích hoạt Use Case&lt;/td&gt;
+&lt;td&gt;Gọi use case thông qua custom hook&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h3 id="512-công-nghệ-sử-dụng"&gt;5.1.2 Công nghệ sử dụng
+&lt;/h3&gt;&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Công nghệ&lt;/th&gt;
+&lt;th&gt;Vai trò&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;React Components&lt;/td&gt;
+&lt;td&gt;Xây dựng UI, tách nhỏ theo component&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Custom Hooks&lt;/td&gt;
+&lt;td&gt;Đóng gói logic tương tác giữa UI và domain&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;TanStack Query&lt;/td&gt;
+&lt;td&gt;Quản lý lifecycle của async mutation&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Zustand&lt;/td&gt;
+&lt;td&gt;Trạng thái global (auth state)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h3 id="513-vai-trò-của-tanstack-query"&gt;5.1.3 Vai trò của TanStack Query
+&lt;/h3&gt;&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Khía cạnh&lt;/th&gt;
+&lt;th&gt;Mô tả&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Mutation lifecycle&lt;/td&gt;
+&lt;td&gt;Quản lý trạng thái &lt;code&gt;loading&lt;/code&gt;, &lt;code&gt;success&lt;/code&gt;, &lt;code&gt;error&lt;/code&gt; của login&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Tách biệt state&lt;/td&gt;
+&lt;td&gt;Logic request không bị trộn vào global store&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Cải thiện UX&lt;/td&gt;
+&lt;td&gt;Loading/error độc lập theo từng form hoặc action&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h2 id="52-domain-layer"&gt;5.2 Domain Layer
+&lt;/h2&gt;&lt;h3 id="521-trách-nhiệm"&gt;5.2.1 Trách nhiệm
+&lt;/h3&gt;&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Trách nhiệm&lt;/th&gt;
+&lt;th&gt;Mô tả&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Business rules&lt;/td&gt;
+&lt;td&gt;Chứa toàn bộ logic nghiệp vụ&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Định nghĩa model&lt;/td&gt;
+&lt;td&gt;Khai báo entity, DTO, interface&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Độc lập framework&lt;/td&gt;
+&lt;td&gt;Không phụ thuộc React, Next.js hay thư viện bên ngoài&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h3 id="522-thành-phần-chính"&gt;5.2.2 Thành phần chính
+&lt;/h3&gt;&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Thành phần&lt;/th&gt;
+&lt;th&gt;Ví dụ&lt;/th&gt;
+&lt;th&gt;Mục đích&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Entity&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;User&lt;/code&gt;, &lt;code&gt;AuthSession&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;Biểu diễn khái niệm cốt lõi của domain&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;DTO&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;LoginCredentials&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;Định dạng dữ liệu đầu vào cho use case&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Use Case&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;LoginUseCaseImpl&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;Thực thi nghiệp vụ login&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Interface&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;LoginRepository&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;Định nghĩa contract cho tầng hạ tầng&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h3 id="523-đặc-điểm"&gt;5.2.3 Đặc điểm
+&lt;/h3&gt;&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Đặc điểm&lt;/th&gt;
+&lt;th&gt;Ý nghĩa&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Test độc lập&lt;/td&gt;
+&lt;td&gt;Có thể unit test không cần UI hay API&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Tái sử dụng&lt;/td&gt;
+&lt;td&gt;Dùng lại cho web, mobile hoặc backend service&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h2 id="53-infrastructure-layer"&gt;5.3 Infrastructure Layer
+&lt;/h2&gt;&lt;h3 id="531-trách-nhiệm"&gt;5.3.1 Trách nhiệm
+&lt;/h3&gt;&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Trách nhiệm&lt;/th&gt;
+&lt;th&gt;Mô tả&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Kết nối bên ngoài&lt;/td&gt;
+&lt;td&gt;Làm việc với API, storage, service&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Hiện thực Repository&lt;/td&gt;
+&lt;td&gt;Cài đặt các interface từ Domain Layer&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h3 id="532-ví-dụ-trong-poc"&gt;5.3.2 Ví dụ trong POC
+&lt;/h3&gt;&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Thành phần&lt;/th&gt;
+&lt;th&gt;Vai trò&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;LocalStorageAuthRepo&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;Lưu session/auth info vào localStorage&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Authenticate&lt;/td&gt;
+&lt;td&gt;Thực hiện xác thực và xử lý dữ liệu&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Mapping&lt;/td&gt;
+&lt;td&gt;Chuyển dữ liệu raw sang domain entity&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h3 id="533-khả-năng-mở-rộng"&gt;5.3.3 Khả năng mở rộng
+&lt;/h3&gt;&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Kịch bản&lt;/th&gt;
+&lt;th&gt;Tác động&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Thay LocalStorage bằng REST API&lt;/td&gt;
+&lt;td&gt;Không ảnh hưởng Domain Layer&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Thay REST bằng GraphQL&lt;/td&gt;
+&lt;td&gt;Chỉ thay Infrastructure&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Mock repository để test&lt;/td&gt;
+&lt;td&gt;Không cần chỉnh sửa business logic&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h2 id="6-luồng-xử-lý-nghiệp-vụ-login-flow"&gt;6. Luồng xử lý nghiệp vụ (Login Flow)
+&lt;/h2&gt;&lt;ol&gt;
+&lt;li&gt;Người dùng submit form login&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;LoginForm&lt;/code&gt; gọi &lt;code&gt;useLogin&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;TanStack Query khởi chạy mutation&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;LoginUseCase.execute()&lt;/code&gt; được gọi&lt;/li&gt;
+&lt;li&gt;Use Case validate và gọi Repository&lt;/li&gt;
+&lt;li&gt;Trả về &lt;code&gt;AuthSession&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;Mutation &lt;code&gt;onSuccess&lt;/code&gt; cập nhật &lt;code&gt;authStore&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;UI redirect người dùng&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2 id="8-đánh-giá"&gt;8. Đánh giá
+&lt;/h2&gt;&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Nhóm&lt;/th&gt;
+&lt;th&gt;Nội dung&lt;/th&gt;
+&lt;th&gt;Mô tả&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Ưu điểm&lt;/td&gt;
+&lt;td&gt;Kiến trúc rõ ràng&lt;/td&gt;
+&lt;td&gt;Phân tách rõ các layer, dễ đọc, dễ bảo trì&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Ưu điểm&lt;/td&gt;
+&lt;td&gt;Dễ mở rộng&lt;/td&gt;
+&lt;td&gt;Có thể thay đổi UI, API hoặc storage mà không ảnh hưởng business logic&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Ưu điểm&lt;/td&gt;
+&lt;td&gt;Tăng khả năng test&lt;/td&gt;
+&lt;td&gt;Domain và use case có thể test độc lập&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Ưu điểm&lt;/td&gt;
+&lt;td&gt;Giảm coupling&lt;/td&gt;
+&lt;td&gt;UI không phụ thuộc trực tiếp vào logic xử lý&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Hạn chế&lt;/td&gt;
+&lt;td&gt;Tăng số lượng file&lt;/td&gt;
+&lt;td&gt;Cần nhiều folder và class/interface hơn&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Hạn chế&lt;/td&gt;
+&lt;td&gt;Yêu cầu kiến thức kiến trúc&lt;/td&gt;
+&lt;td&gt;Dev cần hiểu Clean Architecture và Dependency Rule&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Hạn chế&lt;/td&gt;
+&lt;td&gt;Không phù hợp dự án nhỏ&lt;/td&gt;
+&lt;td&gt;Dễ over-engineering với MVP hoặc app đơn giản&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h2 id="9-kết-luận"&gt;9. Kết luận
+&lt;/h2&gt;&lt;p&gt;POC cho thấy:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Clean Architecture &lt;strong&gt;có thể áp dụng hiệu quả cho Frontend&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;Việc tách mutation state và persistent state giúp code rõ ràng và UX tốt hơn&lt;/li&gt;
+&lt;li&gt;Mô hình phù hợp cho các hệ thống có vòng đời dài và yêu cầu mở rộng&lt;/li&gt;
+&lt;/ul&gt;</description></item><item><title>JavaScript Bundle Size as a Frontend Architecture Concern</title><link>https://phongthien99.github.io/posts/javascript-bundle-size-as-a-frontend-architecture-concern/</link><pubDate>Fri, 19 Dec 2025 11:09:00 +0700</pubDate><guid>https://phongthien99.github.io/posts/javascript-bundle-size-as-a-frontend-architecture-concern/</guid><description>&lt;h2 id="đặt-vấn-đề"&gt;Đặt vấn đề
+&lt;/h2&gt;&lt;p&gt;Trong các ứng dụng frontend hiện đại, &lt;strong&gt;kích thước JavaScript bundle ban đầu&lt;/strong&gt; là yếu tố then chốt ảnh hưởng đến &lt;strong&gt;thời gian tải, khả năng tương tác sớm (Time to Interactive) và hiệu năng thực tế trên client&lt;/strong&gt;.&lt;/p&gt;
+&lt;p&gt;Bundle lớn làm tăng chi phí download, parse và execute trên main thread, đặc biệt rõ rệt trên thiết bị di động và môi trường mạng có độ trễ cao. Hệ quả là &lt;strong&gt;perceived performance suy giảm&lt;/strong&gt;, ngay cả khi backend và UI đã được tối ưu tốt.&lt;/p&gt;
+&lt;p&gt;Bên cạnh tác động đến trải nghiệm người dùng, mỗi KB JavaScript được phân phối qua CDN sẽ &lt;strong&gt;nhân lên theo số lượng request&lt;/strong&gt;, khiến &lt;strong&gt;chi phí CDN tăng tuyến tính theo traffic nếu không có chiến lược chia chunk và cache phù hợp&lt;/strong&gt;.&lt;/p&gt;
+&lt;p&gt;Do đó, kiểm soát bundle size không chỉ là một bước tối ưu ở cuối pipeline, mà là một &lt;strong&gt;quyết định kiến trúc frontend&lt;/strong&gt; cần được cân nhắc từ sớm.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="giải-pháp"&gt;Giải pháp
+&lt;/h2&gt;&lt;p&gt;Để kiểm soát kích thước bundle và tối ưu hiệu năng tổng thể, có thể kết hợp ba kỹ thuật cốt lõi theo đúng thứ tự từ build-time đến runtime:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Tree Shaking&lt;/strong&gt;: loại bỏ code không sử dụng ở giai đoạn build&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Vendor Chunking&lt;/strong&gt;: tách và cache hiệu quả các thư viện ổn định&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Lazy Loading&lt;/strong&gt;: trì hoãn tải code không cần thiết cho luồng ban đầu&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Ba kỹ thuật này bổ trợ lẫn nhau, giúp giảm bundle từ gốc, tối ưu phân phối qua CDN và cải thiện trải nghiệm người dùng.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="thực-hiện-và-ví-dụ-minh-họa"&gt;Thực hiện và Ví dụ minh họa
+&lt;/h2&gt;&lt;h3 id="1-tree-shaking"&gt;1. Tree Shaking
+&lt;/h3&gt;&lt;p&gt;Tree Shaking được thực hiện ở giai đoạn build nhằm loại bỏ các module, function và export không được sử dụng khỏi bundle cuối cùng.&lt;/p&gt;
+&lt;h3 id="-bad"&gt;❌ BAD
+&lt;/h3&gt;&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;span class="lnt"&gt;3
+&lt;/span&gt;&lt;span class="lnt"&gt;4
+&lt;/span&gt;&lt;span class="lnt"&gt;5
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-tsx" data-lang="tsx"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="kr"&gt;import&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="nx"&gt;asIconsfrom&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;lucide-react&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nx"&gt;functionHeader() {&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="k"&gt;return&lt;/span&gt;&lt;span class="p"&gt;&amp;lt;&lt;/span&gt;&lt;span class="nt"&gt;Icons.Home&lt;/span&gt; &lt;span class="p"&gt;/&amp;gt;;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;ul&gt;
+&lt;li&gt;Import toàn bộ module&lt;/li&gt;
+&lt;li&gt;Bundler không thể tree shake hiệu quả&lt;/li&gt;
+&lt;li&gt;Làm tăng kích thước bundle không cần thiết&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="-good"&gt;✅ GOOD
+&lt;/h3&gt;&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;span class="lnt"&gt;3
+&lt;/span&gt;&lt;span class="lnt"&gt;4
+&lt;/span&gt;&lt;span class="lnt"&gt;5
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-tsx" data-lang="tsx"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="kr"&gt;import&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="nx"&gt;Home&lt;/span&gt; &lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="kr"&gt;from&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;lucide-react&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nx"&gt;functionHeader() {&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="k"&gt;return&lt;/span&gt;&lt;span class="p"&gt;&amp;lt;&lt;/span&gt;&lt;span class="nt"&gt;Home&lt;/span&gt; &lt;span class="p"&gt;/&amp;gt;;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;ul&gt;
+&lt;li&gt;Import theo named export&lt;/li&gt;
+&lt;li&gt;Chỉ bundle code thực sự được sử dụng&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h3 id="2-vendor-chunking"&gt;2. Vendor Chunking
+&lt;/h3&gt;&lt;p&gt;Vendor Chunking tách code ứng dụng khỏi các thư viện bên thứ ba có vòng đời ổn định nhằm cải thiện hiệu quả cache.&lt;/p&gt;
+&lt;h3 id="-bad-1"&gt;❌ BAD
+&lt;/h3&gt;&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-tsx" data-lang="tsx"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="c1"&gt;// Không cấu hình chia chunk
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="c1"&gt;// Vendor và app code bị gộp chung
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;ul&gt;
+&lt;li&gt;Mỗi lần deploy invalidate toàn bộ bundle&lt;/li&gt;
+&lt;li&gt;Cache CDN và trình duyệt kém hiệu quả&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="-good-vite"&gt;✅ GOOD (Vite)
+&lt;/h3&gt;&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt; 1
+&lt;/span&gt;&lt;span class="lnt"&gt; 2
+&lt;/span&gt;&lt;span class="lnt"&gt; 3
+&lt;/span&gt;&lt;span class="lnt"&gt; 4
+&lt;/span&gt;&lt;span class="lnt"&gt; 5
+&lt;/span&gt;&lt;span class="lnt"&gt; 6
+&lt;/span&gt;&lt;span class="lnt"&gt; 7
+&lt;/span&gt;&lt;span class="lnt"&gt; 8
+&lt;/span&gt;&lt;span class="lnt"&gt; 9
+&lt;/span&gt;&lt;span class="lnt"&gt;10
+&lt;/span&gt;&lt;span class="lnt"&gt;11
+&lt;/span&gt;&lt;span class="lnt"&gt;12
+&lt;/span&gt;&lt;span class="lnt"&gt;13
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-tsx" data-lang="tsx"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="c1"&gt;// vite.config.ts
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nx"&gt;exportdefault&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nx"&gt;build&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nx"&gt;rollupOptions&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nx"&gt;output&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nx"&gt;manualChunks&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="s1"&gt;&amp;#39;vendor-react&amp;#39;&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;react&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;react-dom&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;],&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="s1"&gt;&amp;#39;vendor-ui&amp;#39;&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt; &lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;lucide-react&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;@radix-ui/react-icons&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;],&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="p"&gt;},&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="p"&gt;},&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="p"&gt;},&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="p"&gt;},&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="p"&gt;};&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;ul&gt;
+&lt;li&gt;Vendor chunk ổn định&lt;/li&gt;
+&lt;li&gt;Giảm lượng JavaScript cần tải lại khi deploy&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h3 id="3-lazy-loading"&gt;3. Lazy Loading
+&lt;/h3&gt;&lt;p&gt;Lazy Loading được áp dụng ở runtime nhằm trì hoãn việc tải các route và component không thuộc luồng sử dụng ban đầu.&lt;/p&gt;
+&lt;h3 id="-bad-2"&gt;❌ BAD
+&lt;/h3&gt;&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;span class="lnt"&gt;3
+&lt;/span&gt;&lt;span class="lnt"&gt;4
+&lt;/span&gt;&lt;span class="lnt"&gt;5
+&lt;/span&gt;&lt;span class="lnt"&gt;6
+&lt;/span&gt;&lt;span class="lnt"&gt;7
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-tsx" data-lang="tsx"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nx"&gt;importDashboardfrom&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;@/pages/Dashboard&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nx"&gt;importSettingsfrom&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;@/pages/Settings&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="p"&gt;&amp;lt;&lt;/span&gt;&lt;span class="nt"&gt;Routes&lt;/span&gt;&lt;span class="p"&gt;&amp;gt;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="p"&gt;&amp;lt;&lt;/span&gt;&lt;span class="nt"&gt;Routepath&lt;/span&gt;&lt;span class="err"&gt;=&lt;/span&gt;&lt;span class="s2"&gt;&amp;#34;/dashboard&amp;#34;&lt;/span&gt;&lt;span class="na"&gt;element&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="p"&gt;{&amp;lt;&lt;/span&gt;&lt;span class="nt"&gt;Dashboard&lt;/span&gt; &lt;span class="p"&gt;/&amp;gt;}&lt;/span&gt; &lt;span class="p"&gt;/&amp;gt;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="p"&gt;&amp;lt;&lt;/span&gt;&lt;span class="nt"&gt;Routepath&lt;/span&gt;&lt;span class="err"&gt;=&lt;/span&gt;&lt;span class="s2"&gt;&amp;#34;/settings&amp;#34;&lt;/span&gt;&lt;span class="na"&gt;element&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="p"&gt;{&amp;lt;&lt;/span&gt;&lt;span class="nt"&gt;Settings&lt;/span&gt; &lt;span class="p"&gt;/&amp;gt;}&lt;/span&gt; &lt;span class="p"&gt;/&amp;gt;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="p"&gt;&amp;lt;/&lt;/span&gt;&lt;span class="nt"&gt;Routes&lt;/span&gt;&lt;span class="p"&gt;&amp;gt;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;ul&gt;
+&lt;li&gt;Eager load toàn bộ route&lt;/li&gt;
+&lt;li&gt;Initial bundle lớn&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="-good-1"&gt;✅ GOOD
+&lt;/h3&gt;&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt; 1
+&lt;/span&gt;&lt;span class="lnt"&gt; 2
+&lt;/span&gt;&lt;span class="lnt"&gt; 3
+&lt;/span&gt;&lt;span class="lnt"&gt; 4
+&lt;/span&gt;&lt;span class="lnt"&gt; 5
+&lt;/span&gt;&lt;span class="lnt"&gt; 6
+&lt;/span&gt;&lt;span class="lnt"&gt; 7
+&lt;/span&gt;&lt;span class="lnt"&gt; 8
+&lt;/span&gt;&lt;span class="lnt"&gt; 9
+&lt;/span&gt;&lt;span class="lnt"&gt;10
+&lt;/span&gt;&lt;span class="lnt"&gt;11
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-tsx" data-lang="tsx"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="kr"&gt;import&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt; &lt;span class="nx"&gt;lazy&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="nx"&gt;Suspense&lt;/span&gt; &lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="kr"&gt;from&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;react&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nx"&gt;constDashboard&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="nx"&gt;lazy&lt;/span&gt;&lt;span class="p"&gt;(()&lt;/span&gt; &lt;span class="o"&gt;=&amp;gt;&lt;/span&gt;&lt;span class="kr"&gt;import&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;@/pages/Dashboard&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;));&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nx"&gt;constSettings&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="nx"&gt;lazy&lt;/span&gt;&lt;span class="p"&gt;(()&lt;/span&gt; &lt;span class="o"&gt;=&amp;gt;&lt;/span&gt;&lt;span class="kr"&gt;import&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;@/pages/Settings&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;));&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="p"&gt;&amp;lt;&lt;/span&gt;&lt;span class="nt"&gt;Suspensefallback&lt;/span&gt;&lt;span class="err"&gt;=&lt;/span&gt;&lt;span class="p"&gt;{&amp;lt;&lt;/span&gt;&lt;span class="nt"&gt;Loading&lt;/span&gt; &lt;span class="p"&gt;/&amp;gt;}&amp;gt;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="p"&gt;&amp;lt;&lt;/span&gt;&lt;span class="nt"&gt;Routes&lt;/span&gt;&lt;span class="p"&gt;&amp;gt;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="p"&gt;&amp;lt;&lt;/span&gt;&lt;span class="nt"&gt;Routepath&lt;/span&gt;&lt;span class="err"&gt;=&lt;/span&gt;&lt;span class="s2"&gt;&amp;#34;/dashboard&amp;#34;&lt;/span&gt;&lt;span class="na"&gt;element&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="p"&gt;{&amp;lt;&lt;/span&gt;&lt;span class="nt"&gt;Dashboard&lt;/span&gt; &lt;span class="p"&gt;/&amp;gt;}&lt;/span&gt; &lt;span class="p"&gt;/&amp;gt;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="p"&gt;&amp;lt;&lt;/span&gt;&lt;span class="nt"&gt;Routepath&lt;/span&gt;&lt;span class="err"&gt;=&lt;/span&gt;&lt;span class="s2"&gt;&amp;#34;/settings&amp;#34;&lt;/span&gt;&lt;span class="na"&gt;element&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="p"&gt;{&amp;lt;&lt;/span&gt;&lt;span class="nt"&gt;Settings&lt;/span&gt; &lt;span class="p"&gt;/&amp;gt;}&lt;/span&gt; &lt;span class="p"&gt;/&amp;gt;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="p"&gt;&amp;lt;/&lt;/span&gt;&lt;span class="nt"&gt;Routes&lt;/span&gt;&lt;span class="p"&gt;&amp;gt;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="p"&gt;&amp;lt;/&lt;/span&gt;&lt;span class="nt"&gt;Suspense&lt;/span&gt;&lt;span class="p"&gt;&amp;gt;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;ul&gt;
+&lt;li&gt;Route chỉ được load khi cần&lt;/li&gt;
+&lt;li&gt;Giảm initial bundle&lt;/li&gt;
+&lt;li&gt;Cải thiện Time to Interactive&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id="kết-luận"&gt;Kết luận
+&lt;/h2&gt;&lt;p&gt;Việc kết hợp &lt;strong&gt;Tree Shaking → Vendor Chunking → Lazy Loading&lt;/strong&gt; tạo thành một chiến lược tối ưu bundle toàn diện cho React:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Giảm kích thước bundle ngay từ build-time&lt;/li&gt;
+&lt;li&gt;Tận dụng cache CDN và trình duyệt hiệu quả hơn&lt;/li&gt;
+&lt;li&gt;Cải thiện trải nghiệm người dùng ở thời điểm tải ban đầu&lt;/li&gt;
+&lt;/ul&gt;</description></item></channel></rss>

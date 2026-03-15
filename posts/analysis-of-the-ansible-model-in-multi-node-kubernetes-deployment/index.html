@@ -1,0 +1,519 @@
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><meta name=description content="Analysis of the Ansible Model in Multi-Node Kubernetes Deployment 1.ĐẶT VẤN ĐỀ Trong các hệ thống hạ tầng hiện đại, việc tự động hóa triển khai và quản lý cấu hình đóng vai trò quan trọng nhằm đảm bảo tính nhất quán và giảm thiểu lỗi do thao tác thủ công. Ansible là một công cụ tự động hóa không cần agent, cho phép quản lý và điều phối nhiều máy chủ thông qua các playbook và role có cấu trúc rõ ràng.\n"><title>Analysis of the Ansible Model in Multi-Node Kubernetes Deployment</title><link rel=canonical href=https://phongthien99.github.io/posts/analysis-of-the-ansible-model-in-multi-node-kubernetes-deployment/><link rel=stylesheet href=/scss/style.min.769133d016a4a1944b3a27800e000cccd439a8c1a9c0c61f7c4fa0bc0e42de57.css><meta property='og:title' content="Analysis of the Ansible Model in Multi-Node Kubernetes Deployment"><meta property='og:description' content="Analysis of the Ansible Model in Multi-Node Kubernetes Deployment 1.ĐẶT VẤN ĐỀ Trong các hệ thống hạ tầng hiện đại, việc tự động hóa triển khai và quản lý cấu hình đóng vai trò quan trọng nhằm đảm bảo tính nhất quán và giảm thiểu lỗi do thao tác thủ công. Ansible là một công cụ tự động hóa không cần agent, cho phép quản lý và điều phối nhiều máy chủ thông qua các playbook và role có cấu trúc rõ ràng.\n"><meta property='og:url' content='https://phongthien99.github.io/posts/analysis-of-the-ansible-model-in-multi-node-kubernetes-deployment/'><meta property='og:site_name' content='phongthien'><meta property='og:type' content='article'><meta property='article:section' content='Post'><meta property='article:tag' content='infrastructure-as-code'><meta property='article:tag' content='terraform'><meta property='article:tag' content='ansible'><meta property='article:tag' content='automation'><meta property='article:tag' content='devops'><meta property='article:published_time' content='2025-12-21T21:40:00+07:00'><meta property='article:modified_time' content='2025-12-21T21:40:00+07:00'><meta name=twitter:title content="Analysis of the Ansible Model in Multi-Node Kubernetes Deployment"><meta name=twitter:description content="Analysis of the Ansible Model in Multi-Node Kubernetes Deployment 1.ĐẶT VẤN ĐỀ Trong các hệ thống hạ tầng hiện đại, việc tự động hóa triển khai và quản lý cấu hình đóng vai trò quan trọng nhằm đảm bảo tính nhất quán và giảm thiểu lỗi do thao tác thủ công. Ansible là một công cụ tự động hóa không cần agent, cho phép quản lý và điều phối nhiều máy chủ thông qua các playbook và role có cấu trúc rõ ràng.\n"><link rel="shortcut icon" href=/favicon.png><script src=https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js></script><script>mermaid.initialize({startOnLoad:!0})</script></head><body class=article-page><script>(function(){const e="StackColorScheme";localStorage.getItem(e)||localStorage.setItem(e,"auto")})()</script><script>(function(){const t="StackColorScheme",e=localStorage.getItem(t),n=window.matchMedia("(prefers-color-scheme: dark)").matches===!0;e=="dark"||e==="auto"&&n?document.documentElement.dataset.scheme="dark":document.documentElement.dataset.scheme="light"})()</script><div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky"><button class="hamburger hamburger--spin" type=button id=toggle-menu aria-label="Toggle Menu">
+<span class=hamburger-box><span class=hamburger-inner></span></span></button><header><figure class=site-avatar><a href=/><img src=/img/avatar_hu_7ee69f593e8680d3.jpg width=300 height=300 class=site-logo loading=lazy alt=Avatar>
+</a><span class=emoji>🏅</span></figure><div class=site-meta><h1 class=site-name><a href=/>phongthien</a></h1><h2 class=site-description>Software Engineer</h2></div></header><ol class=menu-social><li><a href=https://github.com/phongthien99 target=_blank title=GitHub rel=me><svg class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6.0 00-1.3-3.2 4.2 4.2.0 00-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3.0 00-6.2.0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2.0 00-.1 3.2A4.6 4.6.0 004 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg></a></li><li><a href=https://twitter.com target=_blank title=linkedin rel=me><svg class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M10 14a3.5 3.5.0 005 0l4-4a3.5 3.5.0 00-5-5l-.5.5"/><path d="M14 10a3.5 3.5.0 00-5 0l-4 4a3.5 3.5.0 005 5l.5-.5"/></svg></a></li></ol><ol class=menu id=main-menu><li><a href=/><svg class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><polyline points="5 12 3 12 12 3 21 12 19 12"/><path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/><path d="M9 21v-6a2 2 0 012-2h2a2 2 0 012 2v6"/></svg>
+<span>Home</span></a></li><li><a href=/archives/><svg class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><rect x="3" y="4" width="18" height="4" rx="2"/><path d="M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+<span>Archives</span></a></li><li><a href=/search/><svg class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="10" cy="10" r="7"/><line x1="21" y1="21" x2="15" y2="15"/></svg>
+<span>Search</span></a></li><li><a href=/about-me/><svg class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="7" r="4"/><path d="M6 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/></svg>
+<span>About me</span></a></li><li class=menu-bottom-section><ol class=menu><li id=dark-mode-toggle><svg class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="8" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<svg class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="16" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<span>Dark Mode</span></li></ol></li></ol></aside><aside class="sidebar right-sidebar sticky"><section class="widget archives"><div class=widget-icon><svg class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><line x1="5" y1="9" x2="19" y2="9"/><line x1="5" y1="15" x2="19" y2="15"/><line x1="11" y1="4" x2="7" y2="20"/><line x1="17" y1="4" x2="13" y2="20"/></svg></div><h2 class="widget-title section-title">Table of contents</h2><div class=widget--toc><nav id=TableOfContents><ol><li><a href=#1đặt-vấn-đề>1.ĐẶT VẤN ĐỀ</a></li><li><a href=#2-kiến-thức-nền-tảng>2. KIẾN THỨC NỀN TẢNG</a></li><li><a href=#21-tổng-quan-mô-hình-hoạt-động-của-ansible>2.1 Tổng quan mô hình hoạt động của Ansible</a></li><li><a href=#22-kubernetes-và-kubeadm>2.2 Kubernetes và kubeadm</a><ol><li><a href=#2-case-study-triển-khai-k8s-bằng-kubeadmin>2. Case study triển khai k8s bằng kubeadmin</a></li><li><a href=#kết-luận>Kết luận</a></li></ol></li></ol></nav></div></section></aside><main class="main full-width"><article class=main-article><header class=article-header><div class=article-details><header class=article-category><a href=/categories/devops/>Devops
+</a><a href=/categories/iac/>Iac</a></header><div class=article-title-wrapper><h2 class=article-title><a href=/posts/analysis-of-the-ansible-model-in-multi-node-kubernetes-deployment/>Analysis of the Ansible Model in Multi-Node Kubernetes Deployment</a></h2></div><footer class=article-time><div><svg class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M11.795 21H5a2 2 0 01-2-2V7a2 2 0 012-2h12a2 2 0 012 2v4"/><circle cx="18" cy="18" r="4"/><path d="M15 3v4"/><path d="M7 3v4"/><path d="M3 11h16"/><path d="M18 16.496V18l1 1"/></svg>
+<time class=article-time--published datetime=2025-12-21T21:40:00+07:00>Dec 21, 2025</time></div><div><svg class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+<time class=article-time--reading>7 minute read</time></div></footer></div></header><section class=article-content><h1 id=analysis-of-the-ansible-model-in-multi-node-kubernetes-deployment>Analysis of the Ansible Model in Multi-Node Kubernetes Deployment</h1><h2 id=1đặt-vấn-đề>1.ĐẶT VẤN ĐỀ</h2><p>Trong các hệ thống hạ tầng hiện đại, việc tự động hóa triển khai và quản lý cấu hình đóng vai trò quan trọng nhằm đảm bảo tính nhất quán và giảm thiểu lỗi do thao tác thủ công. <strong>Ansible</strong> là một công cụ tự động hóa không cần agent, cho phép quản lý và điều phối nhiều máy chủ thông qua các playbook và role có cấu trúc rõ ràng.</p><p>Nghiên cứu này tập trung phân tích cách <strong>Ansible tổ chức và điều phối quy trình triển khai hạ tầng đa node</strong>, thông qua một case study triển khai Kubernetes bằng kubeadm. Kubernetes được sử dụng như một ví dụ thực tế nhằm làm rõ khả năng tự động hóa, tái sử dụng và mở rộng của Ansible trong triển khai hệ thống phức tạp</p><h2 id=2-kiến-thức-nền-tảng>2. KIẾN THỨC NỀN TẢNG</h2><h2 id=21-tổng-quan-mô-hình-hoạt-động-của-ansible>2.1 Tổng quan mô hình hoạt động của Ansible</h2><p>Trong Ansible, <strong>Playbook</strong> đóng vai trò trung tâm, chịu trách nhiệm điều phối toàn bộ quá trình triển khai. Playbook sử dụng <strong>Inventory</strong> để xác định các node mục tiêu và gọi các <strong>Role</strong> tương ứng với từng chức năng triển khai.</p><p>Sơ đồ lớp (class diagram) ở phần kiến thức mô tả rõ mối quan hệ giữa các thành phần:</p><ul><li>Playbook gọi (include/import) các Role.</li><li>Mỗi Role bao gồm các Task cụ thể và có thể sử dụng Template để sinh file cấu hình động.</li><li>Inventory kết hợp với <code>group_vars</code> và <code>host_vars</code> để cung cấp biến cấu hình cho toàn bộ hệ thống.</li></ul><p>Cách tổ chức này giúp tách biệt <strong>logic triển khai</strong>, <strong>cấu hình hạ tầng</strong> và <strong>tham số môi trường</strong>, từ đó tăng khả năng tái sử dụng và giảm sự phụ thuộc cứng vào môi trường cụ thể.</p><div class=mermaid>classDiagram
+class Playbook {
++includes(Role)
++uses(Inventory)
+}
+class Role {
++contains(Tasks)
++uses(Templates)
+}
+class Tasks {
++executes()
+}
+class Templates {
++generatesConfig()
+}
+class Inventory {
++has(group_vars)
++has(host_vars)
+}
+class group_vars {
++providesVariables()
+}
+class host_vars {
++providesVariables()
+}
+Playbook --> Role : includes
+Playbook --> Inventory : uses
+Role --> Tasks : contains
+Role --> Templates : uses
+Inventory --> group_vars : has
+Inventory --> host_vars : has
+group_vars --> Role : providesVariables
+host_vars --> Role : providesVariables</div><h2 id=22-kubernetes-và-kubeadm>2.2 Kubernetes và kubeadm</h2><p>Kubeadm là công cụ chính thức do Kubernetes cung cấp nhằm đơn giản hóa việc khởi tạo cluster. Kubeadm đảm nhiệm các nhiệm vụ chính như:</p><ul><li>Khởi tạo control plane</li><li>Sinh chứng chỉ</li><li>Thiết lập cấu hình kubelet</li><li>Cung cấp lệnh <code>kubeadm join</code> để thêm worker node</li></ul><p>Tuy nhiên, kubeadm <strong>không tự động hóa các bước chuẩn bị hệ thống</strong> (cài container runtime, cấu hình kernel, network, v.v.). Đây chính là phần mà Ansible bổ sung để hoàn thiện quy trình triển khai end-to-end</p><h3 id=2-case-study-triển-khai-k8s-bằng-kubeadmin>2. Case study triển khai k8s bằng kubeadmin</h3><p>Sơ đồ thiết kế triển khai cho thấy <strong>cấu trúc phân lớp rõ ràng của project Ansible</strong>:</p><ul><li><strong>ansible.cfg</strong> và <strong>Makefile</strong> đóng vai trò lớp điều khiển, giúp tiêu chuẩn hóa cách chạy playbook.</li><li><strong>Inventory</strong> và <strong>group_vars</strong> định nghĩa hạ tầng và tham số cấu hình cluster.</li><li>Các <strong>Playbook</strong> đảm nhiệm điều phối theo từng giai đoạn: chuẩn bị node, khởi tạo control plane và thêm worker.</li><li>Các <strong>Role</strong> được thiết kế theo đúng trình tự logic của kubeadm:<ul><li><code>common</code>: chuẩn bị hệ thống</li><li><code>containerd</code>: cài runtime</li><li><code>kubernetes</code>: cài thành phần K8s</li><li><code>control_plane</code>: khởi tạo cluster</li><li><code>cni</code>: triển khai mạng</li><li><code>workers</code>: join node</li></ul></li></ul><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>  1
+</span><span class=lnt>  2
+</span><span class=lnt>  3
+</span><span class=lnt>  4
+</span><span class=lnt>  5
+</span><span class=lnt>  6
+</span><span class=lnt>  7
+</span><span class=lnt>  8
+</span><span class=lnt>  9
+</span><span class=lnt> 10
+</span><span class=lnt> 11
+</span><span class=lnt> 12
+</span><span class=lnt> 13
+</span><span class=lnt> 14
+</span><span class=lnt> 15
+</span><span class=lnt> 16
+</span><span class=lnt> 17
+</span><span class=lnt> 18
+</span><span class=lnt> 19
+</span><span class=lnt> 20
+</span><span class=lnt> 21
+</span><span class=lnt> 22
+</span><span class=lnt> 23
+</span><span class=lnt> 24
+</span><span class=lnt> 25
+</span><span class=lnt> 26
+</span><span class=lnt> 27
+</span><span class=lnt> 28
+</span><span class=lnt> 29
+</span><span class=lnt> 30
+</span><span class=lnt> 31
+</span><span class=lnt> 32
+</span><span class=lnt> 33
+</span><span class=lnt> 34
+</span><span class=lnt> 35
+</span><span class=lnt> 36
+</span><span class=lnt> 37
+</span><span class=lnt> 38
+</span><span class=lnt> 39
+</span><span class=lnt> 40
+</span><span class=lnt> 41
+</span><span class=lnt> 42
+</span><span class=lnt> 43
+</span><span class=lnt> 44
+</span><span class=lnt> 45
+</span><span class=lnt> 46
+</span><span class=lnt> 47
+</span><span class=lnt> 48
+</span><span class=lnt> 49
+</span><span class=lnt> 50
+</span><span class=lnt> 51
+</span><span class=lnt> 52
+</span><span class=lnt> 53
+</span><span class=lnt> 54
+</span><span class=lnt> 55
+</span><span class=lnt> 56
+</span><span class=lnt> 57
+</span><span class=lnt> 58
+</span><span class=lnt> 59
+</span><span class=lnt> 60
+</span><span class=lnt> 61
+</span><span class=lnt> 62
+</span><span class=lnt> 63
+</span><span class=lnt> 64
+</span><span class=lnt> 65
+</span><span class=lnt> 66
+</span><span class=lnt> 67
+</span><span class=lnt> 68
+</span><span class=lnt> 69
+</span><span class=lnt> 70
+</span><span class=lnt> 71
+</span><span class=lnt> 72
+</span><span class=lnt> 73
+</span><span class=lnt> 74
+</span><span class=lnt> 75
+</span><span class=lnt> 76
+</span><span class=lnt> 77
+</span><span class=lnt> 78
+</span><span class=lnt> 79
+</span><span class=lnt> 80
+</span><span class=lnt> 81
+</span><span class=lnt> 82
+</span><span class=lnt> 83
+</span><span class=lnt> 84
+</span><span class=lnt> 85
+</span><span class=lnt> 86
+</span><span class=lnt> 87
+</span><span class=lnt> 88
+</span><span class=lnt> 89
+</span><span class=lnt> 90
+</span><span class=lnt> 91
+</span><span class=lnt> 92
+</span><span class=lnt> 93
+</span><span class=lnt> 94
+</span><span class=lnt> 95
+</span><span class=lnt> 96
+</span><span class=lnt> 97
+</span><span class=lnt> 98
+</span><span class=lnt> 99
+</span><span class=lnt>100
+</span><span class=lnt>101
+</span><span class=lnt>102
+</span><span class=lnt>103
+</span><span class=lnt>104
+</span><span class=lnt>105
+</span><span class=lnt>106
+</span><span class=lnt>107
+</span><span class=lnt>108
+</span><span class=lnt>109
+</span><span class=lnt>110
+</span><span class=lnt>111
+</span><span class=lnt>112
+</span><span class=lnt>113
+</span><span class=lnt>114
+</span><span class=lnt>115
+</span><span class=lnt>116
+</span><span class=lnt>117
+</span><span class=lnt>118
+</span><span class=lnt>119
+</span><span class=lnt>120
+</span><span class=lnt>121
+</span><span class=lnt>122
+</span><span class=lnt>123
+</span><span class=lnt>124
+</span><span class=lnt>125
+</span><span class=lnt>126
+</span><span class=lnt>127
+</span><span class=lnt>128
+</span><span class=lnt>129
+</span><span class=lnt>130
+</span><span class=lnt>131
+</span><span class=lnt>132
+</span><span class=lnt>133
+</span><span class=lnt>134
+</span><span class=lnt>135
+</span><span class=lnt>136
+</span><span class=lnt>137
+</span><span class=lnt>138
+</span><span class=lnt>139
+</span><span class=lnt>140
+</span><span class=lnt>141
+</span><span class=lnt>142
+</span><span class=lnt>143
+</span><span class=lnt>144
+</span><span class=lnt>145
+</span><span class=lnt>146
+</span><span class=lnt>147
+</span><span class=lnt>148
+</span><span class=lnt>149
+</span><span class=lnt>150
+</span><span class=lnt>151
+</span><span class=lnt>152
+</span><span class=lnt>153
+</span><span class=lnt>154
+</span><span class=lnt>155
+</span><span class=lnt>156
+</span><span class=lnt>157
+</span><span class=lnt>158
+</span><span class=lnt>159
+</span><span class=lnt>160
+</span><span class=lnt>161
+</span><span class=lnt>162
+</span><span class=lnt>163
+</span><span class=lnt>164
+</span><span class=lnt>165
+</span><span class=lnt>166
+</span><span class=lnt>167
+</span><span class=lnt>168
+</span><span class=lnt>169
+</span><span class=lnt>170
+</span><span class=lnt>171
+</span><span class=lnt>172
+</span><span class=lnt>173
+</span><span class=lnt>174
+</span><span class=lnt>175
+</span><span class=lnt>176
+</span><span class=lnt>177
+</span><span class=lnt>178
+</span><span class=lnt>179
+</span><span class=lnt>180
+</span><span class=lnt>181
+</span><span class=lnt>182
+</span><span class=lnt>183
+</span><span class=lnt>184
+</span><span class=lnt>185
+</span><span class=lnt>186
+</span><span class=lnt>187
+</span><span class=lnt>188
+</span><span class=lnt>189
+</span><span class=lnt>190
+</span><span class=lnt>191
+</span><span class=lnt>192
+</span><span class=lnt>193
+</span><span class=lnt>194
+</span><span class=lnt>195
+</span><span class=lnt>196
+</span><span class=lnt>197
+</span><span class=lnt>198
+</span><span class=lnt>199
+</span><span class=lnt>200
+</span><span class=lnt>201
+</span><span class=lnt>202
+</span><span class=lnt>203
+</span><span class=lnt>204
+</span><span class=lnt>205
+</span><span class=lnt>206
+</span><span class=lnt>207
+</span><span class=lnt>208
+</span><span class=lnt>209
+</span><span class=lnt>210
+</span><span class=lnt>211
+</span><span class=lnt>212
+</span><span class=lnt>213
+</span><span class=lnt>214
+</span><span class=lnt>215
+</span><span class=lnt>216
+</span><span class=lnt>217
+</span><span class=lnt>218
+</span><span class=lnt>219
+</span><span class=lnt>220
+</span><span class=lnt>221
+</span><span class=lnt>222
+</span><span class=lnt>223
+</span><span class=lnt>224
+</span><span class=lnt>225
+</span><span class=lnt>226
+</span><span class=lnt>227
+</span><span class=lnt>228
+</span><span class=lnt>229
+</span><span class=lnt>230
+</span><span class=lnt>231
+</span><span class=lnt>232
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-gdscript3 data-lang=gdscript3><span class=line><span class=cl><span class=n>classDiagram</span>
+</span></span><span class=line><span class=cl>    <span class=o>%%</span> <span class=n>Root</span> <span class=n>Files</span>
+</span></span><span class=line><span class=cl>    <span class=k>class</span> <span class=n>AnsibleConfig</span><span class=p>[</span><span class=s2>&#34;ansible.cfg&#34;</span><span class=p>]</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=o>&lt;&lt;</span><span class=n>config</span><span class=o>&gt;&gt;</span>
+</span></span><span class=line><span class=cl>        <span class=o>+</span><span class=n>inventory</span> <span class=o>=</span> <span class=n>inventory</span><span class=o>/</span><span class=n>hosts</span><span class=o>.</span><span class=n>ini</span>
+</span></span><span class=line><span class=cl>        <span class=o>+</span><span class=n>roles_path</span> <span class=o>=</span> <span class=o>./</span><span class=n>roles</span>
+</span></span><span class=line><span class=cl>        <span class=o>+</span><span class=n>host_key_checking</span> <span class=o>=</span> <span class=n>False</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>    <span class=k>class</span> <span class=n>Makefile</span><span class=p>[</span><span class=s2>&#34;Makefile&#34;</span><span class=p>]</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=o>&lt;&lt;</span><span class=n>commands</span><span class=o>&gt;&gt;</span>
+</span></span><span class=line><span class=cl>        <span class=o>+</span><span class=n>ping</span><span class=p>:</span> <span class=n>Test</span> <span class=n>connectivity</span>
+</span></span><span class=line><span class=cl>        <span class=o>+</span><span class=n>check</span><span class=p>:</span> <span class=n>Check</span> <span class=n>prerequisites</span>
+</span></span><span class=line><span class=cl>        <span class=o>+</span><span class=n>deploy</span><span class=p>:</span> <span class=n>Full</span> <span class=n>deployment</span>
+</span></span><span class=line><span class=cl>        <span class=o>+</span><span class=n>deploy</span><span class=o>-</span><span class=n>nodes</span><span class=p>:</span> <span class=n>Setup</span> <span class=n>nodes</span>
+</span></span><span class=line><span class=cl>        <span class=o>+</span><span class=n>deploy</span><span class=o>-</span><span class=n>control</span><span class=o>-</span><span class=n>plane</span><span class=p>:</span> <span class=n>Setup</span> <span class=n>CP</span>
+</span></span><span class=line><span class=cl>        <span class=o>+</span><span class=n>deploy</span><span class=o>-</span><span class=n>workers</span><span class=p>:</span> <span class=n>Setup</span> <span class=n>workers</span>
+</span></span><span class=line><span class=cl>        <span class=o>+</span><span class=n>verify</span><span class=p>:</span> <span class=n>Check</span> <span class=n>cluster</span>
+</span></span><span class=line><span class=cl>        <span class=o>+</span><span class=n>reset</span><span class=p>:</span> <span class=n>Reset</span> <span class=n>cluster</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>    <span class=o>%%</span> <span class=n>Inventory</span> <span class=n>Package</span>
+</span></span><span class=line><span class=cl>    <span class=n>namespace</span> <span class=n>inventory</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=k>class</span> <span class=n>HostsIni</span><span class=p>[</span><span class=s2>&#34;hosts.ini&#34;</span><span class=p>]</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>            <span class=o>&lt;&lt;</span><span class=n>inventory</span><span class=o>&gt;&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=p>[</span><span class=n>control_plane</span><span class=p>]</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>k8s</span><span class=o>-</span><span class=n>dev</span><span class=o>-</span><span class=n>cp</span><span class=p>:</span> <span class=mf>192.168</span><span class=o>.</span><span class=mf>100.10</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=p>[</span><span class=n>workers</span><span class=p>]</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>k8s</span><span class=o>-</span><span class=n>dev</span><span class=o>-</span><span class=n>worker</span><span class=o>-</span><span class=mi>1</span><span class=p>:</span> <span class=mf>192.168</span><span class=o>.</span><span class=mf>100.11</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>k8s</span><span class=o>-</span><span class=n>dev</span><span class=o>-</span><span class=n>worker</span><span class=o>-</span><span class=mi>2</span><span class=p>:</span> <span class=mf>192.168</span><span class=o>.</span><span class=mf>100.12</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=p>[</span><span class=n>k8s_cluster</span><span class=p>:</span><span class=n>vars</span><span class=p>]</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>k8s_version</span><span class=p>:</span> <span class=n>v1</span><span class=o>.</span><span class=mf>29.0</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>pod_network_cidr</span><span class=p>:</span> <span class=mf>10.244</span><span class=o>.</span><span class=mf>0.0</span><span class=o>/</span><span class=mi>16</span>
+</span></span><span class=line><span class=cl>        <span class=p>}</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=o>%%</span> <span class=n>Group</span> <span class=n>Vars</span> <span class=n>Package</span>
+</span></span><span class=line><span class=cl>    <span class=n>namespace</span> <span class=n>group_vars</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=k>class</span> <span class=n>AllYml</span><span class=p>[</span><span class=s2>&#34;all.yml&#34;</span><span class=p>]</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>            <span class=o>&lt;&lt;</span><span class=n>variables</span><span class=o>&gt;&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>k8s_version</span><span class=p>:</span> <span class=s2>&#34;1.29&#34;</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>pod_network_cidr</span><span class=p>:</span> <span class=s2>&#34;10.244.0.0/16&#34;</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>service_cidr</span><span class=p>:</span> <span class=s2>&#34;10.96.0.0/12&#34;</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>control_plane_endpoint</span><span class=p>:</span> <span class=s2>&#34;192.168.100.10&#34;</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>cni_plugin</span><span class=p>:</span> <span class=s2>&#34;calico&#34;</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>pod_ready_timeout</span><span class=p>:</span> <span class=mi>300</span>
+</span></span><span class=line><span class=cl>        <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>        <span class=k>class</span> <span class=n>K8sClusterYml</span><span class=p>[</span><span class=s2>&#34;k8s_cluster.yml&#34;</span><span class=p>]</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>            <span class=o>&lt;&lt;</span><span class=n>variables</span><span class=o>&gt;&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>cluster</span> <span class=n>specific</span> <span class=n>vars</span>
+</span></span><span class=line><span class=cl>        <span class=p>}</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=o>%%</span> <span class=n>Playbooks</span> <span class=n>Package</span>
+</span></span><span class=line><span class=cl>    <span class=n>namespace</span> <span class=n>playbooks</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=k>class</span> <span class=n>DeployK8sCluster</span><span class=p>[</span><span class=s2>&#34;deploy-k8s-cluster.yml&#34;</span><span class=p>]</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>            <span class=o>&lt;&lt;</span><span class=n>playbook</span><span class=o>&gt;&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>import_playbook</span><span class=p>:</span> <span class=n>setup</span><span class=o>-</span><span class=n>nodes</span><span class=o>.</span><span class=n>yml</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>import_playbook</span><span class=p>:</span> <span class=n>setup</span><span class=o>-</span><span class=n>control</span><span class=o>-</span><span class=n>plane</span><span class=o>.</span><span class=n>yml</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>import_playbook</span><span class=p>:</span> <span class=n>setup</span><span class=o>-</span><span class=n>workers</span><span class=o>.</span><span class=n>yml</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>task</span><span class=p>:</span> <span class=n>Get</span> <span class=n>all</span> <span class=n>pods</span> <span class=n>status</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>task</span><span class=p>:</span> <span class=n>Display</span> <span class=n>cluster</span> <span class=n>summary</span>
+</span></span><span class=line><span class=cl>        <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>        <span class=k>class</span> <span class=n>CheckPrereq</span><span class=p>[</span><span class=s2>&#34;check-prerequisites.yml&#34;</span><span class=p>]</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>            <span class=o>&lt;&lt;</span><span class=n>playbook</span><span class=o>&gt;&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>task</span><span class=p>:</span> <span class=n>Check</span> <span class=ne>OS</span> <span class=n>compatibility</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>task</span><span class=p>:</span> <span class=n>Check</span> <span class=n>memory</span> <span class=o>&gt;=</span> <span class=mi>2</span><span class=n>GB</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>task</span><span class=p>:</span> <span class=n>Check</span> <span class=n>CPU</span> <span class=o>&gt;=</span> <span class=mi>2</span> <span class=n>cores</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>task</span><span class=p>:</span> <span class=n>Check</span> <span class=n>required</span> <span class=n>ports</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>task</span><span class=p>:</span> <span class=n>Validate</span> <span class=n>inventory</span>
+</span></span><span class=line><span class=cl>        <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>        <span class=k>class</span> <span class=n>SetupNodes</span><span class=p>[</span><span class=s2>&#34;setup-nodes.yml&#34;</span><span class=p>]</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>            <span class=o>&lt;&lt;</span><span class=n>playbook</span><span class=o>&gt;&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>hosts</span><span class=p>:</span> <span class=n>k8s_cluster</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>role</span><span class=p>:</span> <span class=n>common</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>role</span><span class=p>:</span> <span class=n>containerd</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>role</span><span class=p>:</span> <span class=n>kubernetes</span>
+</span></span><span class=line><span class=cl>        <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>        <span class=k>class</span> <span class=n>SetupControlPlane</span><span class=p>[</span><span class=s2>&#34;setup-control-plane.yml&#34;</span><span class=p>]</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>            <span class=o>&lt;&lt;</span><span class=n>playbook</span><span class=o>&gt;&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>hosts</span><span class=p>:</span> <span class=n>control_plane</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>role</span><span class=p>:</span> <span class=n>control_plane</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>role</span><span class=p>:</span> <span class=n>cni</span>
+</span></span><span class=line><span class=cl>        <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>        <span class=k>class</span> <span class=n>SetupWorkers</span><span class=p>[</span><span class=s2>&#34;setup-workers.yml&#34;</span><span class=p>]</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>            <span class=o>&lt;&lt;</span><span class=n>playbook</span><span class=o>&gt;&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>hosts</span><span class=p>:</span> <span class=n>workers</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>role</span><span class=p>:</span> <span class=n>workers</span>
+</span></span><span class=line><span class=cl>        <span class=p>}</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=o>%%</span> <span class=n>Roles</span> <span class=n>Package</span> <span class=o>-</span> <span class=n>Common</span>
+</span></span><span class=line><span class=cl>    <span class=n>namespace</span> <span class=n>roles</span><span class=o>.</span><span class=n>common</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=k>class</span> <span class=n>CommonTasks</span><span class=p>[</span><span class=s2>&#34;tasks/main.yml&#34;</span><span class=p>]</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>            <span class=o>&lt;&lt;</span><span class=n>tasks</span><span class=o>&gt;&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>Disable</span> <span class=n>swap</span> <span class=n>permanently</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>Load</span> <span class=n>kernel</span> <span class=n>module</span><span class=p>:</span> <span class=n>overlay</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>Load</span> <span class=n>kernel</span> <span class=n>module</span><span class=p>:</span> <span class=n>br_netfilter</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>Set</span> <span class=n>sysctl</span><span class=p>:</span> <span class=n>net</span><span class=o>.</span><span class=n>ipv4</span><span class=o>.</span><span class=n>ip_forward</span><span class=o>=</span><span class=mi>1</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>Set</span> <span class=n>sysctl</span><span class=p>:</span> <span class=n>net</span><span class=o>.</span><span class=n>bridge</span><span class=o>.</span><span class=n>bridge</span><span class=o>-</span><span class=n>nf</span><span class=o>-</span><span class=n>call</span><span class=o>-</span><span class=n>iptables</span><span class=o>=</span><span class=mi>1</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>Update</span> <span class=n>apt</span> <span class=n>cache</span>
+</span></span><span class=line><span class=cl>        <span class=p>}</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=o>%%</span> <span class=n>Roles</span> <span class=n>Package</span> <span class=o>-</span> <span class=n>Containerd</span>
+</span></span><span class=line><span class=cl>    <span class=n>namespace</span> <span class=n>roles</span><span class=o>.</span><span class=n>containerd</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=k>class</span> <span class=n>ContainerdDefaults</span><span class=p>[</span><span class=s2>&#34;defaults/main.yml&#34;</span><span class=p>]</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>            <span class=o>&lt;&lt;</span><span class=n>defaults</span><span class=o>&gt;&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>containerd_version</span><span class=p>:</span> <span class=s2>&#34;latest&#34;</span>
+</span></span><span class=line><span class=cl>        <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>        <span class=k>class</span> <span class=n>ContainerdTasks</span><span class=p>[</span><span class=s2>&#34;tasks/main.yml&#34;</span><span class=p>]</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>            <span class=o>&lt;&lt;</span><span class=n>tasks</span><span class=o>&gt;&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>Install</span> <span class=n>containerd</span> <span class=n>package</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>Create</span> <span class=o>/</span><span class=n>etc</span><span class=o>/</span><span class=n>containerd</span> <span class=n>directory</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>Generate</span> <span class=n>default</span> <span class=n>config</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>Set</span> <span class=n>SystemdCgroup</span> <span class=o>=</span> <span class=bp>true</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>Restart</span> <span class=n>containerd</span> <span class=n>service</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>Enable</span> <span class=n>containerd</span> <span class=n>on</span> <span class=n>boot</span>
+</span></span><span class=line><span class=cl>        <span class=p>}</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=o>%%</span> <span class=n>Roles</span> <span class=n>Package</span> <span class=o>-</span> <span class=n>Kubernetes</span>
+</span></span><span class=line><span class=cl>    <span class=n>namespace</span> <span class=n>roles</span><span class=o>.</span><span class=n>kubernetes</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=k>class</span> <span class=n>K8sTemplates</span><span class=p>[</span><span class=s2>&#34;templates/kubeadm-config.yaml.j2&#34;</span><span class=p>]</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>            <span class=o>&lt;&lt;</span><span class=n>template</span><span class=o>&gt;&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>apiVersion</span><span class=p>:</span> <span class=n>kubeadm</span><span class=o>.</span><span class=n>k8s</span><span class=o>.</span><span class=n>io</span><span class=o>/</span><span class=n>v1beta3</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>kind</span><span class=p>:</span> <span class=n>ClusterConfiguration</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>kubernetesVersion</span><span class=p>:</span> <span class=n>k8s_version</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>networking</span><span class=o>.</span><span class=n>podSubnet</span><span class=p>:</span>  <span class=n>pod_network_cidr</span>
+</span></span><span class=line><span class=cl>        <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>        <span class=k>class</span> <span class=n>K8sHandlers</span><span class=p>[</span><span class=s2>&#34;handlers/main.yml&#34;</span><span class=p>]</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>            <span class=o>&lt;&lt;</span><span class=n>handlers</span><span class=o>&gt;&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>restart</span> <span class=n>kubelet</span>
+</span></span><span class=line><span class=cl>        <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>        <span class=k>class</span> <span class=n>K8sTasks</span><span class=p>[</span><span class=s2>&#34;tasks/main.yml&#34;</span><span class=p>]</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>            <span class=o>&lt;&lt;</span><span class=n>tasks</span><span class=o>&gt;&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>Add</span> <span class=n>K8s</span> <span class=n>apt</span> <span class=n>key</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>Add</span> <span class=n>K8s</span> <span class=n>repository</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>Install</span> <span class=n>kubeadm</span><span class=o>=</span> <span class=n>k8s_version</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>Install</span> <span class=n>kubelet</span><span class=o>=</span> <span class=n>k8s_version</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>Install</span> <span class=n>kubectl</span><span class=o>=</span> <span class=n>k8s_version</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>Hold</span> <span class=n>kubeadm</span> <span class=n>package</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>Hold</span> <span class=n>kubelet</span> <span class=n>package</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>Hold</span> <span class=n>kubectl</span> <span class=n>package</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>Enable</span> <span class=n>kubelet</span> <span class=n>service</span>
+</span></span><span class=line><span class=cl>        <span class=p>}</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=o>%%</span> <span class=n>Roles</span> <span class=n>Package</span> <span class=o>-</span> <span class=ne>Control</span> <span class=ne>Plane</span>
+</span></span><span class=line><span class=cl>    <span class=n>namespace</span> <span class=n>roles</span><span class=o>.</span><span class=n>control_plane</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=k>class</span> <span class=n>ControlPlaneTasks</span><span class=p>[</span><span class=s2>&#34;tasks/main.yml&#34;</span><span class=p>]</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>            <span class=o>&lt;&lt;</span><span class=n>tasks</span><span class=o>&gt;&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>Check</span> <span class=k>if</span> <span class=n>cluster</span> <span class=n>initialized</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>Run</span> <span class=n>kubeadm</span> <span class=n>init</span> <span class=n>with</span> <span class=n>config</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>Create</span> <span class=o>.</span><span class=n>kube</span> <span class=n>directory</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>Copy</span> <span class=n>admin</span><span class=o>.</span><span class=n>conf</span> <span class=n>to</span> <span class=o>.</span><span class=n>kube</span><span class=o>/</span><span class=n>config</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>Set</span> <span class=n>kubeconfig</span> <span class=n>ownership</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>Generate</span> <span class=n>join</span> <span class=n>command</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>Save</span> <span class=n>join</span> <span class=n>command</span> <span class=n>to</span> <span class=o>/</span><span class=n>tmp</span><span class=o>/</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>Wait</span> <span class=k>for</span> <span class=n>control</span> <span class=n>plane</span> <span class=n>pods</span>
+</span></span><span class=line><span class=cl>        <span class=p>}</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=o>%%</span> <span class=n>Roles</span> <span class=n>Package</span> <span class=o>-</span> <span class=n>CNI</span>
+</span></span><span class=line><span class=cl>    <span class=n>namespace</span> <span class=n>roles</span><span class=o>.</span><span class=n>cni</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=k>class</span> <span class=n>CNIDefaults</span><span class=p>[</span><span class=s2>&#34;defaults/main.yml&#34;</span><span class=p>]</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>            <span class=o>&lt;&lt;</span><span class=n>defaults</span><span class=o>&gt;&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>cni_plugin</span><span class=p>:</span> <span class=s2>&#34;calico&#34;</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>calico_version</span><span class=p>:</span> <span class=s2>&#34;v3.26.1&#34;</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>flannel_version</span><span class=p>:</span> <span class=s2>&#34;v0.22.0&#34;</span>
+</span></span><span class=line><span class=cl>        <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>        <span class=k>class</span> <span class=n>CNITasks</span><span class=p>[</span><span class=s2>&#34;tasks/main.yml&#34;</span><span class=p>]</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>            <span class=o>&lt;&lt;</span><span class=n>tasks</span><span class=o>&gt;&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>Download</span> <span class=n>Calico</span> <span class=n>manifest</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>Apply</span> <span class=n>Calico</span> <span class=n>to</span> <span class=n>cluster</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>Wait</span> <span class=k>for</span> <span class=n>calico</span><span class=o>-</span><span class=n>node</span> <span class=n>DaemonSet</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>Wait</span> <span class=k>for</span> <span class=n>calico</span><span class=o>-</span><span class=n>kube</span><span class=o>-</span><span class=n>controllers</span>
+</span></span><span class=line><span class=cl>        <span class=p>}</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=o>%%</span> <span class=n>Roles</span> <span class=n>Package</span> <span class=o>-</span> <span class=n>Workers</span>
+</span></span><span class=line><span class=cl>    <span class=n>namespace</span> <span class=n>roles</span><span class=o>.</span><span class=n>workers</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=k>class</span> <span class=n>WorkersTasks</span><span class=p>[</span><span class=s2>&#34;tasks/main.yml&#34;</span><span class=p>]</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>            <span class=o>&lt;&lt;</span><span class=n>tasks</span><span class=o>&gt;&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>Check</span> <span class=k>if</span> <span class=n>kubelet</span><span class=o>.</span><span class=n>conf</span> <span class=n>exists</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>Generate</span> <span class=n>join</span> <span class=n>command</span> <span class=n>from</span> <span class=n>CP</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>Execute</span> <span class=n>join</span> <span class=n>command</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>Wait</span> <span class=k>for</span> <span class=n>kubelet</span> <span class=n>to</span> <span class=n>start</span>
+</span></span><span class=line><span class=cl>            <span class=o>+</span><span class=n>Verify</span> <span class=n>node</span> <span class=n>joined</span> <span class=n>successfully</span>
+</span></span><span class=line><span class=cl>        <span class=p>}</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=o>%%</span> <span class=n>Relationships</span> <span class=o>-</span> <span class=n>Config</span> <span class=n>to</span> <span class=n>Inventory</span>
+</span></span><span class=line><span class=cl>    <span class=n>AnsibleConfig</span> <span class=o>--&gt;</span> <span class=n>HostsIni</span> <span class=p>:</span> <span class=n>uses</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=o>%%</span> <span class=n>Relationships</span> <span class=o>-</span> <span class=n>Makefile</span> <span class=n>to</span> <span class=n>Playbooks</span>
+</span></span><span class=line><span class=cl>    <span class=n>Makefile</span> <span class=o>--&gt;</span> <span class=n>DeployK8sCluster</span> <span class=p>:</span> <span class=n>executes</span>
+</span></span><span class=line><span class=cl>    <span class=n>Makefile</span> <span class=o>--&gt;</span> <span class=n>CheckPrereq</span> <span class=p>:</span> <span class=n>executes</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=o>%%</span> <span class=n>Relationships</span> <span class=o>-</span> <span class=n>Playbooks</span> <span class=n>Imports</span>
+</span></span><span class=line><span class=cl>    <span class=n>DeployK8sCluster</span> <span class=o>..&gt;</span> <span class=n>SetupNodes</span> <span class=p>:</span> <span class=n>imports</span>
+</span></span><span class=line><span class=cl>    <span class=n>DeployK8sCluster</span> <span class=o>..&gt;</span> <span class=n>SetupControlPlane</span> <span class=p>:</span> <span class=n>imports</span>
+</span></span><span class=line><span class=cl>    <span class=n>DeployK8sCluster</span> <span class=o>..&gt;</span> <span class=n>SetupWorkers</span> <span class=p>:</span> <span class=n>imports</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=o>%%</span> <span class=n>Relationships</span> <span class=o>-</span> <span class=n>Playbooks</span> <span class=n>use</span> <span class=n>Variables</span>
+</span></span><span class=line><span class=cl>    <span class=n>AllYml</span> <span class=o>..&gt;</span> <span class=n>DeployK8sCluster</span> <span class=p>:</span> <span class=n>configures</span>
+</span></span><span class=line><span class=cl>    <span class=n>AllYml</span> <span class=o>..&gt;</span> <span class=n>SetupNodes</span> <span class=p>:</span> <span class=n>configures</span>
+</span></span><span class=line><span class=cl>    <span class=n>AllYml</span> <span class=o>..&gt;</span> <span class=n>SetupControlPlane</span> <span class=p>:</span> <span class=n>configures</span>
+</span></span><span class=line><span class=cl>    <span class=n>K8sClusterYml</span> <span class=o>..&gt;</span> <span class=n>DeployK8sCluster</span> <span class=p>:</span> <span class=n>configures</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=o>%%</span> <span class=n>Relationships</span> <span class=o>-</span> <span class=n>Playbooks</span> <span class=n>to</span> <span class=n>Roles</span>
+</span></span><span class=line><span class=cl>    <span class=n>SetupNodes</span> <span class=o>--&gt;</span> <span class=n>CommonTasks</span> <span class=p>:</span> <span class=n>includes</span> <span class=n>role</span>
+</span></span><span class=line><span class=cl>    <span class=n>SetupNodes</span> <span class=o>--&gt;</span> <span class=n>ContainerdTasks</span> <span class=p>:</span> <span class=n>includes</span> <span class=n>role</span>
+</span></span><span class=line><span class=cl>    <span class=n>SetupNodes</span> <span class=o>--&gt;</span> <span class=n>K8sTasks</span> <span class=p>:</span> <span class=n>includes</span> <span class=n>role</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=n>SetupControlPlane</span> <span class=o>--&gt;</span> <span class=n>ControlPlaneTasks</span> <span class=p>:</span> <span class=n>includes</span> <span class=n>role</span>
+</span></span><span class=line><span class=cl>    <span class=n>SetupControlPlane</span> <span class=o>--&gt;</span> <span class=n>CNITasks</span> <span class=p>:</span> <span class=n>includes</span> <span class=n>role</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=n>SetupWorkers</span> <span class=o>--&gt;</span> <span class=n>WorkersTasks</span> <span class=p>:</span> <span class=n>includes</span> <span class=n>role</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=o>%%</span> <span class=n>Relationships</span> <span class=o>-</span> <span class=n>Roles</span> <span class=n>internal</span>
+</span></span><span class=line><span class=cl>    <span class=n>ContainerdTasks</span> <span class=o>..&gt;</span> <span class=n>ContainerdDefaults</span> <span class=p>:</span> <span class=n>uses</span>
+</span></span><span class=line><span class=cl>    <span class=n>K8sTasks</span> <span class=o>..&gt;</span> <span class=n>K8sTemplates</span> <span class=p>:</span> <span class=n>uses</span>
+</span></span><span class=line><span class=cl>    <span class=n>K8sTasks</span> <span class=o>..&gt;</span> <span class=n>K8sHandlers</span> <span class=p>:</span> <span class=n>notifies</span>
+</span></span><span class=line><span class=cl>    <span class=n>CNITasks</span> <span class=o>..&gt;</span> <span class=n>CNIDefaults</span> <span class=p>:</span> <span class=n>uses</span>
+</span></span></code></pre></td></tr></table></div></div><h3 id=kết-luận>Kết luận</h3><p>Kết quả nghiên cứu cho thấy việc triển khai Kubernetes bằng <strong>Ansible kết hợp kubeadm</strong> mang lại nhiều lợi ích rõ rệt so với phương pháp thủ công.</p><p>Trước hết, quá trình triển khai được <strong>chuẩn hóa và tự động hóa hoàn toàn</strong>, giúp giảm thời gian cài đặt và hạn chế lỗi cấu hình. Thứ hai, cấu trúc project theo hướng role-based giúp hệ thống <strong>dễ bảo trì, dễ mở rộng và dễ tái sử dụng</strong> trong các môi trường khác nhau</p></section><footer class=article-footer><section class=article-tags><a href=/tags/infrastructure-as-code/>Infrastructure-as-Code</a>
+<a href=/tags/terraform/>Terraform</a>
+<a href=/tags/ansible/>Ansible</a>
+<a href=/tags/automation/>Automation</a>
+<a href=/tags/devops/>DevOps</a></section><section class=article-copyright><svg class="icon icon-tabler icon-tabler-copyright" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><path d="M14.5 9a3.5 4 0 100 6"/></svg>
+<span>Licensed under CC BY-NC-SA 4.0</span></section></footer><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css integrity=sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV crossorigin=anonymous><script src=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js integrity=sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8 crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js integrity=sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05 crossorigin=anonymous defer></script><script>window.addEventListener("DOMContentLoaded",()=>{const e=[".main-article",".widget--toc"];e.forEach(e=>{const t=document.querySelector(e);t&&renderMathInElement(t,{delimiters:[{left:"$$",right:"$$",display:!0},{left:"$",right:"$",display:!1},{left:"\\(",right:"\\)",display:!1},{left:"\\[",right:"\\]",display:!0}],ignoredClasses:["gist"]})})})</script></article><aside class=related-content--wrapper><h2 class=section-title>Related content</h2><div class=related-content><div class="flex article-list--tile"><article><a href=/posts/infrastructure-as-code-iac-automating-infrastructure-management/><div class=article-details><h2 class=article-title>Infrastructure as Code (IaC): Automating Infrastructure Management</h2></div></a></article><article><a href=/posts/from-manual-to-automated-enhancing-nginx-test-workflows/><div class=article-details><h2 class=article-title>From Manual to Automated: Enhancing Nginx Test Workflows</h2></div></a></article></div></div></aside><div class=disqus-container></div><style>.disqus-container{background-color:var(--card-background);border-radius:var(--card-border-radius);box-shadow:var(--shadow-l1);padding:var(--card-padding)}</style><script>window.addEventListener("onColorSchemeChange",e=>{typeof DISQUS=="object"&&DISQUS.reset({reload:!0})})</script><footer class=site-footer><section class=copyright>&copy;
+2026 phongthien</section><section class=powerby>Built with <a href=https://gohugo.io/ target=_blank rel=noopener>Hugo</a><br>Theme <b><a href=https://github.com/CaiJimmy/hugo-theme-stack target=_blank rel=noopener data-version=3.33.0>Stack</a></b> designed by <a href=https://jimmycai.com target=_blank rel=noopener>Jimmy</a></section></footer><div class=pswp tabindex=-1 role=dialog aria-hidden=true><div class=pswp__bg></div><div class=pswp__scroll-wrap><div class=pswp__container><div class=pswp__item></div><div class=pswp__item></div><div class=pswp__item></div></div><div class="pswp__ui pswp__ui--hidden"><div class=pswp__top-bar><div class=pswp__counter></div><button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+<button class="pswp__button pswp__button--share" title=Share></button>
+<button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+<button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button><div class=pswp__preloader><div class=pswp__preloader__icn><div class=pswp__preloader__cut><div class=pswp__preloader__donut></div></div></div></div></div><div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap"><div class=pswp__share-tooltip></div></div><button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+</button>
+<button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)"></button><div class=pswp__caption><div class=pswp__caption__center></div></div></div></div></div><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo=" crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU=" crossorigin=anonymous defer></script><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css crossorigin=anonymous><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css crossorigin=anonymous></main></div><script src=https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z+KMkF24hUW8WePSA9HM=" crossorigin=anonymous></script><script type=text/javascript src=/ts/main.c922af694cc257bf1ecc41c0dd7b0430f9114ec280ccf67cd2c6ad55f5316c4e.js defer></script><script>(function(){const e=document.createElement("link");e.href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap",e.type="text/css",e.rel="stylesheet",document.head.appendChild(e)})()</script></body></html>

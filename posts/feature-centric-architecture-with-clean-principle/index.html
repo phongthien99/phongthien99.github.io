@@ -1,0 +1,762 @@
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><meta name=description content="Feature-Centric Architecture with Clean Principle Hướng dẫn tổ chức code theo feature với Clean Architecture để xây dựng ứng dụng dễ bảo trì và mở rộng\n1. Đặt vấn đề Trong các dự án React/Next.js truyền thống, code thường được tổ chức theo technical layers như components/, hooks/, services/, types/, utils/. Mỗi folder gom tất cả file cùng loại, dẫn đến nhiều vấn đề khi dự án lớn:\nKhó tìm kiếm và điều hướng: Muốn thay đổi một feature, developer phải nhảy qua nhiều folder (UI, logic, API, types, utils), mất thời gian và khó nắm tổng thể. Dependencies rối rắm: Component import từ nhiều layer, khó xác định ảnh hưởng khi thay đổi, dễ circular dependency và test phức tạp. Code duplication & inconsistency: Logic giống nhau nhưng khác nhau giữa các component, dẫn đến bug, tốn công sửa và test. Coupling giữa features: Feature này phụ thuộc nhiều feature khác, khó tách riêng, khó reuse và tree-shaking kém hiệu quả. Khó mở rộng & parallel development: Service chứa tất cả logic domain dẫn đến Git conflict, khó phân công task, file lớn gây khó review. Để khắc phục, cần feature-based organization, tức tổ chức code theo từng feature thay vì loại file. Cách này giúp code liên quan gần nhau, độc lập, dễ tìm, dễ test, mở rộng nhanh và giảm bugs, cải thiện đáng kể maintainability và khả năng phát triển song song.\n"><title>Feature-Centric Architecture with Clean Principle</title><link rel=canonical href=https://phongthien99.github.io/posts/feature-centric-architecture-with-clean-principle/><link rel=stylesheet href=/scss/style.min.769133d016a4a1944b3a27800e000cccd439a8c1a9c0c61f7c4fa0bc0e42de57.css><meta property='og:title' content="Feature-Centric Architecture with Clean Principle"><meta property='og:description' content="Feature-Centric Architecture with Clean Principle Hướng dẫn tổ chức code theo feature với Clean Architecture để xây dựng ứng dụng dễ bảo trì và mở rộng\n1. Đặt vấn đề Trong các dự án React/Next.js truyền thống, code thường được tổ chức theo technical layers như components/, hooks/, services/, types/, utils/. Mỗi folder gom tất cả file cùng loại, dẫn đến nhiều vấn đề khi dự án lớn:\nKhó tìm kiếm và điều hướng: Muốn thay đổi một feature, developer phải nhảy qua nhiều folder (UI, logic, API, types, utils), mất thời gian và khó nắm tổng thể. Dependencies rối rắm: Component import từ nhiều layer, khó xác định ảnh hưởng khi thay đổi, dễ circular dependency và test phức tạp. Code duplication & inconsistency: Logic giống nhau nhưng khác nhau giữa các component, dẫn đến bug, tốn công sửa và test. Coupling giữa features: Feature này phụ thuộc nhiều feature khác, khó tách riêng, khó reuse và tree-shaking kém hiệu quả. Khó mở rộng & parallel development: Service chứa tất cả logic domain dẫn đến Git conflict, khó phân công task, file lớn gây khó review. Để khắc phục, cần feature-based organization, tức tổ chức code theo từng feature thay vì loại file. Cách này giúp code liên quan gần nhau, độc lập, dễ tìm, dễ test, mở rộng nhanh và giảm bugs, cải thiện đáng kể maintainability và khả năng phát triển song song.\n"><meta property='og:url' content='https://phongthien99.github.io/posts/feature-centric-architecture-with-clean-principle/'><meta property='og:site_name' content='phongthien'><meta property='og:type' content='article'><meta property='article:section' content='Post'><meta property='article:tag' content='nginx'><meta property='article:tag' content='fe'><meta property='article:tag' content='nextjs'><meta property='article:tag' content='qiankun'><meta property='article:tag' content='micro-frontend'><meta property='article:published_time' content='2025-11-08T11:09:00+07:00'><meta property='article:modified_time' content='2025-11-08T11:09:00+07:00'><meta name=twitter:title content="Feature-Centric Architecture with Clean Principle"><meta name=twitter:description content="Feature-Centric Architecture with Clean Principle Hướng dẫn tổ chức code theo feature với Clean Architecture để xây dựng ứng dụng dễ bảo trì và mở rộng\n1. Đặt vấn đề Trong các dự án React/Next.js truyền thống, code thường được tổ chức theo technical layers như components/, hooks/, services/, types/, utils/. Mỗi folder gom tất cả file cùng loại, dẫn đến nhiều vấn đề khi dự án lớn:\nKhó tìm kiếm và điều hướng: Muốn thay đổi một feature, developer phải nhảy qua nhiều folder (UI, logic, API, types, utils), mất thời gian và khó nắm tổng thể. Dependencies rối rắm: Component import từ nhiều layer, khó xác định ảnh hưởng khi thay đổi, dễ circular dependency và test phức tạp. Code duplication & inconsistency: Logic giống nhau nhưng khác nhau giữa các component, dẫn đến bug, tốn công sửa và test. Coupling giữa features: Feature này phụ thuộc nhiều feature khác, khó tách riêng, khó reuse và tree-shaking kém hiệu quả. Khó mở rộng & parallel development: Service chứa tất cả logic domain dẫn đến Git conflict, khó phân công task, file lớn gây khó review. Để khắc phục, cần feature-based organization, tức tổ chức code theo từng feature thay vì loại file. Cách này giúp code liên quan gần nhau, độc lập, dễ tìm, dễ test, mở rộng nhanh và giảm bugs, cải thiện đáng kể maintainability và khả năng phát triển song song.\n"><link rel="shortcut icon" href=/favicon.png><script src=https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js></script><script>mermaid.initialize({startOnLoad:!0})</script></head><body class=article-page><script>(function(){const e="StackColorScheme";localStorage.getItem(e)||localStorage.setItem(e,"auto")})()</script><script>(function(){const t="StackColorScheme",e=localStorage.getItem(t),n=window.matchMedia("(prefers-color-scheme: dark)").matches===!0;e=="dark"||e==="auto"&&n?document.documentElement.dataset.scheme="dark":document.documentElement.dataset.scheme="light"})()</script><div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky"><button class="hamburger hamburger--spin" type=button id=toggle-menu aria-label="Toggle Menu">
+<span class=hamburger-box><span class=hamburger-inner></span></span></button><header><figure class=site-avatar><a href=/><img src=/img/avatar_hu_7ee69f593e8680d3.jpg width=300 height=300 class=site-logo loading=lazy alt=Avatar>
+</a><span class=emoji>🏅</span></figure><div class=site-meta><h1 class=site-name><a href=/>phongthien</a></h1><h2 class=site-description>Software Engineer</h2></div></header><ol class=menu-social><li><a href=https://github.com/phongthien99 target=_blank title=GitHub rel=me><svg class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6.0 00-1.3-3.2 4.2 4.2.0 00-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3.0 00-6.2.0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2.0 00-.1 3.2A4.6 4.6.0 004 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg></a></li><li><a href=https://twitter.com target=_blank title=linkedin rel=me><svg class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M10 14a3.5 3.5.0 005 0l4-4a3.5 3.5.0 00-5-5l-.5.5"/><path d="M14 10a3.5 3.5.0 00-5 0l-4 4a3.5 3.5.0 005 5l.5-.5"/></svg></a></li></ol><ol class=menu id=main-menu><li><a href=/><svg class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><polyline points="5 12 3 12 12 3 21 12 19 12"/><path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/><path d="M9 21v-6a2 2 0 012-2h2a2 2 0 012 2v6"/></svg>
+<span>Home</span></a></li><li><a href=/archives/><svg class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><rect x="3" y="4" width="18" height="4" rx="2"/><path d="M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+<span>Archives</span></a></li><li><a href=/search/><svg class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="10" cy="10" r="7"/><line x1="21" y1="21" x2="15" y2="15"/></svg>
+<span>Search</span></a></li><li><a href=/about-me/><svg class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="7" r="4"/><path d="M6 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/></svg>
+<span>About me</span></a></li><li class=menu-bottom-section><ol class=menu><li id=dark-mode-toggle><svg class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="8" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<svg class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="16" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<span>Dark Mode</span></li></ol></li></ol></aside><aside class="sidebar right-sidebar sticky"><section class="widget archives"><div class=widget-icon><svg class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><line x1="5" y1="9" x2="19" y2="9"/><line x1="5" y1="15" x2="19" y2="15"/><line x1="11" y1="4" x2="7" y2="20"/><line x1="17" y1="4" x2="13" y2="20"/></svg></div><h2 class="widget-title section-title">Table of contents</h2><div class=widget--toc><nav id=TableOfContents><ol><li><a href=#1-đặt-vấn-đề>1. Đặt vấn đề</a></li><li><a href=#2-giải-pháp>2. Giải pháp</a><ol><li><a href=#21-feature-based-organization-với-clean-architecture>2.1. Feature-Based Organization với Clean Architecture</a></li><li><a href=#22-kiến-trúc-tổng-quan-của-mỗi--feature>2.2. Kiến Trúc Tổng Quan của mỗi feature</a></li><li><a href=#23-nguyên-tắc-thiết-kế>2.3. Nguyên Tắc Thiết Kế</a></li><li><a href=#nguyên-tắc-1-feature-isolation><strong>Nguyên tắc 1: Feature Isolation</strong></a></li><li><a href=#nguyên-tắc-2-layer-dependency-rule><strong>Nguyên tắc 2: Layer Dependency Rule</strong></a></li><li><a href=#nguyên-tắc-3-context-layer-cho-di><strong>Nguyên tắc 3: Context Layer cho DI</strong></a></li></ol></li><li><a href=#3-thực-hiện>3. Thực hiện</a><ol><li><a href=#31-cấu-trúc-chi-tiết-một-feature>3.1. Cấu Trúc Chi Tiết Một Feature</a></li><li><a href=#example-login-feature><strong>Example: Login Feature</strong></a></li><li><a href=#32-implementation-examples>3.2. Implementation Examples</a></li><li><a href=#321-context-layer><strong>3.2.1. Context Layer</strong></a></li><li><a href=#322-domain-layer---entities><strong>3.2.2. Domain Layer - Entities</strong></a></li><li><a href=#323-infrastructure-layer---repositories><strong>3.2.3. Infrastructure Layer - Repositories</strong></a></li><li><a href=#324-infrastructure-layer---provider-di><strong>3.2.4. Infrastructure Layer - Provider (DI)</strong></a></li><li><a href=#325-application-layer---hooks><strong>3.2.5. Application Layer - Hooks</strong></a></li><li><a href=#326-presentation-layer---components><strong>3.2.6. Presentation Layer - Components</strong></a></li><li><a href=#327-entry-point---page><strong>3.2.7. Entry Point - Page</strong></a></li></ol></li><li><a href=#4-kết-luận>4. Kết luận</a></li></ol></nav></div></section></aside><main class="main full-width"><article class=main-article><header class=article-header><div class=article-details><header class=article-category><a href=/categories/fe/>Fe</a></header><div class=article-title-wrapper><h2 class=article-title><a href=/posts/feature-centric-architecture-with-clean-principle/>Feature-Centric Architecture with Clean Principle</a></h2></div><footer class=article-time><div><svg class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M11.795 21H5a2 2 0 01-2-2V7a2 2 0 012-2h12a2 2 0 012 2v4"/><circle cx="18" cy="18" r="4"/><path d="M15 3v4"/><path d="M7 3v4"/><path d="M3 11h16"/><path d="M18 16.496V18l1 1"/></svg>
+<time class=article-time--published datetime=2025-11-08T11:09:00+07:00>Nov 08, 2025</time></div><div><svg class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+<time class=article-time--reading>11 minute read</time></div></footer></div></header><section class=article-content><h1 id=feature-centric-architecture-with-clean-principle>Feature-Centric Architecture with Clean Principle</h1><blockquote><p>Hướng dẫn tổ chức code theo feature với Clean Architecture để xây dựng ứng dụng dễ bảo trì và mở rộng</p></blockquote><h2 id=1-đặt-vấn-đề>1. Đặt vấn đề</h2><p>Trong các dự án React/Next.js truyền thống, code thường được tổ chức theo <strong>technical layers</strong> như <code>components/</code>, <code>hooks/</code>, <code>services/</code>, <code>types/</code>, <code>utils/</code>. Mỗi folder gom tất cả file cùng loại, dẫn đến nhiều vấn đề khi dự án lớn:</p><hr><ul><li><strong>Khó tìm kiếm và điều hướng:</strong> Muốn thay đổi một feature, developer phải nhảy qua nhiều folder (UI, logic, API, types, utils), mất thời gian và khó nắm tổng thể.</li><li><strong>Dependencies rối rắm:</strong> Component import từ nhiều layer, khó xác định ảnh hưởng khi thay đổi, dễ circular dependency và test phức tạp.</li><li><strong>Code duplication & inconsistency:</strong> Logic giống nhau nhưng khác nhau giữa các component, dẫn đến bug, tốn công sửa và test.</li><li><strong>Coupling giữa features:</strong> Feature này phụ thuộc nhiều feature khác, khó tách riêng, khó reuse và tree-shaking kém hiệu quả.</li><li><strong>Khó mở rộng & parallel development:</strong> Service chứa tất cả logic domain dẫn đến Git conflict, khó phân công task, file lớn gây khó review.</li></ul><p>Để khắc phục, cần <strong>feature-based organization</strong>, tức tổ chức code theo từng feature thay vì loại file. Cách này giúp code <strong>liên quan gần nhau, độc lập, dễ tìm, dễ test, mở rộng nhanh và giảm bugs</strong>, cải thiện đáng kể maintainability và khả năng phát triển song song.</p><h2 id=2-giải-pháp>2. Giải pháp</h2><h3 id=21-feature-based-organization-với-clean-architecture>2.1. Feature-Based Organization với Clean Architecture</h3><p>Thay vì tổ chức theo <strong>technical layers</strong>, chúng ta tổ chức theo <strong>business features</strong> kết hợp với <strong>Clean Architecture principles</strong>:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback><span class=line><span class=cl>src/app/
+</span></span><span class=line><span class=cl>├── login/                    # ✅ FEATURE: Login
+</span></span><span class=line><span class=cl>│   ├── components/           # UI của feature
+</span></span><span class=line><span class=cl>│   ├── hooks/               # Application logic
+</span></span><span class=line><span class=cl>│   ├── context/             # Shared context
+</span></span><span class=line><span class=cl>│   ├── entities/            # Domain models
+</span></span><span class=line><span class=cl>│   ├── dto/                 # Data transfer objects
+</span></span><span class=line><span class=cl>│   ├── interfaces/          # Contracts
+</span></span><span class=line><span class=cl>│   ├── usecases/            # Business logic
+</span></span><span class=line><span class=cl>│   ├── repositories/        # Data access
+</span></span><span class=line><span class=cl>│   ├── providers/           # Infrastructure
+</span></span><span class=line><span class=cl>│   └── page.tsx             # Entry point
+</span></span><span class=line><span class=cl>│
+</span></span><span class=line><span class=cl>├── signup/                   # ✅ FEATURE: Signup
+</span></span></code></pre></td></tr></table></div></div><h3 id=22-kiến-trúc-tổng-quan-của-mỗi--feature>2.2. Kiến Trúc Tổng Quan của mỗi feature</h3><div class=mermaid>graph TB
+subgraph "Presentation Layer"
+components[components/]
+pages[page.tsx]
+providers[providers/]
+end
+subgraph "Application Layer"
+hooks[hooks/]
+end
+subgraph "Shared Context Layer"
+context[context/]
+end
+subgraph "Domain Layer"
+entities[entities/]
+dto[dto/]
+interfaces[interfaces/]
+usecases[usecases/]
+end
+subgraph "Infrastructure Layer"
+repositories[repositories/]
+end
+pages --> providers
+pages --> components
+components --> hooks
+components --> usecases
+hooks --> context
+providers --> context
+context --> interfaces
+hooks --> entities
+hooks --> dto
+repositories --> interfaces
+repositories --> entities
+repositories --> dto
+providers --> repositories
+usecases --> dto
+style context fill:#FF1493,stroke:#C71585,stroke-width:4px
+style entities fill:#90EE90,stroke:#2ecc71,stroke-width:2px
+style dto fill:#90EE90,stroke:#2ecc71,stroke-width:2px
+style interfaces fill:#90EE90,stroke:#2ecc71,stroke-width:2px
+style usecases fill:#90EE90,stroke:#2ecc71,stroke-width:2px
+style repositories fill:#FFD700,stroke:#f39c12,stroke-width:2px
+style providers fill:#FFD700,stroke:#f39c12,stroke-width:2px
+style hooks fill:#DDA0DD,stroke:#9b59b6,stroke-width:2px
+style components fill:#74b9ff,stroke:#3498db,stroke-width:2px
+style pages fill:#74b9ff,stroke:#3498db,stroke-width:2px</div><h3 id=23-nguyên-tắc-thiết-kế>2.3. Nguyên Tắc Thiết Kế</h3><h3 id=nguyên-tắc-1-feature-isolation><strong>Nguyên tắc 1: Feature Isolation</strong></h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-tsx data-lang=tsx><span class=line><span class=cl><span class=c1>// ✅ Mỗi feature là self-contained
+</span></span></span><span class=line><span class=cl><span class=nx>src</span><span class=o>/</span><span class=nx>app</span><span class=o>/</span><span class=nx>login</span><span class=o>/</span>
+</span></span><span class=line><span class=cl>  <span class=o>-</span> <span class=nx>Có</span> <span class=err>đầ</span><span class=nx>y</span> <span class=err>đủ</span> <span class=nx>layers</span> <span class=nx>riêng</span>
+</span></span><span class=line><span class=cl>  <span class=o>-</span> <span class=nx>Không</span> <span class=nx>phụ</span> <span class=nx>thuộc</span> <span class=nx>vào</span> <span class=nx>features</span> <span class=nx>khác</span>
+</span></span><span class=line><span class=cl>  <span class=o>-</span> <span class=nx>Có</span> <span class=nx>thể</span> <span class=nx>extract</span> <span class=nx>thành</span> <span class=kr>package</span> <span class=err>độ</span><span class=nx>c</span> <span class=nx>lập</span>
+</span></span></code></pre></td></tr></table></div></div><h3 id=nguyên-tắc-2-layer-dependency-rule><strong>Nguyên tắc 2: Layer Dependency Rule</strong></h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback><span class=line><span class=cl>Presentation → Application → Domain ← Infrastructure
+</span></span><span class=line><span class=cl>                                ↑
+</span></span><span class=line><span class=cl>                          Không phụ thuộc
+</span></span><span class=line><span class=cl>                          vào outer layers
+</span></span></code></pre></td></tr></table></div></div><h3 id=nguyên-tắc-3-context-layer-cho-di><strong>Nguyên tắc 3: Context Layer cho DI</strong></h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-tsx data-lang=tsx><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=nx>hooks</span><span class=o>/</span> <span class=err>──────┐</span>
+</span></span><span class=line><span class=cl>             <span class=err>├──→</span> <span class=nx>context</span><span class=o>/</span> <span class=err>──→</span> <span class=nx>interfaces</span><span class=o>/</span>
+</span></span><span class=line><span class=cl><span class=nx>providers</span><span class=o>/</span> <span class=err>──┘</span>
+</span></span></code></pre></td></tr></table></div></div><hr><h2 id=3-thực-hiện>3. Thực hiện</h2><h3 id=31-cấu-trúc-chi-tiết-một-feature>3.1. Cấu Trúc Chi Tiết Một Feature</h3><h3 id=example-login-feature><strong>Example: Login Feature</strong></h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span><span class=lnt>40
+</span><span class=lnt>41
+</span><span class=lnt>42
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-gdscript3 data-lang=gdscript3><span class=line><span class=cl><span class=n>src</span><span class=o>/</span><span class=n>app</span><span class=o>/</span><span class=n>login</span><span class=o>/</span>
+</span></span><span class=line><span class=cl><span class=err>│</span>
+</span></span><span class=line><span class=cl><span class=err>├──</span> <span class=n>components</span><span class=o>/</span>                   <span class=c1># PRESENTATION LAYER</span>
+</span></span><span class=line><span class=cl><span class=err>│</span>   <span class=err>├──</span> <span class=n>LoginForm</span><span class=o>.</span><span class=n>tsx</span>            <span class=c1># Main form component</span>
+</span></span><span class=line><span class=cl><span class=err>│</span>   <span class=err>├──</span> <span class=n>LoginButton</span><span class=o>.</span><span class=n>tsx</span>          <span class=c1># Reusable button</span>
+</span></span><span class=line><span class=cl><span class=err>│</span>   <span class=err>└──</span> <span class=n>SocialLoginButtons</span><span class=o>.</span><span class=n>tsx</span>   <span class=c1># Social auth buttons</span>
+</span></span><span class=line><span class=cl><span class=err>│</span>
+</span></span><span class=line><span class=cl><span class=err>├──</span> <span class=n>hooks</span><span class=o>/</span>                        <span class=c1># APPLICATION LAYER</span>
+</span></span><span class=line><span class=cl><span class=err>│</span>   <span class=err>├──</span> <span class=n>UseLogin</span><span class=o>.</span><span class=n>ts</span>              <span class=c1># Login logic hook</span>
+</span></span><span class=line><span class=cl><span class=err>│</span>   <span class=err>├──</span> <span class=n>useAuthRepository</span><span class=o>.</span><span class=n>ts</span>     <span class=c1># Repository access hook</span>
+</span></span><span class=line><span class=cl><span class=err>│</span>   <span class=err>└──</span> <span class=n>useLoginValidation</span><span class=o>.</span><span class=n>ts</span>    <span class=c1># Validation hook</span>
+</span></span><span class=line><span class=cl><span class=err>│</span>
+</span></span><span class=line><span class=cl><span class=err>├──</span> <span class=n>context</span><span class=o>/</span>                      <span class=c1># SHARED CONTEXT LAYER</span>
+</span></span><span class=line><span class=cl><span class=err>│</span>   <span class=err>├──</span> <span class=n>AuthContext</span><span class=o>.</span><span class=n>tsx</span>          <span class=c1># Context definition</span>
+</span></span><span class=line><span class=cl><span class=err>│</span>   <span class=err>└──</span> <span class=n>index</span><span class=o>.</span><span class=n>ts</span>                 <span class=c1># Exports</span>
+</span></span><span class=line><span class=cl><span class=err>│</span>
+</span></span><span class=line><span class=cl><span class=err>├──</span> <span class=n>entities</span><span class=o>/</span>                     <span class=c1># DOMAIN LAYER - Models</span>
+</span></span><span class=line><span class=cl><span class=err>│</span>   <span class=err>├──</span> <span class=n>User</span><span class=o>.</span><span class=n>ts</span>                  <span class=c1># User entity</span>
+</span></span><span class=line><span class=cl><span class=err>│</span>   <span class=err>└──</span> <span class=n>AuthSession</span><span class=o>.</span><span class=n>ts</span>           <span class=c1># Session entity</span>
+</span></span><span class=line><span class=cl><span class=err>│</span>
+</span></span><span class=line><span class=cl><span class=err>├──</span> <span class=n>dto</span><span class=o>/</span>                          <span class=c1># DOMAIN LAYER - DTOs</span>
+</span></span><span class=line><span class=cl><span class=err>│</span>   <span class=err>└──</span> <span class=n>LoginTypes</span><span class=o>.</span><span class=n>ts</span>            <span class=c1># Request/Response types</span>
+</span></span><span class=line><span class=cl><span class=err>│</span>
+</span></span><span class=line><span class=cl><span class=err>├──</span> <span class=n>interfaces</span><span class=o>/</span>                   <span class=c1># DOMAIN LAYER - Contracts</span>
+</span></span><span class=line><span class=cl><span class=err>│</span>   <span class=err>├──</span> <span class=n>IAuthRepository</span><span class=o>.</span><span class=n>ts</span>       <span class=c1># Repository interface</span>
+</span></span><span class=line><span class=cl><span class=err>│</span>   <span class=err>├──</span> <span class=n>IAuthenticator</span><span class=o>.</span><span class=n>ts</span>        <span class=c1># Authenticator interface</span>
+</span></span><span class=line><span class=cl><span class=err>│</span>   <span class=err>├──</span> <span class=n>ISessionManager</span><span class=o>.</span><span class=n>ts</span>       <span class=c1># Session manager interface</span>
+</span></span><span class=line><span class=cl><span class=err>│</span>   <span class=err>└──</span> <span class=n>index</span><span class=o>.</span><span class=n>ts</span>                 <span class=c1># Exports</span>
+</span></span><span class=line><span class=cl><span class=err>│</span>
+</span></span><span class=line><span class=cl><span class=err>├──</span> <span class=n>usecases</span><span class=o>/</span>                     <span class=c1># DOMAIN LAYER - Business Logic</span>
+</span></span><span class=line><span class=cl><span class=err>│</span>   <span class=err>└──</span> <span class=n>LoginLogic</span><span class=o>.</span><span class=n>ts</span>            <span class=c1># Pure business functions</span>
+</span></span><span class=line><span class=cl><span class=err>│</span>
+</span></span><span class=line><span class=cl><span class=err>├──</span> <span class=n>repositories</span><span class=o>/</span>                 <span class=c1># INFRASTRUCTURE LAYER - Data Access</span>
+</span></span><span class=line><span class=cl><span class=err>│</span>   <span class=err>├──</span> <span class=n>ApiAuthRepository</span><span class=o>.</span><span class=n>ts</span>     <span class=c1># API implementation</span>
+</span></span><span class=line><span class=cl><span class=err>│</span>   <span class=err>└──</span> <span class=n>LocalStorageAuthRepository</span><span class=o>.</span><span class=n>ts</span>  <span class=c1># LocalStorage implementation</span>
+</span></span><span class=line><span class=cl><span class=err>│</span>
+</span></span><span class=line><span class=cl><span class=err>├──</span> <span class=n>providers</span><span class=o>/</span>                    <span class=c1># INFRASTRUCTURE LAYER - DI</span>
+</span></span><span class=line><span class=cl><span class=err>│</span>   <span class=err>└──</span> <span class=n>AuthProvider</span><span class=o>.</span><span class=n>tsx</span>         <span class=c1># Context provider</span>
+</span></span><span class=line><span class=cl><span class=err>│</span>
+</span></span><span class=line><span class=cl><span class=err>├──</span> <span class=n>page</span><span class=o>.</span><span class=n>tsx</span>                      <span class=c1># Route entry point</span>
+</span></span><span class=line><span class=cl><span class=err>├──</span> <span class=n>index</span><span class=o>.</span><span class=n>ts</span>                      <span class=c1># Public API exports</span>
+</span></span><span class=line><span class=cl><span class=err>└──</span> <span class=n>README</span><span class=o>.</span><span class=n>md</span>                     <span class=c1># Feature documentation</span>
+</span></span></code></pre></td></tr></table></div></div><h3 id=32-implementation-examples>3.2. Implementation Examples</h3><h3 id=321-context-layer><strong>3.2.1. Context Layer</strong></h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-tsx data-lang=tsx><span class=line><span class=cl><span class=c1>// context/AuthContext.tsx
+</span></span></span><span class=line><span class=cl><span class=s2>&#34;use client&#34;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>createContext</span> <span class=p>}</span> <span class=kr>from</span> <span class=s2>&#34;react&#34;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=kr>type</span> <span class=p>{</span> <span class=nx>IAuthRepository</span> <span class=p>}</span> <span class=kr>from</span> <span class=s2>&#34;../interfaces/IAuthRepository&#34;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=cm>/**
+</span></span></span><span class=line><span class=cl><span class=cm> * Auth Context - Shared between providers and hooks
+</span></span></span><span class=line><span class=cl><span class=cm> * Tách biệt coupling giữa Infrastructure và Application layers
+</span></span></span><span class=line><span class=cl><span class=cm> */</span>
+</span></span><span class=line><span class=cl><span class=kr>export</span> <span class=kr>const</span> <span class=nx>AuthContext</span> <span class=o>=</span> <span class=nx>createContext</span><span class=p>&lt;</span><span class=nt>IAuthRepository</span> <span class=err>|</span> <span class=na>null</span><span class=p>&gt;(</span><span class=kc>null</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kr>export</span> <span class=kr>type</span> <span class=nx>AuthContextValue</span> <span class=o>=</span> <span class=nx>IAuthRepository</span> <span class=o>|</span> <span class=kc>null</span><span class=p>;</span>
+</span></span></code></pre></td></tr></table></div></div><h3 id=322-domain-layer---entities><strong>3.2.2. Domain Layer - Entities</strong></h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span><span class=lnt>40
+</span><span class=lnt>41
+</span><span class=lnt>42
+</span><span class=lnt>43
+</span><span class=lnt>44
+</span><span class=lnt>45
+</span><span class=lnt>46
+</span><span class=lnt>47
+</span><span class=lnt>48
+</span><span class=lnt>49
+</span><span class=lnt>50
+</span><span class=lnt>51
+</span><span class=lnt>52
+</span><span class=lnt>53
+</span><span class=lnt>54
+</span><span class=lnt>55
+</span><span class=lnt>56
+</span><span class=lnt>57
+</span><span class=lnt>58
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-tsx data-lang=tsx><span class=line><span class=cl><span class=c1>// entities/AuthSession.ts
+</span></span></span><span class=line><span class=cl><span class=cm>/**
+</span></span></span><span class=line><span class=cl><span class=cm> * AuthSession Entity
+</span></span></span><span class=line><span class=cl><span class=cm> * Rich domain model với business logic
+</span></span></span><span class=line><span class=cl><span class=cm> */</span>
+</span></span><span class=line><span class=cl><span class=kr>export</span> <span class=kr>class</span> <span class=nx>AuthSession</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=kr>constructor</span><span class=p>(</span>
+</span></span><span class=line><span class=cl>    <span class=kr>public</span> <span class=kr>readonly</span> <span class=nx>token</span>: <span class=kt>string</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=kr>public</span> <span class=kr>readonly</span> <span class=nx>user</span>: <span class=kt>User</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=kr>public</span> <span class=kr>readonly</span> <span class=nx>expiresAt</span>: <span class=kt>Date</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=kr>public</span> <span class=kr>readonly</span> <span class=nx>refreshToken?</span>: <span class=kt>string</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>  <span class=p>)</span> <span class=p>{}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=cm>/**
+</span></span></span><span class=line><span class=cl><span class=cm>   * Business logic: Check if expired
+</span></span></span><span class=line><span class=cl><span class=cm>   */</span>
+</span></span><span class=line><span class=cl>  <span class=nx>isExpired</span><span class=p>()</span><span class=o>:</span> <span class=kr>boolean</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=k>new</span> <span class=nb>Date</span><span class=p>()</span> <span class=o>&gt;</span> <span class=k>this</span><span class=p>.</span><span class=nx>expiresAt</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=cm>/**
+</span></span></span><span class=line><span class=cl><span class=cm>   * Business logic: Check if needs refresh
+</span></span></span><span class=line><span class=cl><span class=cm>   */</span>
+</span></span><span class=line><span class=cl>  <span class=nx>needsRefresh</span><span class=p>()</span><span class=o>:</span> <span class=kr>boolean</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=kr>const</span> <span class=nx>thirtyMinutes</span> <span class=o>=</span> <span class=mi>30</span> <span class=o>*</span> <span class=mi>60</span> <span class=o>*</span> <span class=mi>1000</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=p>(</span><span class=k>this</span><span class=p>.</span><span class=nx>expiresAt</span><span class=p>.</span><span class=nx>getTime</span><span class=p>()</span> <span class=o>-</span> <span class=nb>Date</span><span class=p>.</span><span class=nx>now</span><span class=p>())</span> <span class=o>&lt;</span> <span class=nx>thirtyMinutes</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=cm>/**
+</span></span></span><span class=line><span class=cl><span class=cm>   * Persistence helper
+</span></span></span><span class=line><span class=cl><span class=cm>   */</span>
+</span></span><span class=line><span class=cl>  <span class=nx>save</span><span class=p>()</span><span class=o>:</span> <span class=k>void</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=k>if</span> <span class=p>(</span><span class=k>typeof</span> <span class=nb>window</span> <span class=o>===</span> <span class=s1>&#39;undefined&#39;</span><span class=p>)</span> <span class=k>return</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=nx>localStorage</span><span class=p>.</span><span class=nx>setItem</span><span class=p>(</span><span class=s1>&#39;auth_session&#39;</span><span class=p>,</span> <span class=nx>JSON</span><span class=p>.</span><span class=nx>stringify</span><span class=p>(</span><span class=k>this</span><span class=p>.</span><span class=nx>serialize</span><span class=p>()));</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=kr>private</span> <span class=nx>serialize() {</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>      <span class=nx>token</span>: <span class=kt>this.token</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>      <span class=nx>user</span><span class=o>:</span> <span class=p>{</span> <span class=nx>id</span>: <span class=kt>this.user.id</span><span class=p>,</span> <span class=nx>email</span>: <span class=kt>this.user.email</span><span class=p>,</span> <span class=nx>name</span>: <span class=kt>this.user.name</span> <span class=p>},</span>
+</span></span><span class=line><span class=cl>      <span class=nx>expiresAt</span>: <span class=kt>this.expiresAt.toISOString</span><span class=p>(),</span>
+</span></span><span class=line><span class=cl>      <span class=nx>refreshToken</span>: <span class=kt>this.refreshToken</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=p>};</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=cm>/**
+</span></span></span><span class=line><span class=cl><span class=cm>   * Factory method
+</span></span></span><span class=line><span class=cl><span class=cm>   */</span>
+</span></span><span class=line><span class=cl>  <span class=kr>static</span> <span class=nx>fromResponse</span><span class=p>(</span><span class=nx>data</span>: <span class=kt>any</span><span class=p>)</span><span class=o>:</span> <span class=nx>AuthSession</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=kr>const</span> <span class=nx>user</span> <span class=o>=</span> <span class=k>new</span> <span class=nx>User</span><span class=p>(</span><span class=nx>data</span><span class=p>.</span><span class=nx>user</span><span class=p>.</span><span class=nx>id</span><span class=p>,</span> <span class=nx>data</span><span class=p>.</span><span class=nx>user</span><span class=p>.</span><span class=nx>email</span><span class=p>,</span> <span class=nx>data</span><span class=p>.</span><span class=nx>user</span><span class=p>.</span><span class=nx>name</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=k>new</span> <span class=nx>AuthSession</span><span class=p>(</span>
+</span></span><span class=line><span class=cl>      <span class=nx>data</span><span class=p>.</span><span class=nx>token</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>      <span class=nx>user</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>      <span class=k>new</span> <span class=nb>Date</span><span class=p>(</span><span class=nx>data</span><span class=p>.</span><span class=nx>expiresAt</span><span class=p>),</span>
+</span></span><span class=line><span class=cl>      <span class=nx>data</span><span class=p>.</span><span class=nx>refreshToken</span>
+</span></span><span class=line><span class=cl>    <span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><p><strong>✨ Lợi ích:</strong></p><ul><li>✅ Encapsulate business logic trong entity</li><li>✅ Self-validating, self-contained</li><li>✅ Dễ test (pure logic)</li><li>✅ Tái sử dụng trong toàn feature</li></ul><h3 id=323-infrastructure-layer---repositories><strong>3.2.3. Infrastructure Layer - Repositories</strong></h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-tsx data-lang=tsx><span class=line><span class=cl><span class=c1>// repositories/ApiAuthRepository.ts
+</span></span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>IAuthRepository</span> <span class=p>}</span> <span class=kr>from</span> <span class=s2>&#34;../interfaces/IAuthRepository&#34;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>LoginInput</span> <span class=p>}</span> <span class=kr>from</span> <span class=s2>&#34;../dto/LoginTypes&#34;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>AuthSession</span> <span class=p>}</span> <span class=kr>from</span> <span class=s2>&#34;../entities/AuthSession&#34;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=cm>/**
+</span></span></span><span class=line><span class=cl><span class=cm> * API Implementation of AuthRepository
+</span></span></span><span class=line><span class=cl><span class=cm> * Isolated data access logic
+</span></span></span><span class=line><span class=cl><span class=cm> */</span>
+</span></span><span class=line><span class=cl><span class=kr>export</span> <span class=kr>class</span> <span class=nx>ApiAuthRepository</span> <span class=kr>implements</span> <span class=nx>IAuthRepository</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=kr>constructor</span><span class=p>(</span><span class=kr>private</span> <span class=kr>readonly</span> <span class=nx>baseUrl</span>: <span class=kt>string</span> <span class=o>=</span> <span class=s2>&#34;/api/auth&#34;</span><span class=p>)</span> <span class=p>{}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=kr>async</span> <span class=nx>login</span><span class=p>(</span><span class=nx>input</span>: <span class=kt>LoginInput</span><span class=p>)</span><span class=o>:</span> <span class=nx>Promise</span><span class=p>&lt;</span><span class=nt>AuthSession</span><span class=p>&gt;</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=kr>const</span> <span class=nx>res</span> <span class=o>=</span> <span class=k>await</span> <span class=nx>fetch</span><span class=p>(</span><span class=sb>`</span><span class=si>${</span><span class=k>this</span><span class=p>.</span><span class=nx>baseUrl</span><span class=si>}</span><span class=sb>/login`</span><span class=p>,</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>      <span class=nx>method</span><span class=o>:</span> <span class=s2>&#34;POST&#34;</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>      <span class=nx>headers</span><span class=o>:</span> <span class=p>{</span> <span class=s2>&#34;Content-Type&#34;</span><span class=o>:</span> <span class=s2>&#34;application/json&#34;</span> <span class=p>},</span>
+</span></span><span class=line><span class=cl>      <span class=nx>body</span>: <span class=kt>JSON.stringify</span><span class=p>(</span><span class=nx>input</span><span class=p>),</span>
+</span></span><span class=line><span class=cl>    <span class=p>});</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=k>if</span> <span class=p>(</span><span class=o>!</span><span class=nx>res</span><span class=p>.</span><span class=nx>ok</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>      <span class=k>throw</span> <span class=k>new</span> <span class=nb>Error</span><span class=p>(</span><span class=s2>&#34;Login failed&#34;</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=kr>const</span> <span class=nx>data</span> <span class=o>=</span> <span class=k>await</span> <span class=nx>res</span><span class=p>.</span><span class=nx>json</span><span class=p>();</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=nx>AuthSession</span><span class=p>.</span><span class=nx>fromResponse</span><span class=p>(</span><span class=nx>data</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=kr>async</span> <span class=nx>logout</span><span class=p>()</span><span class=o>:</span> <span class=nx>Promise</span><span class=p>&lt;</span><span class=nt>void</span><span class=p>&gt;</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=k>await</span> <span class=nx>fetch</span><span class=p>(</span><span class=sb>`</span><span class=si>${</span><span class=k>this</span><span class=p>.</span><span class=nx>baseUrl</span><span class=si>}</span><span class=sb>/logout`</span><span class=p>,</span> <span class=p>{</span> <span class=nx>method</span><span class=o>:</span> <span class=s2>&#34;POST&#34;</span> <span class=p>});</span>
+</span></span><span class=line><span class=cl>    <span class=nx>AuthSession</span><span class=p>.</span><span class=nx>clear</span><span class=p>();</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=nx>getCurrentSession</span><span class=p>()</span><span class=o>:</span> <span class=nx>AuthSession</span> <span class=o>|</span> <span class=kc>null</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=nx>AuthSession</span><span class=p>.</span><span class=nx>load</span><span class=p>();</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><p><strong>✨ Lợi ích:</strong></p><ul><li>✅ Implement interface từ Domain</li><li>✅ Dễ swap implementations (API → LocalStorage)</li><li>✅ Testable với mock repository</li></ul><h3 id=324-infrastructure-layer---provider-di><strong>3.2.4. Infrastructure Layer - Provider (DI)</strong></h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span><span class=lnt>40
+</span><span class=lnt>41
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-tsx data-lang=tsx><span class=line><span class=cl><span class=c1>// providers/AuthProvider.tsx
+</span></span></span><span class=line><span class=cl><span class=s2>&#34;use client&#34;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>useMemo</span><span class=p>,</span> <span class=kr>type</span> <span class=nx>ReactNode</span> <span class=p>}</span> <span class=kr>from</span> <span class=s2>&#34;react&#34;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>AuthContext</span> <span class=p>}</span> <span class=kr>from</span> <span class=s2>&#34;../context/AuthContext&#34;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=kr>type</span> <span class=p>{</span> <span class=nx>IAuthRepository</span> <span class=p>}</span> <span class=kr>from</span> <span class=s2>&#34;../interfaces/IAuthRepository&#34;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>ApiAuthRepository</span> <span class=p>}</span> <span class=kr>from</span> <span class=s2>&#34;../repositories/ApiAuthRepository&#34;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>LocalStorageAuthRepository</span> <span class=p>}</span> <span class=kr>from</span> <span class=s2>&#34;../repositories/LocalStorageAuthRepository&#34;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kr>type</span> <span class=nx>AuthRepositoryType</span> <span class=o>=</span> <span class=s2>&#34;api&#34;</span> <span class=o>|</span> <span class=s2>&#34;localStorage&#34;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kr>interface</span> <span class=nx>AuthProviderProps</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=nx>children</span>: <span class=kt>ReactNode</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=kr>type</span><span class=o>?:</span> <span class=nx>AuthRepositoryType</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=nx>repository?</span>: <span class=kt>IAuthRepository</span><span class=p>;</span> <span class=c1>// For testing
+</span></span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=cm>/**
+</span></span></span><span class=line><span class=cl><span class=cm> * Auth Provider - Dependency Injection Container
+</span></span></span><span class=line><span class=cl><span class=cm> * Provide repository implementation to the feature
+</span></span></span><span class=line><span class=cl><span class=cm> */</span>
+</span></span><span class=line><span class=cl><span class=kr>export</span> <span class=kd>function</span> <span class=nx>AuthProvider</span><span class=p>({</span> <span class=nx>children</span><span class=p>,</span> <span class=kr>type</span><span class=p>,</span> <span class=nx>repository</span> <span class=p>}</span><span class=o>:</span> <span class=nx>AuthProviderProps</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=kr>const</span> <span class=nx>repositoryInstance</span> <span class=o>=</span> <span class=nx>useMemo</span><span class=p>&lt;</span><span class=nt>IAuthRepository</span><span class=p>&gt;(()</span> <span class=o>=&gt;</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=k>if</span> <span class=p>(</span><span class=nx>repository</span><span class=p>)</span> <span class=k>return</span> <span class=nx>repository</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=kr>const</span> <span class=nx>repoType</span> <span class=o>=</span> <span class=kr>type</span> <span class=o>||</span> <span class=nx>getDefaultType</span><span class=p>();</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=nx>repoType</span> <span class=o>===</span> <span class=s2>&#34;localStorage&#34;</span>
+</span></span><span class=line><span class=cl>      <span class=o>?</span> <span class=k>new</span> <span class=nx>LocalStorageAuthRepository</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>      <span class=o>:</span> <span class=k>new</span> <span class=nx>ApiAuthRepository</span><span class=p>();</span>
+</span></span><span class=line><span class=cl>  <span class=p>},</span> <span class=p>[</span><span class=kr>type</span><span class=p>,</span> <span class=nx>repository</span><span class=p>]);</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=k>return</span> <span class=p>(</span>
+</span></span><span class=line><span class=cl>    <span class=p>&lt;</span><span class=nt>AuthContext.Provider</span> <span class=na>value</span><span class=o>=</span><span class=p>{</span><span class=nx>repositoryInstance</span><span class=p>}&gt;</span>
+</span></span><span class=line><span class=cl>      <span class=p>{</span><span class=nx>children</span><span class=p>}</span>
+</span></span><span class=line><span class=cl>    <span class=p>&lt;/</span><span class=nt>AuthContext.Provider</span><span class=p>&gt;</span>
+</span></span><span class=line><span class=cl>  <span class=p>);</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kd>function</span> <span class=nx>getDefaultType</span><span class=p>()</span><span class=o>:</span> <span class=nx>AuthRepositoryType</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=k>return</span> <span class=nx>process</span><span class=p>.</span><span class=nx>env</span><span class=p>.</span><span class=nx>NODE_ENV</span> <span class=o>===</span> <span class=s2>&#34;production&#34;</span> <span class=o>?</span> <span class=s2>&#34;api&#34;</span> <span class=o>:</span> <span class=s2>&#34;localStorage&#34;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><p><strong>✨ Lợi ích:</strong></p><ul><li>✅ Centralized dependency wiring</li><li>✅ Runtime configuration (api vs localStorage)</li><li>✅ Easy testing (inject mock repository)</li></ul><h3 id=325-application-layer---hooks><strong>3.2.5. Application Layer - Hooks</strong></h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-tsx data-lang=tsx><span class=line><span class=cl><span class=c1>// hooks/useAuthRepository.ts
+</span></span></span><span class=line><span class=cl><span class=s2>&#34;use client&#34;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>useContext</span> <span class=p>}</span> <span class=kr>from</span> <span class=s2>&#34;react&#34;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>AuthContext</span> <span class=p>}</span> <span class=kr>from</span> <span class=s2>&#34;../context/AuthContext&#34;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=kr>type</span> <span class=p>{</span> <span class=nx>IAuthRepository</span> <span class=p>}</span> <span class=kr>from</span> <span class=s2>&#34;../interfaces/IAuthRepository&#34;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=cm>/**
+</span></span></span><span class=line><span class=cl><span class=cm> * Hook to access AuthRepository from Context
+</span></span></span><span class=line><span class=cl><span class=cm> * Application layer sử dụng Infrastructure qua interface
+</span></span></span><span class=line><span class=cl><span class=cm> */</span>
+</span></span><span class=line><span class=cl><span class=kr>export</span> <span class=kd>function</span> <span class=nx>useAuthRepository</span><span class=p>()</span><span class=o>:</span> <span class=nx>IAuthRepository</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=kr>const</span> <span class=nx>context</span> <span class=o>=</span> <span class=nx>useContext</span><span class=p>(</span><span class=nx>AuthContext</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=k>if</span> <span class=p>(</span><span class=o>!</span><span class=nx>context</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=k>throw</span> <span class=k>new</span> <span class=nb>Error</span><span class=p>(</span><span class=s2>&#34;useAuthRepository must be used within AuthProvider&#34;</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=k>return</span> <span class=nx>context</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-tsx data-lang=tsx><span class=line><span class=cl><span class=c1>// hooks/UseLogin.ts
+</span></span></span><span class=line><span class=cl><span class=s2>&#34;use client&#34;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>useMutation</span> <span class=p>}</span> <span class=kr>from</span> <span class=s2>&#34;@tanstack/react-query&#34;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>LoginInput</span> <span class=p>}</span> <span class=kr>from</span> <span class=s2>&#34;../dto/LoginTypes&#34;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>AuthSession</span> <span class=p>}</span> <span class=kr>from</span> <span class=s2>&#34;../entities/AuthSession&#34;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>useAuthRepository</span> <span class=p>}</span> <span class=kr>from</span> <span class=s2>&#34;./useAuthRepository&#34;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=cm>/**
+</span></span></span><span class=line><span class=cl><span class=cm> * Login Hook - Application Business Logic
+</span></span></span><span class=line><span class=cl><span class=cm> * Orchestrate use case flow
+</span></span></span><span class=line><span class=cl><span class=cm> */</span>
+</span></span><span class=line><span class=cl><span class=kr>export</span> <span class=kd>function</span> <span class=nx>useLogin() {</span>
+</span></span><span class=line><span class=cl>  <span class=kr>const</span> <span class=nx>authRepository</span> <span class=o>=</span> <span class=nx>useAuthRepository</span><span class=p>();</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=kr>const</span> <span class=nx>mutation</span> <span class=o>=</span> <span class=nx>useMutation</span><span class=p>&lt;</span><span class=nt>AuthSession</span><span class=p>,</span> <span class=na>Error</span><span class=p>,</span> <span class=na>LoginInput</span><span class=p>&gt;({</span>
+</span></span><span class=line><span class=cl>    <span class=nx>mutationFn</span>: <span class=kt>async</span> <span class=p>(</span><span class=nx>input</span>: <span class=kt>LoginInput</span><span class=p>)</span> <span class=o>=&gt;</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>      <span class=k>return</span> <span class=k>await</span> <span class=nx>authRepository</span><span class=p>.</span><span class=nx>login</span><span class=p>(</span><span class=nx>input</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=p>},</span>
+</span></span><span class=line><span class=cl>  <span class=p>});</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=k>return</span> <span class=nx>mutation</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><p><strong>✨ Lợi ích:</strong></p><ul><li>✅ Reusable application logic</li><li>✅ Access infrastructure via interface</li><li>✅ Type-safe với generics</li></ul><h3 id=326-presentation-layer---components><strong>3.2.6. Presentation Layer - Components</strong></h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span><span class=lnt>40
+</span><span class=lnt>41
+</span><span class=lnt>42
+</span><span class=lnt>43
+</span><span class=lnt>44
+</span><span class=lnt>45
+</span><span class=lnt>46
+</span><span class=lnt>47
+</span><span class=lnt>48
+</span><span class=lnt>49
+</span><span class=lnt>50
+</span><span class=lnt>51
+</span><span class=lnt>52
+</span><span class=lnt>53
+</span><span class=lnt>54
+</span><span class=lnt>55
+</span><span class=lnt>56
+</span><span class=lnt>57
+</span><span class=lnt>58
+</span><span class=lnt>59
+</span><span class=lnt>60
+</span><span class=lnt>61
+</span><span class=lnt>62
+</span><span class=lnt>63
+</span><span class=lnt>64
+</span><span class=lnt>65
+</span><span class=lnt>66
+</span><span class=lnt>67
+</span><span class=lnt>68
+</span><span class=lnt>69
+</span><span class=lnt>70
+</span><span class=lnt>71
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-tsx data-lang=tsx><span class=line><span class=cl><span class=c1>// components/LoginForm.tsx
+</span></span></span><span class=line><span class=cl><span class=s2>&#34;use client&#34;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>useState</span> <span class=p>}</span> <span class=kr>from</span> <span class=s2>&#34;react&#34;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>useRouter</span> <span class=p>}</span> <span class=kr>from</span> <span class=s2>&#34;next/navigation&#34;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>Button</span> <span class=p>}</span> <span class=kr>from</span> <span class=s2>&#34;@/components/ui/button&#34;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>Input</span> <span class=p>}</span> <span class=kr>from</span> <span class=s2>&#34;@/components/ui/input&#34;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>useLogin</span> <span class=p>}</span> <span class=kr>from</span> <span class=s2>&#34;../hooks/UseLogin&#34;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>validateLogin</span> <span class=p>}</span> <span class=kr>from</span> <span class=s2>&#34;../usecases/LoginLogic&#34;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=cm>/**
+</span></span></span><span class=line><span class=cl><span class=cm> * LoginForm Component - Pure UI
+</span></span></span><span class=line><span class=cl><span class=cm> * Chỉ lo rendering và user interaction
+</span></span></span><span class=line><span class=cl><span class=cm> */</span>
+</span></span><span class=line><span class=cl><span class=kr>export</span> <span class=kd>function</span> <span class=nx>LoginForm() {</span>
+</span></span><span class=line><span class=cl>  <span class=kr>const</span> <span class=nx>router</span> <span class=o>=</span> <span class=nx>useRouter</span><span class=p>();</span>
+</span></span><span class=line><span class=cl>  <span class=kr>const</span> <span class=p>{</span> <span class=nx>mutate</span>: <span class=kt>login</span><span class=p>,</span> <span class=nx>isPending</span><span class=p>,</span> <span class=nx>error</span> <span class=p>}</span> <span class=o>=</span> <span class=nx>useLogin</span><span class=p>();</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=kr>const</span> <span class=p>[</span><span class=nx>email</span><span class=p>,</span> <span class=nx>setEmail</span><span class=p>]</span> <span class=o>=</span> <span class=nx>useState</span><span class=p>(</span><span class=s2>&#34;&#34;</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=kr>const</span> <span class=p>[</span><span class=nx>password</span><span class=p>,</span> <span class=nx>setPassword</span><span class=p>]</span> <span class=o>=</span> <span class=nx>useState</span><span class=p>(</span><span class=s2>&#34;&#34;</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=kr>const</span> <span class=p>[</span><span class=nx>validationError</span><span class=p>,</span> <span class=nx>setValidationError</span><span class=p>]</span> <span class=o>=</span> <span class=nx>useState</span><span class=p>(</span><span class=s2>&#34;&#34;</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=kr>const</span> <span class=nx>handleSubmit</span> <span class=o>=</span> <span class=kr>async</span> <span class=p>(</span><span class=nx>e</span>: <span class=kt>React.FormEvent</span><span class=p>)</span> <span class=o>=&gt;</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=nx>e</span><span class=p>.</span><span class=nx>preventDefault</span><span class=p>();</span>
+</span></span><span class=line><span class=cl>    <span class=nx>setValidationError</span><span class=p>(</span><span class=s2>&#34;&#34;</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=c1>// Validate at UI level
+</span></span></span><span class=line><span class=cl>    <span class=kr>const</span> <span class=nx>validation</span> <span class=o>=</span> <span class=nx>validateLogin</span><span class=p>({</span> <span class=nx>email</span><span class=p>,</span> <span class=nx>password</span> <span class=p>});</span>
+</span></span><span class=line><span class=cl>    <span class=k>if</span> <span class=p>(</span><span class=o>!</span><span class=nx>validation</span><span class=p>.</span><span class=nx>success</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>      <span class=nx>setValidationError</span><span class=p>(</span><span class=nx>validation</span><span class=p>.</span><span class=nx>error</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>      <span class=k>return</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=c1>// Execute business logic via hook
+</span></span></span><span class=line><span class=cl>    <span class=nx>login</span><span class=p>(</span><span class=nx>validation</span><span class=p>.</span><span class=nx>data</span><span class=p>,</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>      <span class=nx>onSuccess</span><span class=o>:</span> <span class=p>(</span><span class=nx>session</span><span class=p>)</span> <span class=o>=&gt;</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=nx>session</span><span class=p>.</span><span class=nx>save</span><span class=p>();</span>
+</span></span><span class=line><span class=cl>        <span class=nx>router</span><span class=p>.</span><span class=nx>push</span><span class=p>(</span><span class=s2>&#34;/dashboard&#34;</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>      <span class=p>},</span>
+</span></span><span class=line><span class=cl>      <span class=nx>onError</span><span class=o>:</span> <span class=p>(</span><span class=nx>err</span><span class=p>)</span> <span class=o>=&gt;</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=nx>setValidationError</span><span class=p>(</span><span class=nx>err</span><span class=p>.</span><span class=nx>message</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>      <span class=p>},</span>
+</span></span><span class=line><span class=cl>    <span class=p>});</span>
+</span></span><span class=line><span class=cl>  <span class=p>};</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=k>return</span> <span class=p>(</span>
+</span></span><span class=line><span class=cl>    <span class=p>&lt;</span><span class=nt>form</span> <span class=na>onSubmit</span><span class=o>=</span><span class=p>{</span><span class=nx>handleSubmit</span><span class=p>}&gt;</span>
+</span></span><span class=line><span class=cl>      <span class=p>{</span><span class=nx>validationError</span> <span class=o>&amp;&amp;</span> <span class=p>(</span>
+</span></span><span class=line><span class=cl>        <span class=p>&lt;</span><span class=nt>div</span> <span class=na>className</span><span class=o>=</span><span class=s>&#34;text-red-500 text-sm&#34;</span><span class=p>&gt;{</span><span class=nx>validationError</span><span class=p>}&lt;/</span><span class=nt>div</span><span class=p>&gt;</span>
+</span></span><span class=line><span class=cl>      <span class=p>)}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>      <span class=p>&lt;</span><span class=nt>Input</span>
+</span></span><span class=line><span class=cl>        <span class=na>type</span><span class=o>=</span><span class=s>&#34;email&#34;</span>
+</span></span><span class=line><span class=cl>        <span class=na>value</span><span class=o>=</span><span class=p>{</span><span class=nx>email</span><span class=p>}</span>
+</span></span><span class=line><span class=cl>        <span class=na>onChange</span><span class=o>=</span><span class=p>{(</span><span class=nx>e</span><span class=p>)</span> <span class=o>=&gt;</span> <span class=nx>setEmail</span><span class=p>(</span><span class=nx>e</span><span class=p>.</span><span class=nx>target</span><span class=p>.</span><span class=nx>value</span><span class=p>)}</span>
+</span></span><span class=line><span class=cl>        <span class=na>disabled</span><span class=o>=</span><span class=p>{</span><span class=nx>isPending</span><span class=p>}</span>
+</span></span><span class=line><span class=cl>      <span class=p>/&gt;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>      <span class=p>&lt;</span><span class=nt>Input</span>
+</span></span><span class=line><span class=cl>        <span class=na>type</span><span class=o>=</span><span class=s>&#34;password&#34;</span>
+</span></span><span class=line><span class=cl>        <span class=na>value</span><span class=o>=</span><span class=p>{</span><span class=nx>password</span><span class=p>}</span>
+</span></span><span class=line><span class=cl>        <span class=na>onChange</span><span class=o>=</span><span class=p>{(</span><span class=nx>e</span><span class=p>)</span> <span class=o>=&gt;</span> <span class=nx>setPassword</span><span class=p>(</span><span class=nx>e</span><span class=p>.</span><span class=nx>target</span><span class=p>.</span><span class=nx>value</span><span class=p>)}</span>
+</span></span><span class=line><span class=cl>        <span class=na>disabled</span><span class=o>=</span><span class=p>{</span><span class=nx>isPending</span><span class=p>}</span>
+</span></span><span class=line><span class=cl>      <span class=p>/&gt;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>      <span class=p>&lt;</span><span class=nt>Button</span> <span class=na>type</span><span class=o>=</span><span class=s>&#34;submit&#34;</span> <span class=na>disabled</span><span class=o>=</span><span class=p>{</span><span class=nx>isPending</span><span class=p>}&gt;</span>
+</span></span><span class=line><span class=cl>        <span class=p>{</span><span class=nx>isPending</span> <span class=o>?</span> <span class=s2>&#34;Logging in...&#34;</span> <span class=o>:</span> <span class=s2>&#34;Login&#34;</span><span class=p>}</span>
+</span></span><span class=line><span class=cl>      <span class=p>&lt;/</span><span class=nt>Button</span><span class=p>&gt;</span>
+</span></span><span class=line><span class=cl>    <span class=p>&lt;/</span><span class=nt>form</span><span class=p>&gt;</span>
+</span></span><span class=line><span class=cl>  <span class=p>);</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><p><strong>✨ Lợi ích:</strong></p><ul><li>✅ Component chỉ lo UI/UX</li><li>✅ Business logic trong hooks</li><li>✅ Validation ở UI level</li><li>✅ Dễ test (mock hooks)</li></ul><h3 id=327-entry-point---page><strong>3.2.7. Entry Point - Page</strong></h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-tsx data-lang=tsx><span class=line><span class=cl><span class=c1>// page.tsx
+</span></span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>AuthProvider</span> <span class=p>}</span> <span class=kr>from</span> <span class=s2>&#34;./providers/AuthProvider&#34;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>LoginForm</span> <span class=p>}</span> <span class=kr>from</span> <span class=s2>&#34;./components/LoginForm&#34;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=cm>/**
+</span></span></span><span class=line><span class=cl><span class=cm> * Login Page - Feature Entry Point
+</span></span></span><span class=line><span class=cl><span class=cm> * Setup providers và render UI
+</span></span></span><span class=line><span class=cl><span class=cm> */</span>
+</span></span><span class=line><span class=cl><span class=kr>export</span> <span class=k>default</span> <span class=kd>function</span> <span class=nx>LoginPage() {</span>
+</span></span><span class=line><span class=cl>  <span class=k>return</span> <span class=p>(</span>
+</span></span><span class=line><span class=cl>    <span class=p>&lt;</span><span class=nt>AuthProvider</span> <span class=na>type</span><span class=o>=</span><span class=s>&#34;localStorage&#34;</span><span class=p>&gt;</span>
+</span></span><span class=line><span class=cl>      <span class=p>&lt;</span><span class=nt>div</span> <span class=na>className</span><span class=o>=</span><span class=s>&#34;min-h-screen flex items-center justify-center&#34;</span><span class=p>&gt;</span>
+</span></span><span class=line><span class=cl>        <span class=p>&lt;</span><span class=nt>LoginForm</span> <span class=p>/&gt;</span>
+</span></span><span class=line><span class=cl>      <span class=p>&lt;/</span><span class=nt>div</span><span class=p>&gt;</span>
+</span></span><span class=line><span class=cl>    <span class=p>&lt;/</span><span class=nt>AuthProvider</span><span class=p>&gt;</span>
+</span></span><span class=line><span class=cl>  <span class=p>);</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><h2 id=4-kết-luận>4. Kết luận</h2><p>Kiến trúc <strong>Feature-Based kết hợp Clean Architecture</strong> mang lại nhiều lợi ích rõ ràng cho các ứng dụng React hiện đại, đặc biệt là các dự án quy mô trung bình và lớn.</p><ul><li><strong>Lợi ích chính:</strong><ul><li><strong>Learning Curve:</strong> Mức trung bình lúc đầu nhưng nhanh chóng giảm nhờ feature isolation và dependency rõ ràng.</li><li><strong>Maintenance Cost:</strong> Thấp, dễ refactor, kiểm soát technical debt hiệu quả.</li><li><strong>Development / Total Cost:</strong> Thấp, tăng tốc độ thêm feature, fix bug và viết test.</li><li><strong>Testability và Reusability:</strong> Cao, domain thuần, usecase và entity dễ tái sử dụng.</li><li><strong>Scalability:</strong> Cao, dễ mở rộng module hoặc deploy độc lập, hỗ trợ parallel development và giảm xung đột team.</li></ul></li><li><strong>Nhược điểm cần lưu ý:</strong><ul><li><strong>Initial Setup Complexity:</strong> Ban đầu cần sắp xếp folder, context và dependency, có thể tốn thời gian chuẩn bị.</li><li><strong>Learning Curve:</strong> Thành viên mới cần 1-2 ngày làm quen với tổ chức feature và context pattern.</li><li><strong>Overhead cho dự án nhỏ:</strong> Với dự án đơn giản, cấu trúc này có thể hơi “over-engineered”, nhưng vẫn giữ kỷ luật code và dễ bảo trì nếu dự án mở rộng sau này.</li></ul></li></ul><p><strong>Tóm lại:</strong></p><p>Feature-Based + Clean Architecture là một <strong>giải pháp cân bằng</strong> giữa khả năng mở rộng, maintainability, testability và tốc độ phát triển dài hạn. Mặc dù có chi phí thiết lập ban đầu và đường cong học tập vừa phải, nhưng về lâu dài, kiến trúc này giúp giảm <strong>chi phí bảo trì</strong>, <strong>technical debt</strong>, và tăng <strong>tính ổn định, khả năng mở rộng, và năng suất nhóm</strong>.</p><hr></section><footer class=article-footer><section class=article-tags><a href=/tags/nginx/>Nginx</a>
+<a href=/tags/fe/>Fe</a>
+<a href=/tags/nextjs/>Nextjs</a>
+<a href=/tags/qiankun/>Qiankun</a>
+<a href=/tags/micro-frontend/>Micro-Frontend</a></section><section class=article-copyright><svg class="icon icon-tabler icon-tabler-copyright" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><path d="M14.5 9a3.5 4 0 100 6"/></svg>
+<span>Licensed under CC BY-NC-SA 4.0</span></section></footer><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css integrity=sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV crossorigin=anonymous><script src=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js integrity=sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8 crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js integrity=sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05 crossorigin=anonymous defer></script><script>window.addEventListener("DOMContentLoaded",()=>{const e=[".main-article",".widget--toc"];e.forEach(e=>{const t=document.querySelector(e);t&&renderMathInElement(t,{delimiters:[{left:"$$",right:"$$",display:!0},{left:"$",right:"$",display:!1},{left:"\\(",right:"\\)",display:!1},{left:"\\[",right:"\\]",display:!0}],ignoredClasses:["gist"]})})})</script></article><aside class=related-content--wrapper><h2 class=section-title>Related content</h2><div class=related-content><div class="flex article-list--tile"><article><a href=/posts/multi-zone-in-modern-web-development-solution-with-next.js-qiankun-and-nginx/><div class=article-details><h2 class=article-title>Multi-Zone in Modern Web Development: Solution with Next.js, Qiankun, and Nginx</h2></div></a></article><article><a href=/posts/mastering-dynamic-base-path-management-in-dockerized-vue-3--vite/><div class=article-details><h2 class=article-title>Mastering Dynamic Base Path Management in Dockerized Vue 3 + Vite</h2></div></a></article><article><a href=/posts/implementing-command-and-compensation-in-applications/><div class=article-details><h2 class=article-title>Implementing Command and Compensation in Applications</h2></div></a></article><article><a href=/posts/clean-architecture-trong-frontend-react/><div class=article-details><h2 class=article-title>Clean Architecture trong Frontend React</h2></div></a></article><article><a href=/posts/javascript-bundle-size-as-a-frontend-architecture-concern/><div class=article-details><h2 class=article-title>JavaScript Bundle Size as a Frontend Architecture Concern</h2></div></a></article></div></div></aside><div class=disqus-container></div><style>.disqus-container{background-color:var(--card-background);border-radius:var(--card-border-radius);box-shadow:var(--shadow-l1);padding:var(--card-padding)}</style><script>window.addEventListener("onColorSchemeChange",e=>{typeof DISQUS=="object"&&DISQUS.reset({reload:!0})})</script><footer class=site-footer><section class=copyright>&copy;
+2026 phongthien</section><section class=powerby>Built with <a href=https://gohugo.io/ target=_blank rel=noopener>Hugo</a><br>Theme <b><a href=https://github.com/CaiJimmy/hugo-theme-stack target=_blank rel=noopener data-version=3.33.0>Stack</a></b> designed by <a href=https://jimmycai.com target=_blank rel=noopener>Jimmy</a></section></footer><div class=pswp tabindex=-1 role=dialog aria-hidden=true><div class=pswp__bg></div><div class=pswp__scroll-wrap><div class=pswp__container><div class=pswp__item></div><div class=pswp__item></div><div class=pswp__item></div></div><div class="pswp__ui pswp__ui--hidden"><div class=pswp__top-bar><div class=pswp__counter></div><button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+<button class="pswp__button pswp__button--share" title=Share></button>
+<button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+<button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button><div class=pswp__preloader><div class=pswp__preloader__icn><div class=pswp__preloader__cut><div class=pswp__preloader__donut></div></div></div></div></div><div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap"><div class=pswp__share-tooltip></div></div><button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+</button>
+<button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)"></button><div class=pswp__caption><div class=pswp__caption__center></div></div></div></div></div><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo=" crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU=" crossorigin=anonymous defer></script><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css crossorigin=anonymous><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css crossorigin=anonymous></main></div><script src=https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z+KMkF24hUW8WePSA9HM=" crossorigin=anonymous></script><script type=text/javascript src=/ts/main.c922af694cc257bf1ecc41c0dd7b0430f9114ec280ccf67cd2c6ad55f5316c4e.js defer></script><script>(function(){const e=document.createElement("link");e.href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap",e.type="text/css",e.rel="stylesheet",document.head.appendChild(e)})()</script></body></html>

@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Design-Pattern on phongthien</title><link>https://phongthien99.github.io/tags/design-pattern/</link><description>Recent content in Design-Pattern on phongthien</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Sun, 15 Mar 2026 00:00:00 +0700</lastBuildDate><atom:link href="https://phongthien99.github.io/tags/design-pattern/index.xml" rel="self" type="application/rss+xml"/><item><title>Transactional Outbox Pattern</title><link>https://phongthien99.github.io/posts/transactional-outbox-pattern/</link><pubDate>Sun, 15 Mar 2026 00:00:00 +0700</pubDate><guid>https://phongthien99.github.io/posts/transactional-outbox-pattern/</guid><description>&lt;h1 id="transactional-outbox-pattern"&gt;Transactional Outbox Pattern
+&lt;/h1&gt;&lt;h2 id="1-đặt-vấn-đề--dual-write-problem"&gt;1. Đặt vấn đề — Dual Write Problem
+&lt;/h2&gt;&lt;h3 id="bối-cảnh"&gt;Bối cảnh
+&lt;/h3&gt;&lt;p&gt;Trong kiến trúc &lt;strong&gt;Microservices&lt;/strong&gt;, một nghiệp vụ thường yêu cầu đồng thời hai thao tác:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Ghi dữ liệu vào database&lt;/strong&gt; (ví dụ: tạo đơn hàng).&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Gửi event/message đến Message Broker&lt;/strong&gt; (Kafka, RabbitMQ…) để các service khác xử lý tiếp (ví dụ: gửi email xác nhận, trừ tồn kho…).&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Vấn đề nằm ở chỗ: hai thao tác này &lt;strong&gt;không nằm trong cùng một transaction&lt;/strong&gt;. Database có transaction riêng, Message Broker có transaction riêng. Không có cơ chế atomic nào đảm bảo cả hai cùng thành công hoặc cùng thất bại.&lt;/p&gt;
+&lt;p&gt;Đây chính là &lt;strong&gt;Dual Write Problem&lt;/strong&gt; — kẻ thù thầm lặng trong mọi hệ thống phân tán.&lt;/p&gt;
+&lt;h3 id="minh-họa-vấn-đề"&gt;Minh họa vấn đề
+&lt;/h3&gt;&lt;pre class="mermaid"&gt;
+sequenceDiagram
+participant S as 🖥 Order Service
+participant DB as 🗄 Database
+participant MQ as 📨 Message Broker
+S-&amp;gt;&amp;gt;DB: 1. INSERT order
+Note over DB: ✅ Commit thành công
+S-&amp;gt;&amp;gt;MQ: 2. Publish &amp;#34;OrderCreated&amp;#34; event
+Note over MQ: ❌ Broker down!&amp;lt;br/&amp;gt;Message bị mất!
+rect rgba(220, 38, 38, 0.1)
+Note over S,MQ: ⚠️ KHÔNG NHẤT QUÁN&amp;lt;br/&amp;gt;DB có order nhưng event không được gửi&amp;lt;br/&amp;gt;→ Các service khác không biết có order mới
+end
+&lt;/pre&gt;
+&lt;h3 id="các-kịch-bản-thất-bại"&gt;Các kịch bản thất bại
+&lt;/h3&gt;&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Kịch bản&lt;/th&gt;
+&lt;th&gt;Mô tả&lt;/th&gt;
+&lt;th&gt;Hậu quả&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;Broker lỗi&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;DB ghi thành công, Broker không nhận được message&lt;/td&gt;
+&lt;td&gt;Downstream services mất event, dữ liệu bất đồng bộ&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;Service crash&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;DB ghi thành công, service crash trước khi publish&lt;/td&gt;
+&lt;td&gt;Event mãi mãi bị mất, không có cách retry&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;Network partition&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;DB ghi thành công, mạng đến Broker bị đứt&lt;/td&gt;
+&lt;td&gt;Message timeout, không chắc đã gửi hay chưa&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;Publish trước DB&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;Message được gửi nhưng DB rollback&lt;/td&gt;
+&lt;td&gt;Service khác nhận event &amp;ldquo;ảo&amp;rdquo; — dữ liệu phantom&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;💡 Lưu ý:&lt;/strong&gt; Ngay cả khi bạn đặt publish message &lt;em&gt;trước&lt;/em&gt; commit database, vấn đề vẫn tồn tại — chỉ là theo chiều ngược lại. Không có thứ tự nào giải quyết được vấn đề này nếu không thay đổi cách tiếp cận.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id="2-giải-pháp--outbox-pattern-là-gì"&gt;2. Giải pháp — Outbox Pattern là gì?
+&lt;/h2&gt;&lt;h3 id="ý-tưởng-cốt-lõi"&gt;Ý tưởng cốt lõi
+&lt;/h3&gt;&lt;p&gt;Outbox Pattern biến &lt;strong&gt;hai bước riêng biệt&lt;/strong&gt; thành &lt;strong&gt;một bước atomic duy nhất&lt;/strong&gt; bằng cách:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;Thay vì publish message trực tiếp đến Broker, ta ghi message vào một bảng &lt;code&gt;outbox&lt;/code&gt; trong cùng database, trong cùng một transaction với dữ liệu nghiệp vụ.&lt;/strong&gt; Sau đó, một tiến trình riêng biệt sẽ đọc bảng &lt;code&gt;outbox&lt;/code&gt; và publish message đến Broker.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Vì cả dữ liệu nghiệp vụ và message đều được ghi vào &lt;strong&gt;cùng một database&lt;/strong&gt;, ta có thể tận dụng &lt;strong&gt;ACID transaction&lt;/strong&gt; của database để đảm bảo tính atomic.&lt;/p&gt;
+&lt;h3 id="so-sánh-trước-vs-sau-khi-áp-dụng"&gt;So sánh: Trước vs Sau khi áp dụng
+&lt;/h3&gt;&lt;pre class="mermaid"&gt;
+graph LR
+subgraph &amp;#34;❌ KHÔNG CÓ Outbox Pattern&amp;#34;
+A1[Order Service] --&amp;gt;|1. Write| B1[(Database)]
+A1 --&amp;gt;|2. Publish| C1[Message Broker]
+style C1 stroke:#dc2626,stroke-dasharray: 5 5
+end
+subgraph &amp;#34;✅ CÓ Outbox Pattern&amp;#34;
+A2[Order Service] --&amp;gt;|&amp;#34;1. Write order + outbox&amp;lt;br/&amp;gt;(single transaction)&amp;#34;| B2[(Database)]
+D2[Relay/CDC] --&amp;gt;|2. Read outbox| B2
+D2 --&amp;gt;|3. Publish| C2[Message Broker]
+end
+&lt;/pre&gt;
+&lt;h3 id="tại-sao-outbox-pattern-hoạt-động"&gt;Tại sao Outbox Pattern hoạt động?
+&lt;/h3&gt;&lt;p&gt;Outbox Pattern hoạt động dựa trên một nguyên tắc đơn giản nhưng mạnh mẽ:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Atomic write:&lt;/strong&gt; Dữ liệu nghiệp vụ và outbox message được ghi trong cùng một DB transaction. Nếu transaction rollback → cả hai đều rollback. Nếu commit → cả hai đều tồn tại.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Guaranteed delivery:&lt;/strong&gt; Một tiến trình riêng (Polling Publisher hoặc CDC) liên tục quét bảng outbox và publish message. Nếu Broker down, message vẫn nằm trong outbox, chờ được gửi lại.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;At-least-once semantics:&lt;/strong&gt; Message sẽ được gửi &lt;em&gt;ít nhất một lần&lt;/em&gt;. Consumer phía nhận cần xử lý idempotent.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="3-thiết-kế-hệ-thống-design"&gt;3. Thiết kế hệ thống (Design)
+&lt;/h2&gt;&lt;h3 id="31-kiến-trúc-tổng-quan"&gt;3.1 Kiến trúc tổng quan
+&lt;/h3&gt;&lt;pre class="mermaid"&gt;
+flowchart TB
+subgraph Service[&amp;#34;🖥 Order Service&amp;#34;]
+API[API Handler]
+BL[Business Logic]
+end
+subgraph DB[&amp;#34;🗄 Database&amp;#34;]
+OT[orders table]
+OB[outbox table]
+end
+subgraph Relay[&amp;#34;⚙️ Message Relay&amp;#34;]
+POLL[Polling Publisher]
+CDC[CDC Connector&amp;lt;br/&amp;gt;Debezium]
+end
+subgraph Broker[&amp;#34;📨 Message Broker&amp;#34;]
+KAFKA[Kafka / RabbitMQ]
+end
+subgraph Consumers[&amp;#34;📥 Downstream Services&amp;#34;]
+INV[Inventory Service]
+NOTIF[Notification Service]
+PAY[Payment Service]
+end
+API --&amp;gt; BL
+BL --&amp;gt;|&amp;#34;Single TX&amp;#34;| OT
+BL --&amp;gt;|&amp;#34;Single TX&amp;#34;| OB
+POLL -.-&amp;gt;|&amp;#34;Option A: Polling&amp;#34;| OB
+CDC -.-&amp;gt;|&amp;#34;Option B: CDC&amp;#34;| OB
+POLL --&amp;gt; KAFKA
+CDC --&amp;gt; KAFKA
+KAFKA --&amp;gt; INV
+KAFKA --&amp;gt; NOTIF
+KAFKA --&amp;gt; PAY
+style OB fill:#fef3c7,stroke:#f59e0b,stroke-width:2px
+style KAFKA fill:#dbeafe,stroke:#3b82f6,stroke-width:2px
+&lt;/pre&gt;
+&lt;h3 id="33-luồng-xử-lý-chi-tiết"&gt;3.3 Luồng xử lý chi tiết
+&lt;/h3&gt;&lt;pre class="mermaid"&gt;
+sequenceDiagram
+participant C as 👤 Client
+participant S as 🖥 Order Service
+participant DB as 🗄 Database
+participant R as ⚙️ Message Relay
+participant K as 📨 Kafka
+participant INV as 📦 Inventory Service
+C-&amp;gt;&amp;gt;S: POST /orders (tạo đơn hàng)
+rect rgba(34, 197, 94, 0.08)
+Note over S,DB: 🔒 BEGIN TRANSACTION
+S-&amp;gt;&amp;gt;DB: INSERT INTO orders (...)
+S-&amp;gt;&amp;gt;DB: INSERT INTO outbox (event_type=&amp;#39;OrderCreated&amp;#39;, status=&amp;#39;PENDING&amp;#39;)
+Note over S,DB: ✅ COMMIT
+end
+S--&amp;gt;&amp;gt;C: 201 Created
+loop Polling mỗi 5 giây
+R-&amp;gt;&amp;gt;DB: SELECT * FROM outbox WHERE status = &amp;#39;PENDING&amp;#39;
+DB--&amp;gt;&amp;gt;R: Trả về danh sách events
+end
+R-&amp;gt;&amp;gt;K: Publish &amp;#34;OrderCreated&amp;#34; event
+K--&amp;gt;&amp;gt;R: ACK
+R-&amp;gt;&amp;gt;DB: UPDATE outbox SET status=&amp;#39;SENT&amp;#39;, processed_at=now()
+K-&amp;gt;&amp;gt;INV: Deliver &amp;#34;OrderCreated&amp;#34;
+INV-&amp;gt;&amp;gt;INV: Trừ tồn kho (idempotent check)
+&lt;/pre&gt;
+&lt;h3 id="34-hai-chiến-lược-đọc-outbox"&gt;3.4 Hai chiến lược đọc Outbox
+&lt;/h3&gt;&lt;pre class="mermaid"&gt;
+flowchart LR
+subgraph A[&amp;#34;Option A: Polling Publisher&amp;#34;]
+direction TB
+T1[⏰ Scheduler&amp;lt;br/&amp;gt;chạy mỗi N giây]
+T2[📖 Query outbox&amp;lt;br/&amp;gt;WHERE status = PENDING]
+T3[📨 Publish to Broker]
+T4[✏️ Update status = SENT]
+T1 --&amp;gt; T2 --&amp;gt; T3 --&amp;gt; T4
+end
+subgraph B[&amp;#34;Option B: CDC — Change Data Capture&amp;#34;]
+direction TB
+S1[📝 DB ghi outbox row]
+S2[📋 Transaction Log&amp;lt;br/&amp;gt;WAL / Binlog]
+S3[🔌 Debezium Connector]
+S4[📨 Publish to Kafka]
+S1 --&amp;gt; S2 --&amp;gt; S3 --&amp;gt; S4
+end
+&lt;/pre&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Tiêu chí&lt;/th&gt;
+&lt;th&gt;Polling Publisher&lt;/th&gt;
+&lt;th&gt;CDC (Debezium)&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;Độ trễ&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;Cao (phụ thuộc polling interval)&lt;/td&gt;
+&lt;td&gt;Gần real-time&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;Tải lên DB&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;Cao (query liên tục)&lt;/td&gt;
+&lt;td&gt;Thấp (đọc từ WAL/binlog)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;Độ phức tạp&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;Thấp — dễ implement&lt;/td&gt;
+&lt;td&gt;Cao — cần setup Debezium, Kafka Connect&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;Phù hợp&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;Hệ thống nhỏ, traffic thấp&lt;/td&gt;
+&lt;td&gt;Hệ thống lớn, yêu cầu latency thấp&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;Rủi ro&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;Duplicate nếu crash giữa publish và update&lt;/td&gt;
+&lt;td&gt;Cần quản lý offset Kafka Connect&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h2 id="5-kết-luận"&gt;5. Kết luận
+&lt;/h2&gt;&lt;p&gt;Outbox Pattern là một giải pháp &lt;strong&gt;đơn giản nhưng hiệu quả&lt;/strong&gt; để giải quyết Dual Write Problem — một trong những thách thức phổ biến nhất khi xây dựng hệ thống Microservices.&lt;/p&gt;
+&lt;p&gt;Thay vì cố gắng thực hiện hai thao tác phân tán một cách atomic (điều bất khả thi nếu không có distributed transaction), Outbox Pattern &lt;strong&gt;tận dụng ACID transaction&lt;/strong&gt; của database sẵn có để đảm bảo tính nhất quán, sau đó dùng một relay process riêng biệt để đưa message đến Broker.&lt;/p&gt;
+&lt;p&gt;Outbox Pattern không loại bỏ hoàn toàn failure, nhưng nó biến failure thành thứ có thể &lt;strong&gt;phát hiện, retry và phục hồi&lt;/strong&gt; — và đó chính là điều quan trọng nhất khi xây dựng hệ thống đáng tin cậy.&lt;/p&gt;</description></item></channel></rss>

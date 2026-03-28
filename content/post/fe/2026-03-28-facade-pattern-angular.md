@@ -1,7 +1,7 @@
 ---
-title: "Implementing Command and Compensation in Applications"
+title: "Facade Pattern in Angular"
 author: phongthien99
-date: 2026-03-28 00:00:00 +0700
+date: 2026-03-27 00:00:00 +0700
 categories: [Fe]
 tags: [frontend]
 math: true
@@ -49,10 +49,20 @@ Component đang phải biết:
 - Thứ tự: check cache → gọi API → cập nhật cache → cập nhật state
 - Khi nào `setLoading`, khi nào `setUsers`
 
-Đây là **tight coupling**. Khi logic thay đổi — thêm retry, đổi cache TTL, thêm
-analytics — ta phải sửa component, thứ không liên quan đến UI.
+Đây là **tight coupling** — component đang gánh logic không thuộc về nó.
 
----
+Về bản chất, component chỉ nên trả lời một câu hỏi: **"Dữ liệu này hiển thị lên
+màn hình như thế nào?"**. Nhưng ở đây nó đang trả lời thêm những câu hoàn toàn khác:
+"Dữ liệu lấy từ đâu?", "Cache bao lâu?", "Thứ tự các bước ra sao?". Đó là những
+quyết định thuộc về tầng **orchestration**, không phải tầng **presentation**.
+
+Hệ quả là khi bất kỳ chi tiết nào thay đổi — thêm retry khi API lỗi, đổi cache TTL,
+gắn analytics tracking — ta buộc phải mở component ra sửa, dù UI không hề thay đổi.
+Component trở thành nơi mọi thay đổi business logic đều chạm vào, và đó chính là dấu
+hiệu rõ nhất của tight coupling: **thay đổi ở một concern bắt buộc phải sửa ở một
+nơi không liên quan**
+
+
 
 ## II. Giải pháp — Facade Pattern
 
@@ -181,9 +191,9 @@ export class UserListComponent implements OnInit {
 Facade Pattern không phải là thêm một service vào đống service.
 Nó là **ranh giới có chủ đích** giữa ba câu hỏi:
 
-- **"Làm thế nào?"** — Subsystems (Api, Cache, State)
-- **"Làm gì?"** — Facade (orchestration, public API)
-- **"Hiển thị gì?"** — Component (UI)
+- **"What to show?"** — Subsystems (Api, Cache, State)
+- **"What to do?"** — Facade (orchestration, public API)
+- **"What to show?"** — Component (UI)
 
 Khi ranh giới này rõ ràng, mỗi lớp thay đổi độc lập mà không ảnh hưởng lớp kia.
 

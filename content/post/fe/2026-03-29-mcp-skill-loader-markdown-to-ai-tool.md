@@ -107,7 +107,7 @@ graph TD
     
     subgraph Core["⚙️ Core Layer"]
         P[Parser] --> R[Registry]
-        R --> |"validate"| V[Security Checks]
+    
     end
     
     subgraph Output["🔌 Output Layer"]

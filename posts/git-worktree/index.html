@@ -1,0 +1,366 @@
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><meta name=description content="Git Worktree Bạn đang code ngon lành thì sếp ping &ldquo;fix gấp bug production&rdquo;. Bạn thở dài, git stash, checkout, fix xong lại checkout về, stash pop&mldr; rồi mất 10 phút nhớ lại mình đang làm gì. Quen không?\n1. Đặt vấn đề — Context Switch là kẻ giết năng suất thầm lặng Hãy hình dung ngày làm việc điển hình của một developer:\nBạn đang triển khai feature &ldquo;Payment Integration&rdquo; — đã setup xong service, viết được nửa logic xử lý, server dev đang chạy ngon lành trên localhost:3000. Đúng lúc đó, Slack nổ: &ldquo;Production đang lỗi checkout, cần hotfix ngay!&rdquo;.\n"><title>Git Worktree</title><link rel=canonical href=https://phongthien99.github.io/posts/git-worktree/><link rel=stylesheet href=/scss/style.min.769133d016a4a1944b3a27800e000cccd439a8c1a9c0c61f7c4fa0bc0e42de57.css><meta property='og:title' content="Git Worktree"><meta property='og:description' content="Git Worktree Bạn đang code ngon lành thì sếp ping &ldquo;fix gấp bug production&rdquo;. Bạn thở dài, git stash, checkout, fix xong lại checkout về, stash pop&mldr; rồi mất 10 phút nhớ lại mình đang làm gì. Quen không?\n1. Đặt vấn đề — Context Switch là kẻ giết năng suất thầm lặng Hãy hình dung ngày làm việc điển hình của một developer:\nBạn đang triển khai feature &ldquo;Payment Integration&rdquo; — đã setup xong service, viết được nửa logic xử lý, server dev đang chạy ngon lành trên localhost:3000. Đúng lúc đó, Slack nổ: &ldquo;Production đang lỗi checkout, cần hotfix ngay!&rdquo;.\n"><meta property='og:url' content='https://phongthien99.github.io/posts/git-worktree/'><meta property='og:site_name' content='phongthien'><meta property='og:type' content='article'><meta property='article:section' content='Post'><meta property='article:tag' content='develop'><meta property='article:published_time' content='2026-04-27T12:40:00+08:00'><meta property='article:modified_time' content='2026-04-27T12:40:00+08:00'><meta name=twitter:title content="Git Worktree"><meta name=twitter:description content="Git Worktree Bạn đang code ngon lành thì sếp ping &ldquo;fix gấp bug production&rdquo;. Bạn thở dài, git stash, checkout, fix xong lại checkout về, stash pop&mldr; rồi mất 10 phút nhớ lại mình đang làm gì. Quen không?\n1. Đặt vấn đề — Context Switch là kẻ giết năng suất thầm lặng Hãy hình dung ngày làm việc điển hình của một developer:\nBạn đang triển khai feature &ldquo;Payment Integration&rdquo; — đã setup xong service, viết được nửa logic xử lý, server dev đang chạy ngon lành trên localhost:3000. Đúng lúc đó, Slack nổ: &ldquo;Production đang lỗi checkout, cần hotfix ngay!&rdquo;.\n"><link rel="shortcut icon" href=/favicon.png><script src=https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js></script><script>mermaid.initialize({startOnLoad:!0})</script></head><body class=article-page><script>(function(){const e="StackColorScheme";localStorage.getItem(e)||localStorage.setItem(e,"auto")})()</script><script>(function(){const t="StackColorScheme",e=localStorage.getItem(t),n=window.matchMedia("(prefers-color-scheme: dark)").matches===!0;e=="dark"||e==="auto"&&n?document.documentElement.dataset.scheme="dark":document.documentElement.dataset.scheme="light"})()</script><div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky"><button class="hamburger hamburger--spin" type=button id=toggle-menu aria-label="Toggle Menu">
+<span class=hamburger-box><span class=hamburger-inner></span></span></button><header><figure class=site-avatar><a href=/><img src=/img/avatar_hu_7ee69f593e8680d3.jpg width=300 height=300 class=site-logo loading=lazy alt=Avatar>
+</a><span class=emoji>🏅</span></figure><div class=site-meta><h1 class=site-name><a href=/>phongthien</a></h1><h2 class=site-description>Software Engineer</h2></div></header><ol class=menu-social><li><a href=https://github.com/phongthien99 target=_blank title=GitHub rel=me><svg class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6.0 00-1.3-3.2 4.2 4.2.0 00-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3.0 00-6.2.0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2.0 00-.1 3.2A4.6 4.6.0 004 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg></a></li><li><a href=https://twitter.com target=_blank title=linkedin rel=me><svg class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M10 14a3.5 3.5.0 005 0l4-4a3.5 3.5.0 00-5-5l-.5.5"/><path d="M14 10a3.5 3.5.0 00-5 0l-4 4a3.5 3.5.0 005 5l.5-.5"/></svg></a></li></ol><ol class=menu id=main-menu><li><a href=/><svg class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><polyline points="5 12 3 12 12 3 21 12 19 12"/><path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/><path d="M9 21v-6a2 2 0 012-2h2a2 2 0 012 2v6"/></svg>
+<span>Home</span></a></li><li><a href=/archives/><svg class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><rect x="3" y="4" width="18" height="4" rx="2"/><path d="M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+<span>Archives</span></a></li><li><a href=/search/><svg class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="10" cy="10" r="7"/><line x1="21" y1="21" x2="15" y2="15"/></svg>
+<span>Search</span></a></li><li><a href=/about-me/><svg class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="7" r="4"/><path d="M6 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/></svg>
+<span>About me</span></a></li><li class=menu-bottom-section><ol class=menu><li id=dark-mode-toggle><svg class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="8" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<svg class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="16" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<span>Dark Mode</span></li></ol></li></ol></aside><aside class="sidebar right-sidebar sticky"><section class="widget archives"><div class=widget-icon><svg class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><line x1="5" y1="9" x2="19" y2="9"/><line x1="5" y1="15" x2="19" y2="15"/><line x1="11" y1="4" x2="7" y2="20"/><line x1="17" y1="4" x2="13" y2="20"/></svg></div><h2 class="widget-title section-title">Table of contents</h2><div class=widget--toc><nav id=TableOfContents><ol><li><a href=#1-đặt-vấn-đề--context-switch-là-kẻ-giết-năng-suất-thầm-lặng>1. Đặt vấn đề — Context Switch là kẻ giết năng suất thầm lặng</a></li><li><a href=#2-giải-pháp--git-worktree-là-gì>2. Giải pháp — Git Worktree là gì?</a><ol><li><a href=#cách-nó-hoạt-động-bên-trong>Cách nó hoạt động bên trong</a></li></ol></li><li><a href=#3-các-lệnh-cơ-bản>3. Các lệnh cơ bản</a><ol><li><a href=#tạo-worktree-mới>Tạo worktree mới</a></li><li><a href=#xem-danh-sách-worktree>Xem danh sách worktree</a></li><li><a href=#xóa-worktree>Xóa worktree</a></li><li><a href=#quy-tắc-quan-trọng>Quy tắc quan trọng</a></li></ol></li><li><a href=#4-workflow-thực-tế>4. Workflow thực tế</a><ol><li><a href=#workflow-1--hotfix-song-song-với-feature-đang-làm-dở>Workflow 1 — Hotfix song song với feature đang làm dở</a></li><li><a href=#workflow-2--review-pr-của-đồng-nghiệp>Workflow 2 — Review PR của đồng nghiệp</a></li><li><a href=#workflow-3--phát-triển-nhiều-feature-song-song>Workflow 3 — Phát triển nhiều feature song song</a></li><li><a href=#workflow-4--merge-và-giải-quyết-conflict-an-toàn>Workflow 4 — Merge và giải quyết conflict an toàn</a></li><li><a href=#workflow-5--ai-agent-chạy-song-song-claude-code-copilot>Workflow 5 — AI Agent chạy song song (Claude Code, Copilot)</a></li><li><a href=#workflow-6--test-trên-nhiều-versionconfig-cùng-lúc>Workflow 6 — Test trên nhiều version/config cùng lúc</a></li></ol></li><li><a href=#5-cheat-sheet--lệnh-thường-dùng>5. Cheat Sheet — Lệnh thường dùng</a></li><li><a href=#6-kết-luận>6. Kết luận</a></li></ol></nav></div></section></aside><main class="main full-width"><article class=main-article><header class=article-header><div class=article-details><header class=article-category><a href=/categories/develop/>Develop</a></header><div class=article-title-wrapper><h2 class=article-title><a href=/posts/git-worktree/>Git Worktree</a></h2></div><footer class=article-time><div><svg class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M11.795 21H5a2 2 0 01-2-2V7a2 2 0 012-2h12a2 2 0 012 2v4"/><circle cx="18" cy="18" r="4"/><path d="M15 3v4"/><path d="M7 3v4"/><path d="M3 11h16"/><path d="M18 16.496V18l1 1"/></svg>
+<time class=article-time--published datetime=2026-04-27T12:40:00+08:00>Apr 27, 2026</time></div><div><svg class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+<time class=article-time--reading>10 minute read</time></div></footer></div></header><section class=article-content><h1 id=git-worktree>Git Worktree</h1><blockquote><p><em>Bạn đang code ngon lành thì sếp ping &ldquo;fix gấp bug production&rdquo;. Bạn thở dài, <code>git stash</code>, <code>checkout</code>, fix xong lại <code>checkout</code> về, <code>stash pop</code>&mldr; rồi mất 10 phút nhớ lại mình đang làm gì. Quen không?</em></p></blockquote><h2 id=1-đặt-vấn-đề--context-switch-là-kẻ-giết-năng-suất-thầm-lặng>1. Đặt vấn đề — Context Switch là kẻ giết năng suất thầm lặng</h2><p>Hãy hình dung ngày làm việc điển hình của một developer:</p><p>Bạn đang triển khai feature <strong>&ldquo;Payment Integration&rdquo;</strong> — đã setup xong service, viết được nửa logic xử lý, server dev đang chạy ngon lành trên <code>localhost:3000</code>. Đúng lúc đó, Slack nổ: <em>&ldquo;Production đang lỗi checkout, cần hotfix ngay!&rdquo;</em>.</p><p>Và bạn bắt đầu vòng lặp quen thuộc:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span><span class=lnt>8
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl>git stash                          <span class=c1># Cất đống code đang làm dở</span>
+</span></span><span class=line><span class=cl>git checkout main                  <span class=c1># Về nhánh chính</span>
+</span></span><span class=line><span class=cl>git pull origin main               <span class=c1># Cập nhật code mới nhất</span>
+</span></span><span class=line><span class=cl>git checkout -b hotfix/checkout    <span class=c1># Tạo nhánh hotfix</span>
+</span></span><span class=line><span class=cl><span class=c1># ... fix bug, test, commit, push ...</span>
+</span></span><span class=line><span class=cl>git checkout feature/payment       <span class=c1># Quay lại feature</span>
+</span></span><span class=line><span class=cl>git stash pop                      <span class=c1># Lấy code cũ ra</span>
+</span></span><span class=line><span class=cl><span class=c1># ... 10 phút sau: &#34;Mình đang làm tới đâu nhỉ?&#34; 🤯</span>
+</span></span></code></pre></td></tr></table></div></div><p>Vấn đề không chỉ dừng ở đó. Có ít nhất <strong>ba nỗi đau</strong> mà developer gặp hàng ngày:</p><p><strong>Nỗi đau #1 — Hotfix gấp giữa chừng feature.</strong> Như kịch bản trên. <code>git stash</code> nghe đơn giản nhưng thực tế đầy rủi ro: stash conflict, quên stash nào là stash nào, hoặc tệ hơn — <code>stash pop</code> nhầm branch.</p><p><strong>Nỗi đau #2 — Review code của đồng nghiệp.</strong> Bạn đồng nghiệp gửi PR và cần bạn pull branch về test thử. Nhưng branch hiện tại của bạn đang dở dang, <code>node_modules</code> đang chạy, dev server đang bật. Checkout sang branch khác đồng nghĩa với việc phải tắt server, có thể cài lại dependencies, rồi lại quay về setup lại mọi thứ.</p><p><strong>Nỗi đau #3 — AI agent cần isolation.</strong> Trong kỷ nguyên AI-assisted development, bạn muốn cho Claude Code hoặc Copilot Workspace chạy task trên một branch riêng, trong khi bạn vẫn code trên branch của mình. Nhưng cả hai đều cần working directory — và bạn chỉ có một.</p><p>Tất cả những vấn đề này có chung một gốc rễ: <strong>Git chỉ cho phép một branch hoạt động trong một working directory tại một thời điểm.</strong> Và giải pháp không phải là clone thêm repo, mà là một tính năng đã có sẵn trong Git từ lâu nhưng ít người biết đến.</p><h2 id=2-giải-pháp--git-worktree-là-gì>2. Giải pháp — Git Worktree là gì?</h2><p><strong>Git Worktree</strong> cho phép bạn checkout nhiều branch ra nhiều thư mục khác nhau, tất cả đều dùng chung một <code>.git</code> directory duy nhất.</p><p>Nói đơn giản: thay vì chỉ có một &ldquo;bản sao làm việc&rdquo; của repo, bạn có thể mở ra nhiều bản sao, mỗi bản ở một branch khác nhau, trong các thư mục riêng biệt — mà không cần <code>git clone</code> thêm lần nào.</p><h3 id=cách-nó-hoạt-động-bên-trong>Cách nó hoạt động bên trong</h3><p>Khi bạn <code>git clone</code> một repo, Git tạo ra hai thứ: thư mục <code>.git</code> (chứa toàn bộ object database, refs, config) và working tree (các file bạn nhìn thấy và edit). Bình thường, chúng là cặp 1:1. Git Worktree phá vỡ giới hạn đó — bạn có thể có nhiều working tree nhưng tất cả trỏ về cùng một <code>.git</code>.</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback><span class=line><span class=cl>~/my-project/              ← worktree chính (main branch)
+</span></span><span class=line><span class=cl>├── .git/                  ← object database duy nhất
+</span></span><span class=line><span class=cl>├── src/
+</span></span><span class=line><span class=cl>└── package.json
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>/tmp/hotfix-wt/            ← worktree phụ (hotfix branch)
+</span></span><span class=line><span class=cl>├── .git  → file trỏ về ~/my-project/.git
+</span></span><span class=line><span class=cl>├── src/
+</span></span><span class=line><span class=cl>└── package.json
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>/tmp/review-wt/            ← worktree phụ (PR review branch)
+</span></span><span class=line><span class=cl>├── .git  → file trỏ về ~/my-project/.git
+</span></span><span class=line><span class=cl>├── src/
+</span></span><span class=line><span class=cl>└── package.json
+</span></span></code></pre></td></tr></table></div></div><h2 id=3-các-lệnh-cơ-bản>3. Các lệnh cơ bản</h2><h3 id=tạo-worktree-mới>Tạo worktree mới</h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span><span class=lnt>8
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl><span class=c1># Tạo worktree mới từ branch có sẵn</span>
+</span></span><span class=line><span class=cl>git worktree add ../hotfix-wt hotfix/urgent-bug
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># Tạo worktree + tạo branch mới (flag -b)</span>
+</span></span><span class=line><span class=cl>git worktree add ../hotfix-wt -b hotfix/urgent-bug
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># Tạo worktree từ remote branch</span>
+</span></span><span class=line><span class=cl>git worktree add ../review-wt origin/feature/new-ui
+</span></span></code></pre></td></tr></table></div></div><h3 id=xem-danh-sách-worktree>Xem danh sách worktree</h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl>git worktree list
+</span></span><span class=line><span class=cl><span class=c1># Output:</span>
+</span></span><span class=line><span class=cl><span class=c1># /home/dev/my-project         abc1234 [main]</span>
+</span></span><span class=line><span class=cl><span class=c1># /home/dev/hotfix-wt          def5678 [hotfix/urgent-bug]</span>
+</span></span><span class=line><span class=cl><span class=c1># /home/dev/review-wt          ghi9012 [feature/new-ui]</span>
+</span></span></code></pre></td></tr></table></div></div><h3 id=xóa-worktree>Xóa worktree</h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span><span class=lnt>8
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl><span class=c1># Xóa worktree (sẽ xóa cả thư mục)</span>
+</span></span><span class=line><span class=cl>git worktree remove ../hotfix-wt
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># Nếu có uncommitted changes, cần force</span>
+</span></span><span class=line><span class=cl>git worktree remove --force ../hotfix-wt
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># Dọn dẹp metadata của worktree đã xóa thủ công</span>
+</span></span><span class=line><span class=cl>git worktree prune
+</span></span></code></pre></td></tr></table></div></div><h3 id=quy-tắc-quan-trọng>Quy tắc quan trọng</h3><p>Một branch chỉ được checkout ở đúng một worktree tại một thời điểm. Nếu <code>main</code> đang được dùng ở worktree chính, bạn không thể tạo worktree khác cũng checkout <code>main</code>. Đây là thiết kế có chủ đích để tránh xung đột khi commit.</p><h2 id=4-workflow-thực-tế>4. Workflow thực tế</h2><h3 id=workflow-1--hotfix-song-song-với-feature-đang-làm-dở>Workflow 1 — Hotfix song song với feature đang làm dở</h3><p>Đây là use case kinh điển nhất. Bạn đang code feature, cần fix bug production ngay mà không muốn đụng đến bất cứ thứ gì đang chạy.</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl><span class=c1># Bạn đang ở ~/project, branch feature/payment, server đang chạy</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># Tạo worktree cho hotfix (không ảnh hưởng gì tới thư mục hiện tại)</span>
+</span></span><span class=line><span class=cl>git worktree add ../hotfix-checkout -b hotfix/fix-checkout origin/main
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># Mở terminal mới, cd vào worktree</span>
+</span></span><span class=line><span class=cl><span class=nb>cd</span> ../hotfix-checkout
+</span></span><span class=line><span class=cl>npm install          <span class=c1># Cài dependencies riêng cho worktree này</span>
+</span></span><span class=line><span class=cl>npm run dev          <span class=c1># Chạy dev server trên port khác</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># Fix bug, test, commit</span>
+</span></span><span class=line><span class=cl>git add .
+</span></span><span class=line><span class=cl>git commit -m <span class=s2>&#34;fix: resolve checkout payment error&#34;</span>
+</span></span><span class=line><span class=cl>git push origin hotfix/fix-checkout
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># Tạo PR, merge xong → dọn dẹp</span>
+</span></span><span class=line><span class=cl><span class=nb>cd</span> ~/project
+</span></span><span class=line><span class=cl>git worktree remove ../hotfix-checkout
+</span></span></code></pre></td></tr></table></div></div><p>Trong suốt quá trình này, terminal cũ của bạn vẫn chạy feature/payment, dev server vẫn hoạt động, code vẫn nguyên vẹn. Không stash, không checkout, không mất context.</p><h3 id=workflow-2--review-pr-của-đồng-nghiệp>Workflow 2 — Review PR của đồng nghiệp</h3><p>Đồng nghiệp gửi PR cần bạn test thử trên máy local trước khi approve. Thay vì phá working directory hiện tại, bạn tạo worktree riêng.</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl><span class=c1># Fetch branch mới nhất</span>
+</span></span><span class=line><span class=cl>git fetch origin
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># Tạo worktree cho branch cần review</span>
+</span></span><span class=line><span class=cl>git worktree add ../review-new-ui origin/feature/new-ui
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># Mở thư mục này trong VSCode</span>
+</span></span><span class=line><span class=cl>code ../review-new-ui
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># Test, đọc code, chạy thử</span>
+</span></span><span class=line><span class=cl><span class=nb>cd</span> ../review-new-ui
+</span></span><span class=line><span class=cl>npm install
+</span></span><span class=line><span class=cl>npm <span class=nb>test</span>
+</span></span><span class=line><span class=cl>npm run dev
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># Review xong → dọn dẹp</span>
+</span></span><span class=line><span class=cl>git worktree remove ../review-new-ui
+</span></span></code></pre></td></tr></table></div></div><p>Bạn thậm chí có thể mở VSCode <strong>Multi-root Workspace</strong> để thấy cả hai codebase cùng lúc:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl><span class=c1># Mở workspace với nhiều worktree</span>
+</span></span><span class=line><span class=cl>code --add ../review-new-ui
+</span></span><span class=line><span class=cl><span class=c1># Hoặc tạo file .code-workspace</span>
+</span></span></code></pre></td></tr></table></div></div><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-json data-lang=json><span class=line><span class=cl><span class=c1>// multi-root.code-workspace
+</span></span></span><span class=line><span class=cl><span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=nt>&#34;folders&#34;</span><span class=p>:</span> <span class=p>[</span>
+</span></span><span class=line><span class=cl>    <span class=p>{</span> <span class=nt>&#34;path&#34;</span><span class=p>:</span> <span class=s2>&#34;../project&#34;</span><span class=p>,</span> <span class=nt>&#34;name&#34;</span><span class=p>:</span> <span class=s2>&#34;🔨 Feature - Payment&#34;</span> <span class=p>},</span>
+</span></span><span class=line><span class=cl>    <span class=p>{</span> <span class=nt>&#34;path&#34;</span><span class=p>:</span> <span class=s2>&#34;../review-new-ui&#34;</span><span class=p>,</span> <span class=nt>&#34;name&#34;</span><span class=p>:</span> <span class=s2>&#34;👀 Review - New UI&#34;</span> <span class=p>}</span>
+</span></span><span class=line><span class=cl>  <span class=p>]</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><h3 id=workflow-3--phát-triển-nhiều-feature-song-song>Workflow 3 — Phát triển nhiều feature song song</h3><p>Khi team nhỏ, một developer thường phải xử lý 2–3 feature cùng lúc. Feature A đang chờ review, bạn chuyển sang feature B. Feature B bị block bởi API chưa ready, bạn nhảy sang feature C. Với worktree, mỗi feature là một thư mục riêng.</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl><span class=c1># Setup ban đầu</span>
+</span></span><span class=line><span class=cl>git worktree add ../ft-payment   -b feature/payment    origin/main
+</span></span><span class=line><span class=cl>git worktree add ../ft-dashboard -b feature/dashboard   origin/main
+</span></span><span class=line><span class=cl>git worktree add ../ft-auth      -b feature/auth        origin/main
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># Mỗi worktree chạy trên terminal/IDE riêng</span>
+</span></span><span class=line><span class=cl><span class=c1># Terminal 1: cd ../ft-payment   &amp;&amp; npm i &amp;&amp; npm run dev -- --port 3001</span>
+</span></span><span class=line><span class=cl><span class=c1># Terminal 2: cd ../ft-dashboard &amp;&amp; npm i &amp;&amp; npm run dev -- --port 3002</span>
+</span></span><span class=line><span class=cl><span class=c1># Terminal 3: cd ../ft-auth      &amp;&amp; npm i &amp;&amp; npm run dev -- --port 3003</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># Nhảy qua lại giữa các feature = Alt+Tab giữa các terminal</span>
+</span></span><span class=line><span class=cl><span class=c1># Không stash, không checkout, không mất state</span>
+</span></span></code></pre></td></tr></table></div></div><p>Mẹo quản lý: đặt tên thư mục worktree có prefix để dễ nhận diện, ví dụ <code>ft-</code> cho feature, <code>hf-</code> cho hotfix, <code>rv-</code> cho review. Chạy <code>git worktree list</code> để luôn nắm toàn cảnh.</p><h3 id=workflow-4--merge-và-giải-quyết-conflict-an-toàn>Workflow 4 — Merge và giải quyết conflict an toàn</h3><p>Merge conflict luôn là một thao tác căng thẳng — đặc biệt khi bạn merge trực tiếp trên branch đang làm việc. Với worktree, bạn có thể tạo một &ldquo;sandbox&rdquo; riêng để merge.</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl><span class=c1># Tạo worktree riêng để merge</span>
+</span></span><span class=line><span class=cl>git worktree add ../merge-zone -b merge/payment-to-main origin/main
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=nb>cd</span> ../merge-zone
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># Merge feature branch vào</span>
+</span></span><span class=line><span class=cl>git merge origin/feature/payment
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># Nếu có conflict → giải quyết thoải mái ở đây</span>
+</span></span><span class=line><span class=cl><span class=c1># Code trong worktree chính không bị ảnh hưởng</span>
+</span></span><span class=line><span class=cl><span class=c1># Bạn có thể mở cả hai thư mục so sánh song song</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># Merge xong, test kỹ</span>
+</span></span><span class=line><span class=cl>npm install
+</span></span><span class=line><span class=cl>npm <span class=nb>test</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># Push và tạo PR</span>
+</span></span><span class=line><span class=cl>git push origin merge/payment-to-main
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># Dọn dẹp</span>
+</span></span><span class=line><span class=cl><span class=nb>cd</span> ~/project
+</span></span><span class=line><span class=cl>git worktree remove ../merge-zone
+</span></span></code></pre></td></tr></table></div></div><p>Lợi ích lớn nhất: nếu merge hỏng hoặc bạn muốn làm lại, chỉ cần xóa worktree và tạo mới. Không có gì bị ảnh hưởng.</p><h3 id=workflow-5--ai-agent-chạy-song-song-claude-code-copilot>Workflow 5 — AI Agent chạy song song (Claude Code, Copilot)</h3><p>Đây là workflow đang ngày càng phổ biến. Bạn muốn một AI agent tự động implement một task trong khi bạn làm task khác — hoặc thậm chí nhiều agent chạy song song nhiều task.</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl><span class=c1># Worktree cho bạn</span>
+</span></span><span class=line><span class=cl><span class=c1># (đang ở ~/project, branch feature/payment)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># Worktree cho AI agent 1</span>
+</span></span><span class=line><span class=cl>git worktree add ../agent-1-auth -b feature/auth origin/main
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># Worktree cho AI agent 2</span>
+</span></span><span class=line><span class=cl>git worktree add ../agent-2-tests -b chore/add-tests origin/main
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># Chạy Claude Code trên từng worktree riêng biệt</span>
+</span></span><span class=line><span class=cl><span class=c1># Terminal 1 (agent 1):</span>
+</span></span><span class=line><span class=cl><span class=nb>cd</span> ../agent-1-auth
+</span></span><span class=line><span class=cl>claude <span class=s2>&#34;Implement OAuth2 login flow based on the auth spec in docs/&#34;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># Terminal 2 (agent 2):</span>
+</span></span><span class=line><span class=cl><span class=nb>cd</span> ../agent-2-tests
+</span></span><span class=line><span class=cl>claude <span class=s2>&#34;Write unit tests for all services in src/services/&#34;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># Bạn vẫn code bình thường ở ~/project</span>
+</span></span><span class=line><span class=cl><span class=c1># Mỗi agent có sandbox riêng, không đụng chạm nhau</span>
+</span></span></code></pre></td></tr></table></div></div><p>Kiến trúc này đặc biệt mạnh vì mỗi agent có <strong>full isolation</strong>: filesystem riêng, có thể cài dependencies riêng, chạy test riêng, commit riêng — không sợ race condition hay file conflict.</p><h3 id=workflow-6--test-trên-nhiều-versionconfig-cùng-lúc>Workflow 6 — Test trên nhiều version/config cùng lúc</h3><p>Bạn cần test ứng dụng với các config khác nhau — ví dụ Node 18 vs Node 20, hoặc PostgreSQL vs MySQL. Worktree cho phép bạn chạy song song.</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl>git worktree add ../test-node18 main
+</span></span><span class=line><span class=cl>git worktree add ../test-node20 main  
+</span></span><span class=line><span class=cl><span class=c1># Lưu ý: cùng branch main sẽ bị lỗi!</span>
+</span></span><span class=line><span class=cl><span class=c1># Giải pháp: checkout dạng detached HEAD</span>
+</span></span><span class=line><span class=cl>git worktree add --detach ../test-node20 main
+</span></span></code></pre></td></tr></table></div></div><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span><span class=lnt>8
+</span><span class=lnt>9
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl><span class=c1># Terminal 1</span>
+</span></span><span class=line><span class=cl><span class=nb>cd</span> ../test-node18
+</span></span><span class=line><span class=cl>nvm use <span class=m>18</span>
+</span></span><span class=line><span class=cl>npm install <span class=o>&amp;&amp;</span> npm <span class=nb>test</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># Terminal 2</span>
+</span></span><span class=line><span class=cl><span class=nb>cd</span> ../test-node20
+</span></span><span class=line><span class=cl>nvm use <span class=m>20</span>
+</span></span><span class=line><span class=cl>npm install <span class=o>&amp;&amp;</span> npm <span class=nb>test</span>
+</span></span></code></pre></td></tr></table></div></div><h2 id=5-cheat-sheet--lệnh-thường-dùng>5. Cheat Sheet — Lệnh thường dùng</h2><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl><span class=c1># ─── TẠO ──────────────────────────────────────────────</span>
+</span></span><span class=line><span class=cl>git worktree add &lt;path&gt; &lt;branch&gt;         <span class=c1># Checkout branch có sẵn</span>
+</span></span><span class=line><span class=cl>git worktree add &lt;path&gt; -b &lt;new&gt; &lt;base&gt;  <span class=c1># Tạo branch mới từ base</span>
+</span></span><span class=line><span class=cl>git worktree add --detach &lt;path&gt; &lt;ref&gt;   <span class=c1># Checkout dạng detached HEAD</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># ─── QUẢN LÝ ──────────────────────────────────────────</span>
+</span></span><span class=line><span class=cl>git worktree list                        <span class=c1># Liệt kê tất cả worktree</span>
+</span></span><span class=line><span class=cl>git worktree list --porcelain            <span class=c1># Output dạng machine-readable</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># ─── DỌN DẸP ──────────────────────────────────────────</span>
+</span></span><span class=line><span class=cl>git worktree remove &lt;path&gt;               <span class=c1># Xóa worktree</span>
+</span></span><span class=line><span class=cl>git worktree remove --force &lt;path&gt;       <span class=c1># Xóa kể cả khi có changes</span>
+</span></span><span class=line><span class=cl>git worktree prune                       <span class=c1># Dọn metadata cũ</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># ─── MẸO ──────────────────────────────────────────────</span>
+</span></span><span class=line><span class=cl>git worktree lock &lt;path&gt;                 <span class=c1># Khóa worktree (tránh bị prune)</span>
+</span></span><span class=line><span class=cl>git worktree unlock &lt;path&gt;               <span class=c1># Mở khóa</span>
+</span></span><span class=line><span class=cl>git worktree move &lt;path&gt; &lt;new-path&gt;      <span class=c1># Di chuyển worktree</span>
+</span></span></code></pre></td></tr></table></div></div><hr><h2 id=6-kết-luận>6. Kết luận</h2><p>Git Worktree không phải tính năng mới — nó đã có trong Git từ version 2.5 (2015). Nhưng nó là một trong những công cụ bị underrated nhất trong bộ công cụ của developer.</p><p>Chỉ với vài lệnh đơn giản, bạn giải quyết được những vấn đề mà trước đây phải dùng <code>stash</code>, clone repo, hoặc chấp nhận mất context. Hotfix không còn là nỗi ám ảnh. Review PR trở nên nhẹ nhàng. Phát triển song song nhiều feature trở thành chuyện bình thường.</p><p>Và đặc biệt, trong kỷ nguyên AI agent, khi bạn muốn Claude Code hay bất kỳ AI tool nào chạy task song song với bạn — Git Worktree cung cấp isolation hoàn hảo mà không cần container hay VM phức tạp.</p><p>Hãy thử ngay hôm nay. Chỉ cần một lệnh <code>git worktree add</code> — và bạn sẽ tự hỏi tại sao mình không biết đến nó sớm hơn.</p></section><footer class=article-footer><section class=article-tags><a href=/tags/develop/>Develop</a></section><section class=article-copyright><svg class="icon icon-tabler icon-tabler-copyright" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><path d="M14.5 9a3.5 4 0 100 6"/></svg>
+<span>Licensed under CC BY-NC-SA 4.0</span></section></footer><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css integrity=sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV crossorigin=anonymous><script src=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js integrity=sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8 crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js integrity=sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05 crossorigin=anonymous defer></script><script>window.addEventListener("DOMContentLoaded",()=>{const e=[".main-article",".widget--toc"];e.forEach(e=>{const t=document.querySelector(e);t&&renderMathInElement(t,{delimiters:[{left:"$$",right:"$$",display:!0},{left:"$",right:"$",display:!1},{left:"\\(",right:"\\)",display:!1},{left:"\\[",right:"\\]",display:!0}],ignoredClasses:["gist"]})})})</script></article><div class=disqus-container></div><style>.disqus-container{background-color:var(--card-background);border-radius:var(--card-border-radius);box-shadow:var(--shadow-l1);padding:var(--card-padding)}</style><script>window.addEventListener("onColorSchemeChange",e=>{typeof DISQUS=="object"&&DISQUS.reset({reload:!0})})</script><footer class=site-footer><section class=copyright>&copy;
+2026 phongthien</section><section class=powerby>Built with <a href=https://gohugo.io/ target=_blank rel=noopener>Hugo</a><br>Theme <b><a href=https://github.com/CaiJimmy/hugo-theme-stack target=_blank rel=noopener data-version=3.33.0>Stack</a></b> designed by <a href=https://jimmycai.com target=_blank rel=noopener>Jimmy</a></section></footer><div class=pswp tabindex=-1 role=dialog aria-hidden=true><div class=pswp__bg></div><div class=pswp__scroll-wrap><div class=pswp__container><div class=pswp__item></div><div class=pswp__item></div><div class=pswp__item></div></div><div class="pswp__ui pswp__ui--hidden"><div class=pswp__top-bar><div class=pswp__counter></div><button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+<button class="pswp__button pswp__button--share" title=Share></button>
+<button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+<button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button><div class=pswp__preloader><div class=pswp__preloader__icn><div class=pswp__preloader__cut><div class=pswp__preloader__donut></div></div></div></div></div><div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap"><div class=pswp__share-tooltip></div></div><button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+</button>
+<button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)"></button><div class=pswp__caption><div class=pswp__caption__center></div></div></div></div></div><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo=" crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU=" crossorigin=anonymous defer></script><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css crossorigin=anonymous><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css crossorigin=anonymous></main></div><script src=https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z+KMkF24hUW8WePSA9HM=" crossorigin=anonymous></script><script type=text/javascript src=/ts/main.c922af694cc257bf1ecc41c0dd7b0430f9114ec280ccf67cd2c6ad55f5316c4e.js defer></script><script>(function(){const e=document.createElement("link");e.href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap",e.type="text/css",e.rel="stylesheet",document.head.appendChild(e)})()</script></body></html>

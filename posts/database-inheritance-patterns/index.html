@@ -1,0 +1,461 @@
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><meta name=description content="Database Inheritance Patterns Bạn có một hệ thống issue tracker. Có Bug, có FeatureRequest, có Task. Chúng chia sẻ vài trường chung như title, status, created_at — nhưng mỗi loại lại có dữ liệu riêng. Câu hỏi đặt ra: thiết kế database thế nào?\nBối cảnh bài toán Giả sử chúng ta đang xây dựng một hệ thống quản lý issue cho một dự án phần mềm. Có 3 loại issue:\n"><title>Database Inheritance Patterns</title><link rel=canonical href=https://phongthien99.github.io/posts/database-inheritance-patterns/><link rel=stylesheet href=/scss/style.min.769133d016a4a1944b3a27800e000cccd439a8c1a9c0c61f7c4fa0bc0e42de57.css><meta property='og:title' content="Database Inheritance Patterns"><meta property='og:description' content="Database Inheritance Patterns Bạn có một hệ thống issue tracker. Có Bug, có FeatureRequest, có Task. Chúng chia sẻ vài trường chung như title, status, created_at — nhưng mỗi loại lại có dữ liệu riêng. Câu hỏi đặt ra: thiết kế database thế nào?\nBối cảnh bài toán Giả sử chúng ta đang xây dựng một hệ thống quản lý issue cho một dự án phần mềm. Có 3 loại issue:\n"><meta property='og:url' content='https://phongthien99.github.io/posts/database-inheritance-patterns/'><meta property='og:site_name' content='phongthien'><meta property='og:type' content='article'><meta property='article:section' content='Post'><meta property='article:tag' content='Database'><meta property='article:published_time' content='2026-04-05T00:40:00+08:00'><meta property='article:modified_time' content='2026-04-05T00:40:00+08:00'><meta name=twitter:title content="Database Inheritance Patterns"><meta name=twitter:description content="Database Inheritance Patterns Bạn có một hệ thống issue tracker. Có Bug, có FeatureRequest, có Task. Chúng chia sẻ vài trường chung như title, status, created_at — nhưng mỗi loại lại có dữ liệu riêng. Câu hỏi đặt ra: thiết kế database thế nào?\nBối cảnh bài toán Giả sử chúng ta đang xây dựng một hệ thống quản lý issue cho một dự án phần mềm. Có 3 loại issue:\n"><link rel="shortcut icon" href=/favicon.png><script src=https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js></script><script>mermaid.initialize({startOnLoad:!0})</script></head><body class=article-page><script>(function(){const e="StackColorScheme";localStorage.getItem(e)||localStorage.setItem(e,"auto")})()</script><script>(function(){const t="StackColorScheme",e=localStorage.getItem(t),n=window.matchMedia("(prefers-color-scheme: dark)").matches===!0;e=="dark"||e==="auto"&&n?document.documentElement.dataset.scheme="dark":document.documentElement.dataset.scheme="light"})()</script><div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky"><button class="hamburger hamburger--spin" type=button id=toggle-menu aria-label="Toggle Menu">
+<span class=hamburger-box><span class=hamburger-inner></span></span></button><header><figure class=site-avatar><a href=/><img src=/img/avatar_hu_7ee69f593e8680d3.jpg width=300 height=300 class=site-logo loading=lazy alt=Avatar>
+</a><span class=emoji>🏅</span></figure><div class=site-meta><h1 class=site-name><a href=/>phongthien</a></h1><h2 class=site-description>Software Engineer</h2></div></header><ol class=menu-social><li><a href=https://github.com/phongthien99 target=_blank title=GitHub rel=me><svg class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6.0 00-1.3-3.2 4.2 4.2.0 00-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3.0 00-6.2.0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2.0 00-.1 3.2A4.6 4.6.0 004 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg></a></li><li><a href=https://twitter.com target=_blank title=linkedin rel=me><svg class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M10 14a3.5 3.5.0 005 0l4-4a3.5 3.5.0 00-5-5l-.5.5"/><path d="M14 10a3.5 3.5.0 00-5 0l-4 4a3.5 3.5.0 005 5l.5-.5"/></svg></a></li></ol><ol class=menu id=main-menu><li><a href=/><svg class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><polyline points="5 12 3 12 12 3 21 12 19 12"/><path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/><path d="M9 21v-6a2 2 0 012-2h2a2 2 0 012 2v6"/></svg>
+<span>Home</span></a></li><li><a href=/archives/><svg class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><rect x="3" y="4" width="18" height="4" rx="2"/><path d="M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+<span>Archives</span></a></li><li><a href=/search/><svg class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="10" cy="10" r="7"/><line x1="21" y1="21" x2="15" y2="15"/></svg>
+<span>Search</span></a></li><li><a href=/about-me/><svg class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="7" r="4"/><path d="M6 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/></svg>
+<span>About me</span></a></li><li class=menu-bottom-section><ol class=menu><li id=dark-mode-toggle><svg class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="8" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<svg class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="16" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<span>Dark Mode</span></li></ol></li></ol></aside><aside class="sidebar right-sidebar sticky"><section class="widget archives"><div class=widget-icon><svg class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><line x1="5" y1="9" x2="19" y2="9"/><line x1="5" y1="15" x2="19" y2="15"/><line x1="11" y1="4" x2="7" y2="20"/><line x1="17" y1="4" x2="13" y2="20"/></svg></div><h2 class="widget-title section-title">Table of contents</h2><div class=widget--toc><nav id=TableOfContents><ol><li><a href=#bối-cảnh-bài-toán>Bối cảnh bài toán</a></li><li><a href=#1-single-table-inheritance-sti>1. Single Table Inheritance (STI)</a><ol><li><a href=#ý-tưởng>Ý tưởng</a></li><li><a href=#sơ-đồ-er>Sơ đồ ER</a></li><li><a href=#schema>Schema</a></li><li><a href=#truy-vấn-minh-họa>Truy vấn minh họa</a></li><li><a href=#ưu-điểm>Ưu điểm</a></li><li><a href=#nhược-điểm>Nhược điểm</a></li><li><a href=#khi-nào-nên-dùng>Khi nào nên dùng?</a></li></ol></li><li><a href=#2-concrete-table-inheritance-cti>2. Concrete Table Inheritance (CTI)</a><ol><li><a href=#ý-tưởng-1>Ý tưởng</a></li><li><a href=#sơ-đồ-er-1>Sơ đồ ER</a></li><li><a href=#schema-1>Schema</a></li><li><a href=#truy-vấn-minh-họa-1>Truy vấn minh họa</a></li><li><a href=#ưu-điểm-1>Ưu điểm</a></li><li><a href=#nhược-điểm-1>Nhược điểm</a></li><li><a href=#khi-nào-nên-dùng-1>Khi nào nên dùng?</a></li></ol></li><li><a href=#3-class-table-inheritance-cti--hay-còn-gọi-table-per-type>3. Class Table Inheritance (CTI — hay còn gọi Table-per-Type)</a><ol><li><a href=#ý-tưởng-2>Ý tưởng</a></li><li><a href=#sơ-đồ-er-2>Sơ đồ ER</a></li><li><a href=#schema-2>Schema</a></li><li><a href=#truy-vấn-minh-họa-2>Truy vấn minh họa</a></li><li><a href=#ưu-điểm-2>Ưu điểm</a></li><li><a href=#nhược-điểm-2>Nhược điểm</a></li><li><a href=#khi-nào-nên-dùng-2>Khi nào nên dùng?</a></li></ol></li><li><a href=#kết-luận>Kết luận</a></li></ol></nav></div></section></aside><main class="main full-width"><article class=main-article><header class=article-header><div class=article-details><header class=article-category><a href=/categories/database-inheritance-patterns/>Database Inheritance Patterns</a></header><div class=article-title-wrapper><h2 class=article-title><a href=/posts/database-inheritance-patterns/>Database Inheritance Patterns</a></h2></div><footer class=article-time><div><svg class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M11.795 21H5a2 2 0 01-2-2V7a2 2 0 012-2h12a2 2 0 012 2v4"/><circle cx="18" cy="18" r="4"/><path d="M15 3v4"/><path d="M7 3v4"/><path d="M3 11h16"/><path d="M18 16.496V18l1 1"/></svg>
+<time class=article-time--published datetime=2026-04-05T00:40:00+08:00>Apr 05, 2026</time></div><div><svg class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+<time class=article-time--reading>13 minute read</time></div></footer></div></header><section class=article-content><h1 id=database-inheritance-patterns>Database Inheritance Patterns</h1><blockquote><p><em>Bạn có một hệ thống issue tracker. Có <code>Bug</code>, có <code>FeatureRequest</code>, có <code>Task</code>. Chúng chia sẻ vài trường chung như <code>title</code>, <code>status</code>, <code>created_at</code> — nhưng mỗi loại lại có dữ liệu riêng. Câu hỏi đặt ra: thiết kế database thế nào?</em></p></blockquote><h2 id=bối-cảnh-bài-toán>Bối cảnh bài toán</h2><p>Giả sử chúng ta đang xây dựng một hệ thống quản lý issue cho một dự án phần mềm. Có 3 loại issue:</p><ul><li><strong>Bug</strong> — có thêm <code>severity</code>, <code>steps_to_reproduce</code>, <code>environment</code></li><li><strong>FeatureRequest</strong> — có thêm <code>business_value</code>, <code>target_release</code>, <code>sponsor</code></li><li><strong>Task</strong> — có thêm <code>estimated_hours</code>, <code>assignee_team</code></li></ul><p>Cả 3 đều chia sẻ các trường chung: <code>id</code>, <code>title</code>, <code>description</code>, <code>status</code>, <code>priority</code>, <code>reporter_id</code>, <code>created_at</code>, <code>updated_at</code>.</p><p>Vậy làm sao để ánh xạ mô hình kế thừa này xuống cơ sở dữ liệu quan hệ — nơi vốn không có khái niệm &ldquo;kế thừa&rdquo;?</p><h2 id=1-single-table-inheritance-sti>1. Single Table Inheritance (STI)</h2><h3 id=ý-tưởng>Ý tưởng</h3><p>Gom tất cả vào <strong>một bảng duy nhất</strong>. Thêm một cột <code>type</code> để phân biệt loại. Các cột không áp dụng cho một loại cụ thể sẽ mang giá trị <code>NULL</code>.</p><h3 id=sơ-đồ-er>Sơ đồ ER</h3><pre class=mermaid>
+  erDiagram
+    users {
+        BIGSERIAL id PK
+        VARCHAR name
+        VARCHAR email
+    }
+
+    issues {
+        BIGSERIAL id PK
+        VARCHAR type &#34;Bug | FeatureRequest | Task&#34;
+        VARCHAR title &#34;NOT NULL&#34;
+        TEXT description
+        VARCHAR status &#34;DEFAULT open&#34;
+        SMALLINT priority &#34;DEFAULT 3&#34;
+        BIGINT reporter_id FK
+        TIMESTAMP created_at
+        TIMESTAMP updated_at
+        VARCHAR severity &#34;NULL nếu không phải Bug&#34;
+        TEXT steps_to_reproduce &#34;NULL nếu không phải Bug&#34;
+        VARCHAR environment &#34;NULL nếu không phải Bug&#34;
+        SMALLINT business_value &#34;NULL nếu không phải FeatureRequest&#34;
+        VARCHAR target_release &#34;NULL nếu không phải FeatureRequest&#34;
+        VARCHAR sponsor &#34;NULL nếu không phải FeatureRequest&#34;
+        DECIMAL estimated_hours &#34;NULL nếu không phải Task&#34;
+        VARCHAR assignee_team &#34;NULL nếu không phải Task&#34;
+    }
+
+    users ||--o{ issues : &#34;reports&#34;
+</pre><h3 id=schema>Schema</h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-sql data-lang=sql><span class=line><span class=cl><span class=k>CREATE</span><span class=w> </span><span class=k>TABLE</span><span class=w> </span><span class=n>issues</span><span class=w> </span><span class=p>(</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>id</span><span class=w>            </span><span class=n>BIGSERIAL</span><span class=w> </span><span class=k>PRIMARY</span><span class=w> </span><span class=k>KEY</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=k>type</span><span class=w>          </span><span class=nb>VARCHAR</span><span class=p>(</span><span class=mi>20</span><span class=p>)</span><span class=w> </span><span class=k>NOT</span><span class=w> </span><span class=k>NULL</span><span class=p>,</span><span class=w>  </span><span class=c1>-- &#39;Bug&#39;, &#39;FeatureRequest&#39;, &#39;Task&#39;
+</span></span></span><span class=line><span class=cl><span class=w>    
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=c1>-- Trường chung
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>title</span><span class=w>         </span><span class=nb>VARCHAR</span><span class=p>(</span><span class=mi>255</span><span class=p>)</span><span class=w> </span><span class=k>NOT</span><span class=w> </span><span class=k>NULL</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>description</span><span class=w>   </span><span class=nb>TEXT</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>status</span><span class=w>        </span><span class=nb>VARCHAR</span><span class=p>(</span><span class=mi>20</span><span class=p>)</span><span class=w> </span><span class=k>NOT</span><span class=w> </span><span class=k>NULL</span><span class=w> </span><span class=k>DEFAULT</span><span class=w> </span><span class=s1>&#39;open&#39;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>priority</span><span class=w>      </span><span class=nb>SMALLINT</span><span class=w> </span><span class=k>NOT</span><span class=w> </span><span class=k>NULL</span><span class=w> </span><span class=k>DEFAULT</span><span class=w> </span><span class=mi>3</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>reporter_id</span><span class=w>   </span><span class=nb>BIGINT</span><span class=w> </span><span class=k>REFERENCES</span><span class=w> </span><span class=n>users</span><span class=p>(</span><span class=n>id</span><span class=p>),</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>created_at</span><span class=w>    </span><span class=k>TIMESTAMP</span><span class=w> </span><span class=k>DEFAULT</span><span class=w> </span><span class=n>now</span><span class=p>(),</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>updated_at</span><span class=w>    </span><span class=k>TIMESTAMP</span><span class=w> </span><span class=k>DEFAULT</span><span class=w> </span><span class=n>now</span><span class=p>(),</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=c1>-- Trường riêng của Bug
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>severity</span><span class=w>           </span><span class=nb>VARCHAR</span><span class=p>(</span><span class=mi>20</span><span class=p>),</span><span class=w>     </span><span class=c1>-- NULL nếu không phải Bug
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>steps_to_reproduce</span><span class=w> </span><span class=nb>TEXT</span><span class=p>,</span><span class=w>            </span><span class=c1>-- NULL nếu không phải Bug
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>environment</span><span class=w>        </span><span class=nb>VARCHAR</span><span class=p>(</span><span class=mi>100</span><span class=p>),</span><span class=w>    </span><span class=c1>-- NULL nếu không phải Bug
+</span></span></span><span class=line><span class=cl><span class=w>    
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=c1>-- Trường riêng của FeatureRequest
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>business_value</span><span class=w>     </span><span class=nb>SMALLINT</span><span class=p>,</span><span class=w>        </span><span class=c1>-- NULL nếu không phải FeatureRequest
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>target_release</span><span class=w>     </span><span class=nb>VARCHAR</span><span class=p>(</span><span class=mi>50</span><span class=p>),</span><span class=w>     </span><span class=c1>-- NULL nếu không phải FeatureRequest
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>sponsor</span><span class=w>            </span><span class=nb>VARCHAR</span><span class=p>(</span><span class=mi>100</span><span class=p>),</span><span class=w>    </span><span class=c1>-- NULL nếu không phải FeatureRequest
+</span></span></span><span class=line><span class=cl><span class=w>    
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=c1>-- Trường riêng của Task
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>estimated_hours</span><span class=w>    </span><span class=nb>DECIMAL</span><span class=p>(</span><span class=mi>6</span><span class=p>,</span><span class=mi>2</span><span class=p>),</span><span class=w>    </span><span class=c1>-- NULL nếu không phải Task
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>assignee_team</span><span class=w>      </span><span class=nb>VARCHAR</span><span class=p>(</span><span class=mi>100</span><span class=p>)</span><span class=w>     </span><span class=c1>-- NULL nếu không phải Task
+</span></span></span><span class=line><span class=cl><span class=p>);</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=k>CREATE</span><span class=w> </span><span class=k>INDEX</span><span class=w> </span><span class=n>idx_issues_type</span><span class=w> </span><span class=k>ON</span><span class=w> </span><span class=n>issues</span><span class=p>(</span><span class=k>type</span><span class=p>);</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=k>CREATE</span><span class=w> </span><span class=k>INDEX</span><span class=w> </span><span class=n>idx_issues_status</span><span class=w> </span><span class=k>ON</span><span class=w> </span><span class=n>issues</span><span class=p>(</span><span class=n>status</span><span class=p>);</span><span class=w>
+</span></span></span></code></pre></td></tr></table></div></div><h3 id=truy-vấn-minh-họa>Truy vấn minh họa</h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span><span class=lnt>8
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-sql data-lang=sql><span class=line><span class=cl><span class=c1>-- Lấy tất cả issue, không phân biệt loại
+</span></span></span><span class=line><span class=cl><span class=k>SELECT</span><span class=w> </span><span class=o>*</span><span class=w> </span><span class=k>FROM</span><span class=w> </span><span class=n>issues</span><span class=w> </span><span class=k>WHERE</span><span class=w> </span><span class=n>status</span><span class=w> </span><span class=o>=</span><span class=w> </span><span class=s1>&#39;open&#39;</span><span class=w> </span><span class=k>ORDER</span><span class=w> </span><span class=k>BY</span><span class=w> </span><span class=n>created_at</span><span class=w> </span><span class=k>DESC</span><span class=p>;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=c1>-- Lấy riêng Bug có severity cao
+</span></span></span><span class=line><span class=cl><span class=k>SELECT</span><span class=w> </span><span class=o>*</span><span class=w> </span><span class=k>FROM</span><span class=w> </span><span class=n>issues</span><span class=w> </span><span class=k>WHERE</span><span class=w> </span><span class=k>type</span><span class=w> </span><span class=o>=</span><span class=w> </span><span class=s1>&#39;Bug&#39;</span><span class=w> </span><span class=k>AND</span><span class=w> </span><span class=n>severity</span><span class=w> </span><span class=o>=</span><span class=w> </span><span class=s1>&#39;critical&#39;</span><span class=p>;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=c1>-- Đếm số lượng theo loại
+</span></span></span><span class=line><span class=cl><span class=k>SELECT</span><span class=w> </span><span class=k>type</span><span class=p>,</span><span class=w> </span><span class=k>COUNT</span><span class=p>(</span><span class=o>*</span><span class=p>)</span><span class=w> </span><span class=k>FROM</span><span class=w> </span><span class=n>issues</span><span class=w> </span><span class=k>GROUP</span><span class=w> </span><span class=k>BY</span><span class=w> </span><span class=k>type</span><span class=p>;</span><span class=w>
+</span></span></span></code></pre></td></tr></table></div></div><h3 id=ưu-điểm>Ưu điểm</h3><ul><li><strong>Đơn giản tuyệt đối</strong> — chỉ một bảng, không cần JOIN, không cần quản lý quan hệ phức tạp.</li><li><strong>Query đa hình dễ dàng</strong> — muốn lấy &ldquo;tất cả issue đang mở&rdquo; chỉ cần <code>WHERE status = 'open'</code>, không cần UNION hay JOIN.</li><li><strong>Hiệu năng đọc tốt</strong> — mọi dữ liệu nằm trên cùng một bảng, database optimizer làm việc hiệu quả.</li><li><strong>Thêm loại mới nhanh</strong> — chỉ cần <code>ALTER TABLE ADD COLUMN</code>, không cần tạo bảng mới hay sửa logic JOIN.</li><li><strong>ORM hỗ trợ tốt</strong> — Rails ActiveRecord, Django (django-polymorphic), Laravel đều hỗ trợ STI ngay từ đầu.</li></ul><h3 id=nhược-điểm>Nhược điểm</h3><ul><li><strong>NULL tràn lan</strong> — với 3 loại, mỗi record có ~30-50% cột là NULL. Với 10 loại, con số này lên 80-90%. Bảng trở nên khó đọc khi nhìn trực tiếp vào data.</li><li><strong>Không thể dùng NOT NULL constraint cho trường riêng</strong> — <code>severity</code> bắt buộc với Bug nhưng phải cho phép NULL vì FeatureRequest không có trường này. Bạn phải chuyển validation lên tầng application.</li><li><strong>Bảng phình to</strong> — khi số loại tăng, bảng có thể có hàng chục cột mà phần lớn là rỗng.</li><li><strong>Index kém hiệu quả</strong> — index trên <code>severity</code> sẽ bao gồm cả các record không phải Bug (nơi giá trị là NULL), gây lãng phí.</li><li><strong>Khó maintain</strong> — khi nhìn vào schema, không rõ trường nào thuộc loại nào nếu không có documentation tốt.</li></ul><h3 id=khi-nào-nên-dùng>Khi nào nên dùng?</h3><p>STI phù hợp khi số loại ít (2-5 loại), các loại chia sẻ phần lớn trường chung, và sự khác biệt giữa các loại chỉ là vài cột. Nếu bạn đang dùng framework hỗ trợ STI tốt như Rails, đây thường là lựa chọn mặc định để bắt đầu.</p><hr><h2 id=2-concrete-table-inheritance-cti>2. Concrete Table Inheritance (CTI)</h2><h3 id=ý-tưởng-1>Ý tưởng</h3><p>Mỗi loại có <strong>bảng riêng hoàn toàn</strong>. Không có bảng chung. Mỗi bảng chứa cả trường chung lẫn trường riêng, dẫn đến sự lặp lại cấu trúc giữa các bảng.</p><h3 id=sơ-đồ-er-1>Sơ đồ ER</h3><pre class=mermaid>
+  erDiagram
+    users {
+        BIGSERIAL id PK
+        VARCHAR name
+        VARCHAR email
+    }
+
+    bugs {
+        BIGSERIAL id PK
+        VARCHAR title &#34;NOT NULL&#34;
+        TEXT description
+        VARCHAR status &#34;DEFAULT open&#34;
+        SMALLINT priority &#34;DEFAULT 3&#34;
+        BIGINT reporter_id FK
+        TIMESTAMP created_at
+        TIMESTAMP updated_at
+        VARCHAR severity &#34;NOT NULL&#34;
+        TEXT steps_to_reproduce &#34;NOT NULL&#34;
+        VARCHAR environment
+    }
+
+    feature_requests {
+        BIGSERIAL id PK
+        VARCHAR title &#34;NOT NULL&#34;
+        TEXT description
+        VARCHAR status &#34;DEFAULT open&#34;
+        SMALLINT priority &#34;DEFAULT 3&#34;
+        BIGINT reporter_id FK
+        TIMESTAMP created_at
+        TIMESTAMP updated_at
+        SMALLINT business_value &#34;NOT NULL&#34;
+        VARCHAR target_release
+        VARCHAR sponsor &#34;NOT NULL&#34;
+    }
+
+    tasks {
+        BIGSERIAL id PK
+        VARCHAR title &#34;NOT NULL&#34;
+        TEXT description
+        VARCHAR status &#34;DEFAULT open&#34;
+        SMALLINT priority &#34;DEFAULT 3&#34;
+        BIGINT reporter_id FK
+        TIMESTAMP created_at
+        TIMESTAMP updated_at
+        DECIMAL estimated_hours &#34;NOT NULL&#34;
+        VARCHAR assignee_team
+    }
+
+    users ||--o{ bugs : &#34;reports&#34;
+    users ||--o{ feature_requests : &#34;reports&#34;
+    users ||--o{ tasks : &#34;reports&#34;
+</pre><h3 id=schema-1>Schema</h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span><span class=lnt>40
+</span><span class=lnt>41
+</span><span class=lnt>42
+</span><span class=lnt>43
+</span><span class=lnt>44
+</span><span class=lnt>45
+</span><span class=lnt>46
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-sql data-lang=sql><span class=line><span class=cl><span class=k>CREATE</span><span class=w> </span><span class=k>TABLE</span><span class=w> </span><span class=n>bugs</span><span class=w> </span><span class=p>(</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>id</span><span class=w>                 </span><span class=n>BIGSERIAL</span><span class=w> </span><span class=k>PRIMARY</span><span class=w> </span><span class=k>KEY</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=c1>-- Trường chung (lặp lại ở mỗi bảng)
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>title</span><span class=w>              </span><span class=nb>VARCHAR</span><span class=p>(</span><span class=mi>255</span><span class=p>)</span><span class=w> </span><span class=k>NOT</span><span class=w> </span><span class=k>NULL</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>description</span><span class=w>        </span><span class=nb>TEXT</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>status</span><span class=w>             </span><span class=nb>VARCHAR</span><span class=p>(</span><span class=mi>20</span><span class=p>)</span><span class=w> </span><span class=k>NOT</span><span class=w> </span><span class=k>NULL</span><span class=w> </span><span class=k>DEFAULT</span><span class=w> </span><span class=s1>&#39;open&#39;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>priority</span><span class=w>           </span><span class=nb>SMALLINT</span><span class=w> </span><span class=k>NOT</span><span class=w> </span><span class=k>NULL</span><span class=w> </span><span class=k>DEFAULT</span><span class=w> </span><span class=mi>3</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>reporter_id</span><span class=w>        </span><span class=nb>BIGINT</span><span class=w> </span><span class=k>REFERENCES</span><span class=w> </span><span class=n>users</span><span class=p>(</span><span class=n>id</span><span class=p>),</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>created_at</span><span class=w>         </span><span class=k>TIMESTAMP</span><span class=w> </span><span class=k>DEFAULT</span><span class=w> </span><span class=n>now</span><span class=p>(),</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>updated_at</span><span class=w>         </span><span class=k>TIMESTAMP</span><span class=w> </span><span class=k>DEFAULT</span><span class=w> </span><span class=n>now</span><span class=p>(),</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=c1>-- Trường riêng của Bug
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>severity</span><span class=w>           </span><span class=nb>VARCHAR</span><span class=p>(</span><span class=mi>20</span><span class=p>)</span><span class=w> </span><span class=k>NOT</span><span class=w> </span><span class=k>NULL</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>steps_to_reproduce</span><span class=w> </span><span class=nb>TEXT</span><span class=w> </span><span class=k>NOT</span><span class=w> </span><span class=k>NULL</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>environment</span><span class=w>        </span><span class=nb>VARCHAR</span><span class=p>(</span><span class=mi>100</span><span class=p>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=p>);</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=k>CREATE</span><span class=w> </span><span class=k>TABLE</span><span class=w> </span><span class=n>feature_requests</span><span class=w> </span><span class=p>(</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>id</span><span class=w>                 </span><span class=n>BIGSERIAL</span><span class=w> </span><span class=k>PRIMARY</span><span class=w> </span><span class=k>KEY</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=c1>-- Trường chung (lặp lại)
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>title</span><span class=w>              </span><span class=nb>VARCHAR</span><span class=p>(</span><span class=mi>255</span><span class=p>)</span><span class=w> </span><span class=k>NOT</span><span class=w> </span><span class=k>NULL</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>description</span><span class=w>        </span><span class=nb>TEXT</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>status</span><span class=w>             </span><span class=nb>VARCHAR</span><span class=p>(</span><span class=mi>20</span><span class=p>)</span><span class=w> </span><span class=k>NOT</span><span class=w> </span><span class=k>NULL</span><span class=w> </span><span class=k>DEFAULT</span><span class=w> </span><span class=s1>&#39;open&#39;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>priority</span><span class=w>           </span><span class=nb>SMALLINT</span><span class=w> </span><span class=k>NOT</span><span class=w> </span><span class=k>NULL</span><span class=w> </span><span class=k>DEFAULT</span><span class=w> </span><span class=mi>3</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>reporter_id</span><span class=w>        </span><span class=nb>BIGINT</span><span class=w> </span><span class=k>REFERENCES</span><span class=w> </span><span class=n>users</span><span class=p>(</span><span class=n>id</span><span class=p>),</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>created_at</span><span class=w>         </span><span class=k>TIMESTAMP</span><span class=w> </span><span class=k>DEFAULT</span><span class=w> </span><span class=n>now</span><span class=p>(),</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>updated_at</span><span class=w>         </span><span class=k>TIMESTAMP</span><span class=w> </span><span class=k>DEFAULT</span><span class=w> </span><span class=n>now</span><span class=p>(),</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=c1>-- Trường riêng của FeatureRequest
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>business_value</span><span class=w>     </span><span class=nb>SMALLINT</span><span class=w> </span><span class=k>NOT</span><span class=w> </span><span class=k>NULL</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>target_release</span><span class=w>     </span><span class=nb>VARCHAR</span><span class=p>(</span><span class=mi>50</span><span class=p>),</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>sponsor</span><span class=w>            </span><span class=nb>VARCHAR</span><span class=p>(</span><span class=mi>100</span><span class=p>)</span><span class=w> </span><span class=k>NOT</span><span class=w> </span><span class=k>NULL</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=p>);</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=k>CREATE</span><span class=w> </span><span class=k>TABLE</span><span class=w> </span><span class=n>tasks</span><span class=w> </span><span class=p>(</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>id</span><span class=w>                 </span><span class=n>BIGSERIAL</span><span class=w> </span><span class=k>PRIMARY</span><span class=w> </span><span class=k>KEY</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=c1>-- Trường chung (lặp lại)
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>title</span><span class=w>              </span><span class=nb>VARCHAR</span><span class=p>(</span><span class=mi>255</span><span class=p>)</span><span class=w> </span><span class=k>NOT</span><span class=w> </span><span class=k>NULL</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>description</span><span class=w>        </span><span class=nb>TEXT</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>status</span><span class=w>             </span><span class=nb>VARCHAR</span><span class=p>(</span><span class=mi>20</span><span class=p>)</span><span class=w> </span><span class=k>NOT</span><span class=w> </span><span class=k>NULL</span><span class=w> </span><span class=k>DEFAULT</span><span class=w> </span><span class=s1>&#39;open&#39;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>priority</span><span class=w>           </span><span class=nb>SMALLINT</span><span class=w> </span><span class=k>NOT</span><span class=w> </span><span class=k>NULL</span><span class=w> </span><span class=k>DEFAULT</span><span class=w> </span><span class=mi>3</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>reporter_id</span><span class=w>        </span><span class=nb>BIGINT</span><span class=w> </span><span class=k>REFERENCES</span><span class=w> </span><span class=n>users</span><span class=p>(</span><span class=n>id</span><span class=p>),</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>created_at</span><span class=w>         </span><span class=k>TIMESTAMP</span><span class=w> </span><span class=k>DEFAULT</span><span class=w> </span><span class=n>now</span><span class=p>(),</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>updated_at</span><span class=w>         </span><span class=k>TIMESTAMP</span><span class=w> </span><span class=k>DEFAULT</span><span class=w> </span><span class=n>now</span><span class=p>(),</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=c1>-- Trường riêng của Task
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>estimated_hours</span><span class=w>    </span><span class=nb>DECIMAL</span><span class=p>(</span><span class=mi>6</span><span class=p>,</span><span class=mi>2</span><span class=p>)</span><span class=w> </span><span class=k>NOT</span><span class=w> </span><span class=k>NULL</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>assignee_team</span><span class=w>      </span><span class=nb>VARCHAR</span><span class=p>(</span><span class=mi>100</span><span class=p>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=p>);</span><span class=w>
+</span></span></span></code></pre></td></tr></table></div></div><h3 id=truy-vấn-minh-họa-1>Truy vấn minh họa</h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-sql data-lang=sql><span class=line><span class=cl><span class=c1>-- Lấy tất cả Bug có severity critical
+</span></span></span><span class=line><span class=cl><span class=k>SELECT</span><span class=w> </span><span class=o>*</span><span class=w> </span><span class=k>FROM</span><span class=w> </span><span class=n>bugs</span><span class=w> </span><span class=k>WHERE</span><span class=w> </span><span class=n>severity</span><span class=w> </span><span class=o>=</span><span class=w> </span><span class=s1>&#39;critical&#39;</span><span class=p>;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=c1>-- Lấy TẤT CẢ issue đang mở — phải dùng UNION
+</span></span></span><span class=line><span class=cl><span class=k>SELECT</span><span class=w> </span><span class=n>id</span><span class=p>,</span><span class=w> </span><span class=s1>&#39;Bug&#39;</span><span class=w> </span><span class=k>AS</span><span class=w> </span><span class=k>type</span><span class=p>,</span><span class=w> </span><span class=n>title</span><span class=p>,</span><span class=w> </span><span class=n>status</span><span class=p>,</span><span class=w> </span><span class=n>priority</span><span class=p>,</span><span class=w> </span><span class=n>created_at</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=k>FROM</span><span class=w> </span><span class=n>bugs</span><span class=w> </span><span class=k>WHERE</span><span class=w> </span><span class=n>status</span><span class=w> </span><span class=o>=</span><span class=w> </span><span class=s1>&#39;open&#39;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=k>UNION</span><span class=w> </span><span class=k>ALL</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=k>SELECT</span><span class=w> </span><span class=n>id</span><span class=p>,</span><span class=w> </span><span class=s1>&#39;FeatureRequest&#39;</span><span class=p>,</span><span class=w> </span><span class=n>title</span><span class=p>,</span><span class=w> </span><span class=n>status</span><span class=p>,</span><span class=w> </span><span class=n>priority</span><span class=p>,</span><span class=w> </span><span class=n>created_at</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=k>FROM</span><span class=w> </span><span class=n>feature_requests</span><span class=w> </span><span class=k>WHERE</span><span class=w> </span><span class=n>status</span><span class=w> </span><span class=o>=</span><span class=w> </span><span class=s1>&#39;open&#39;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=k>UNION</span><span class=w> </span><span class=k>ALL</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=k>SELECT</span><span class=w> </span><span class=n>id</span><span class=p>,</span><span class=w> </span><span class=s1>&#39;Task&#39;</span><span class=p>,</span><span class=w> </span><span class=n>title</span><span class=p>,</span><span class=w> </span><span class=n>status</span><span class=p>,</span><span class=w> </span><span class=n>priority</span><span class=p>,</span><span class=w> </span><span class=n>created_at</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=k>FROM</span><span class=w> </span><span class=n>tasks</span><span class=w> </span><span class=k>WHERE</span><span class=w> </span><span class=n>status</span><span class=w> </span><span class=o>=</span><span class=w> </span><span class=s1>&#39;open&#39;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=k>ORDER</span><span class=w> </span><span class=k>BY</span><span class=w> </span><span class=n>created_at</span><span class=w> </span><span class=k>DESC</span><span class=p>;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=c1>-- Đếm tổng số issue — cũng phải UNION
+</span></span></span><span class=line><span class=cl><span class=k>SELECT</span><span class=w> </span><span class=s1>&#39;Bug&#39;</span><span class=w> </span><span class=k>AS</span><span class=w> </span><span class=k>type</span><span class=p>,</span><span class=w> </span><span class=k>COUNT</span><span class=p>(</span><span class=o>*</span><span class=p>)</span><span class=w> </span><span class=k>AS</span><span class=w> </span><span class=n>cnt</span><span class=w> </span><span class=k>FROM</span><span class=w> </span><span class=n>bugs</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=k>UNION</span><span class=w> </span><span class=k>ALL</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=k>SELECT</span><span class=w> </span><span class=s1>&#39;FeatureRequest&#39;</span><span class=p>,</span><span class=w> </span><span class=k>COUNT</span><span class=p>(</span><span class=o>*</span><span class=p>)</span><span class=w> </span><span class=k>FROM</span><span class=w> </span><span class=n>feature_requests</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=k>UNION</span><span class=w> </span><span class=k>ALL</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=k>SELECT</span><span class=w> </span><span class=s1>&#39;Task&#39;</span><span class=p>,</span><span class=w> </span><span class=k>COUNT</span><span class=p>(</span><span class=o>*</span><span class=p>)</span><span class=w> </span><span class=k>FROM</span><span class=w> </span><span class=n>tasks</span><span class=p>;</span><span class=w>
+</span></span></span></code></pre></td></tr></table></div></div><h3 id=ưu-điểm-1>Ưu điểm</h3><ul><li><strong>Không có NULL thừa</strong> — mỗi bảng chỉ chứa đúng những cột cần thiết. Schema sạch sẽ, dễ đọc.</li><li><strong>Constraint chặt chẽ</strong> — <code>severity NOT NULL</code> áp dụng đúng cho Bug mà không ảnh hưởng các loại khác. Database tự enforce tính toàn vẹn dữ liệu.</li><li><strong>Hiệu năng truy vấn theo loại rất tốt</strong> — mỗi bảng nhỏ gọn, index hoạt động hiệu quả tối đa vì không có record &ldquo;ngoại lai&rdquo;.</li><li><strong>Độc lập hoàn toàn</strong> — có thể thay đổi schema của Bug mà không ảnh hưởng FeatureRequest. Phù hợp khi các team khác nhau quản lý các loại khác nhau.</li><li><strong>Dễ partition và scale</strong> — mỗi bảng có thể nằm trên server riêng, có chiến lược archival riêng.</li></ul><h3 id=nhược-điểm-1>Nhược điểm</h3><ul><li><strong>Truy vấn đa hình rất đau đớn</strong> — mỗi lần cần &ldquo;lấy tất cả issue&rdquo;, bạn phải viết UNION ALL qua tất cả các bảng. Thêm loại mới là phải sửa tất cả các query kiểu này.</li><li><strong>Trùng lặp schema</strong> — thay đổi trường chung (ví dụ thêm <code>closed_at</code>) phải ALTER TABLE trên tất cả các bảng. Dễ quên, dễ sai.</li><li><strong>Foreign key từ bảng khác rất khó</strong> — nếu bảng <code>comments</code> cần tham chiếu đến &ldquo;bất kỳ issue nào&rdquo;, bạn không thể dùng một foreign key đơn giản. Phải dùng polymorphic association hoặc nhiều cột FK nullable.</li><li><strong>ID có thể trùng</strong> — Bug #42 và Task #42 là hai record khác nhau. Nếu cần ID duy nhất toàn hệ thống, phải dùng UUID hoặc sequence chung.</li><li><strong>Báo cáo tổng hợp phức tạp</strong> — mọi thống kê cross-type đều cần UNION, khiến query dài và khó maintain.</li></ul><h3 id=khi-nào-nên-dùng-1>Khi nào nên dùng?</h3><p>CTI phù hợp khi các loại rất khác nhau về cấu trúc (ít trường chung, nhiều trường riêng), hiếm khi cần truy vấn xuyên loại, và mỗi loại có vòng đời quản lý riêng biệt. Thường thấy trong các hệ thống microservice nơi mỗi bounded context quản lý một loại entity.</p><hr><h2 id=3-class-table-inheritance-cti--hay-còn-gọi-table-per-type>3. Class Table Inheritance (CTI — hay còn gọi Table-per-Type)</h2><h3 id=ý-tưởng-2>Ý tưởng</h3><p>Tạo một <strong>bảng cơ sở</strong> chứa các trường chung, sau đó mỗi loại có <strong>bảng con riêng</strong> chỉ chứa trường đặc thù. Bảng con liên kết với bảng cha thông qua foreign key (thường dùng chung primary key).</p><h3 id=sơ-đồ-er-2>Sơ đồ ER</h3><pre class=mermaid>
+  erDiagram
+    users {
+        BIGSERIAL id PK
+        VARCHAR name
+        VARCHAR email
+    }
+
+    issues {
+        BIGSERIAL id PK
+        VARCHAR type
+        VARCHAR title
+        TEXT description
+        VARCHAR status
+        SMALLINT priority
+        BIGINT reporter_id FK
+        TIMESTAMP created_at
+        TIMESTAMP updated_at
+    }
+
+    bug_details {
+        BIGINT issue_id PK, FK
+        VARCHAR severity
+        TEXT steps_to_reproduce
+        VARCHAR environment
+    }
+
+    feature_request_details {
+        BIGINT issue_id PK, FK
+        SMALLINT business_value
+        VARCHAR target_release
+        VARCHAR sponsor
+    }
+
+    task_details {
+        BIGINT issue_id PK, FK
+        DECIMAL estimated_hours
+        VARCHAR assignee_team
+    }
+
+    users ||--o{ issues : reports
+    issues ||--|| bug_details : extends
+    issues ||--|| feature_request_details : extends
+    issues ||--|| task_details : extends
+</pre><h3 id=schema-2>Schema</h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-sql data-lang=sql><span class=line><span class=cl><span class=c1>-- Bảng cha: chứa mọi thuộc tính chung
+</span></span></span><span class=line><span class=cl><span class=k>CREATE</span><span class=w> </span><span class=k>TABLE</span><span class=w> </span><span class=n>issues</span><span class=w> </span><span class=p>(</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>id</span><span class=w>            </span><span class=n>BIGSERIAL</span><span class=w> </span><span class=k>PRIMARY</span><span class=w> </span><span class=k>KEY</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=k>type</span><span class=w>          </span><span class=nb>VARCHAR</span><span class=p>(</span><span class=mi>20</span><span class=p>)</span><span class=w> </span><span class=k>NOT</span><span class=w> </span><span class=k>NULL</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>title</span><span class=w>         </span><span class=nb>VARCHAR</span><span class=p>(</span><span class=mi>255</span><span class=p>)</span><span class=w> </span><span class=k>NOT</span><span class=w> </span><span class=k>NULL</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>description</span><span class=w>   </span><span class=nb>TEXT</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>status</span><span class=w>        </span><span class=nb>VARCHAR</span><span class=p>(</span><span class=mi>20</span><span class=p>)</span><span class=w> </span><span class=k>NOT</span><span class=w> </span><span class=k>NULL</span><span class=w> </span><span class=k>DEFAULT</span><span class=w> </span><span class=s1>&#39;open&#39;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>priority</span><span class=w>      </span><span class=nb>SMALLINT</span><span class=w> </span><span class=k>NOT</span><span class=w> </span><span class=k>NULL</span><span class=w> </span><span class=k>DEFAULT</span><span class=w> </span><span class=mi>3</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>reporter_id</span><span class=w>   </span><span class=nb>BIGINT</span><span class=w> </span><span class=k>REFERENCES</span><span class=w> </span><span class=n>users</span><span class=p>(</span><span class=n>id</span><span class=p>),</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>created_at</span><span class=w>    </span><span class=k>TIMESTAMP</span><span class=w> </span><span class=k>DEFAULT</span><span class=w> </span><span class=n>now</span><span class=p>(),</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>updated_at</span><span class=w>    </span><span class=k>TIMESTAMP</span><span class=w> </span><span class=k>DEFAULT</span><span class=w> </span><span class=n>now</span><span class=p>()</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=p>);</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=c1>-- Bảng con: chỉ chứa trường riêng, PK đồng thời là FK
+</span></span></span><span class=line><span class=cl><span class=k>CREATE</span><span class=w> </span><span class=k>TABLE</span><span class=w> </span><span class=n>bug_details</span><span class=w> </span><span class=p>(</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>issue_id</span><span class=w>           </span><span class=nb>BIGINT</span><span class=w> </span><span class=k>PRIMARY</span><span class=w> </span><span class=k>KEY</span><span class=w> </span><span class=k>REFERENCES</span><span class=w> </span><span class=n>issues</span><span class=p>(</span><span class=n>id</span><span class=p>)</span><span class=w> </span><span class=k>ON</span><span class=w> </span><span class=k>DELETE</span><span class=w> </span><span class=k>CASCADE</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>severity</span><span class=w>           </span><span class=nb>VARCHAR</span><span class=p>(</span><span class=mi>20</span><span class=p>)</span><span class=w> </span><span class=k>NOT</span><span class=w> </span><span class=k>NULL</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>steps_to_reproduce</span><span class=w> </span><span class=nb>TEXT</span><span class=w> </span><span class=k>NOT</span><span class=w> </span><span class=k>NULL</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>environment</span><span class=w>        </span><span class=nb>VARCHAR</span><span class=p>(</span><span class=mi>100</span><span class=p>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=p>);</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=k>CREATE</span><span class=w> </span><span class=k>TABLE</span><span class=w> </span><span class=n>feature_request_details</span><span class=w> </span><span class=p>(</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>issue_id</span><span class=w>           </span><span class=nb>BIGINT</span><span class=w> </span><span class=k>PRIMARY</span><span class=w> </span><span class=k>KEY</span><span class=w> </span><span class=k>REFERENCES</span><span class=w> </span><span class=n>issues</span><span class=p>(</span><span class=n>id</span><span class=p>)</span><span class=w> </span><span class=k>ON</span><span class=w> </span><span class=k>DELETE</span><span class=w> </span><span class=k>CASCADE</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>business_value</span><span class=w>     </span><span class=nb>SMALLINT</span><span class=w> </span><span class=k>NOT</span><span class=w> </span><span class=k>NULL</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>target_release</span><span class=w>     </span><span class=nb>VARCHAR</span><span class=p>(</span><span class=mi>50</span><span class=p>),</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>sponsor</span><span class=w>            </span><span class=nb>VARCHAR</span><span class=p>(</span><span class=mi>100</span><span class=p>)</span><span class=w> </span><span class=k>NOT</span><span class=w> </span><span class=k>NULL</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=p>);</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=k>CREATE</span><span class=w> </span><span class=k>TABLE</span><span class=w> </span><span class=n>task_details</span><span class=w> </span><span class=p>(</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>issue_id</span><span class=w>           </span><span class=nb>BIGINT</span><span class=w> </span><span class=k>PRIMARY</span><span class=w> </span><span class=k>KEY</span><span class=w> </span><span class=k>REFERENCES</span><span class=w> </span><span class=n>issues</span><span class=p>(</span><span class=n>id</span><span class=p>)</span><span class=w> </span><span class=k>ON</span><span class=w> </span><span class=k>DELETE</span><span class=w> </span><span class=k>CASCADE</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>estimated_hours</span><span class=w>    </span><span class=nb>DECIMAL</span><span class=p>(</span><span class=mi>6</span><span class=p>,</span><span class=mi>2</span><span class=p>)</span><span class=w> </span><span class=k>NOT</span><span class=w> </span><span class=k>NULL</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>assignee_team</span><span class=w>      </span><span class=nb>VARCHAR</span><span class=p>(</span><span class=mi>100</span><span class=p>)</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=p>);</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=k>CREATE</span><span class=w> </span><span class=k>INDEX</span><span class=w> </span><span class=n>idx_issues_type</span><span class=w> </span><span class=k>ON</span><span class=w> </span><span class=n>issues</span><span class=p>(</span><span class=k>type</span><span class=p>);</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=k>CREATE</span><span class=w> </span><span class=k>INDEX</span><span class=w> </span><span class=n>idx_issues_status</span><span class=w> </span><span class=k>ON</span><span class=w> </span><span class=n>issues</span><span class=p>(</span><span class=n>status</span><span class=p>);</span><span class=w>
+</span></span></span></code></pre></td></tr></table></div></div><h3 id=truy-vấn-minh-họa-2>Truy vấn minh họa</h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-sql data-lang=sql><span class=line><span class=cl><span class=c1>-- Lấy tất cả issue đang mở (chỉ trường chung — KHÔNG cần JOIN)
+</span></span></span><span class=line><span class=cl><span class=k>SELECT</span><span class=w> </span><span class=o>*</span><span class=w> </span><span class=k>FROM</span><span class=w> </span><span class=n>issues</span><span class=w> </span><span class=k>WHERE</span><span class=w> </span><span class=n>status</span><span class=w> </span><span class=o>=</span><span class=w> </span><span class=s1>&#39;open&#39;</span><span class=w> </span><span class=k>ORDER</span><span class=w> </span><span class=k>BY</span><span class=w> </span><span class=n>created_at</span><span class=w> </span><span class=k>DESC</span><span class=p>;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=c1>-- Lấy Bug kèm chi tiết riêng
+</span></span></span><span class=line><span class=cl><span class=k>SELECT</span><span class=w> </span><span class=n>i</span><span class=p>.</span><span class=o>*</span><span class=p>,</span><span class=w> </span><span class=n>b</span><span class=p>.</span><span class=o>*</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=k>FROM</span><span class=w> </span><span class=n>issues</span><span class=w> </span><span class=n>i</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=k>JOIN</span><span class=w> </span><span class=n>bug_details</span><span class=w> </span><span class=n>b</span><span class=w> </span><span class=k>ON</span><span class=w> </span><span class=n>b</span><span class=p>.</span><span class=n>issue_id</span><span class=w> </span><span class=o>=</span><span class=w> </span><span class=n>i</span><span class=p>.</span><span class=n>id</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=k>WHERE</span><span class=w> </span><span class=n>i</span><span class=p>.</span><span class=k>type</span><span class=w> </span><span class=o>=</span><span class=w> </span><span class=s1>&#39;Bug&#39;</span><span class=w> </span><span class=k>AND</span><span class=w> </span><span class=n>b</span><span class=p>.</span><span class=n>severity</span><span class=w> </span><span class=o>=</span><span class=w> </span><span class=s1>&#39;critical&#39;</span><span class=p>;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=c1>-- Lấy tất cả issue kèm đầy đủ chi tiết (dùng LEFT JOIN)
+</span></span></span><span class=line><span class=cl><span class=k>SELECT</span><span class=w> </span><span class=n>i</span><span class=p>.</span><span class=o>*</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>       </span><span class=n>b</span><span class=p>.</span><span class=n>severity</span><span class=p>,</span><span class=w> </span><span class=n>b</span><span class=p>.</span><span class=n>steps_to_reproduce</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>       </span><span class=n>f</span><span class=p>.</span><span class=n>business_value</span><span class=p>,</span><span class=w> </span><span class=n>f</span><span class=p>.</span><span class=n>sponsor</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>       </span><span class=n>t</span><span class=p>.</span><span class=n>estimated_hours</span><span class=p>,</span><span class=w> </span><span class=n>t</span><span class=p>.</span><span class=n>assignee_team</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=k>FROM</span><span class=w> </span><span class=n>issues</span><span class=w> </span><span class=n>i</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=k>LEFT</span><span class=w> </span><span class=k>JOIN</span><span class=w> </span><span class=n>bug_details</span><span class=w> </span><span class=n>b</span><span class=w> </span><span class=k>ON</span><span class=w> </span><span class=n>b</span><span class=p>.</span><span class=n>issue_id</span><span class=w> </span><span class=o>=</span><span class=w> </span><span class=n>i</span><span class=p>.</span><span class=n>id</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=k>LEFT</span><span class=w> </span><span class=k>JOIN</span><span class=w> </span><span class=n>feature_request_details</span><span class=w> </span><span class=n>f</span><span class=w> </span><span class=k>ON</span><span class=w> </span><span class=n>f</span><span class=p>.</span><span class=n>issue_id</span><span class=w> </span><span class=o>=</span><span class=w> </span><span class=n>i</span><span class=p>.</span><span class=n>id</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=k>LEFT</span><span class=w> </span><span class=k>JOIN</span><span class=w> </span><span class=n>task_details</span><span class=w> </span><span class=n>t</span><span class=w> </span><span class=k>ON</span><span class=w> </span><span class=n>t</span><span class=p>.</span><span class=n>issue_id</span><span class=w> </span><span class=o>=</span><span class=w> </span><span class=n>i</span><span class=p>.</span><span class=n>id</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=k>WHERE</span><span class=w> </span><span class=n>i</span><span class=p>.</span><span class=n>status</span><span class=w> </span><span class=o>=</span><span class=w> </span><span class=s1>&#39;open&#39;</span><span class=p>;</span><span class=w>
+</span></span></span></code></pre></td></tr></table></div></div><h3 id=ưu-điểm-2>Ưu điểm</h3><ul><li><strong>Không NULL thừa, không trùng lặp</strong> — trường chung nằm ở một chỗ duy nhất, trường riêng nằm ở bảng con. Đây là thiết kế &ldquo;chuẩn hóa&rdquo; nhất trong 3 pattern.</li><li><strong>Constraint chặt chẽ</strong> — <code>severity NOT NULL</code> trong <code>bug_details</code> chỉ áp dụng cho Bug. Database enforce đúng.</li><li><strong>Truy vấn chung dễ dàng</strong> — &ldquo;tất cả issue đang mở&rdquo; chỉ cần query bảng <code>issues</code>, không cần JOIN hay UNION.</li><li><strong>Foreign key rõ ràng</strong> — bảng <code>comments</code> chỉ cần <code>REFERENCES issues(id)</code> là có thể trỏ đến bất kỳ loại issue nào.</li><li><strong>ID duy nhất toàn hệ thống</strong> — mọi issue đều có ID từ bảng <code>issues</code>, không lo trùng.</li><li><strong>Dễ mở rộng</strong> — thêm loại mới chỉ cần thêm bảng con, không sửa bảng cha.</li></ul><h3 id=nhược-điểm-2>Nhược điểm</h3><ul><li><strong>Cần JOIN khi lấy đầy đủ thông tin</strong> — truy vấn chi tiết một Bug luôn cần <code>JOIN bug_details</code>. Với 10 loại, query &ldquo;lấy tất cả kèm chi tiết&rdquo; phải LEFT JOIN 10 bảng.</li><li><strong>Insert/Update phức tạp hơn</strong> — tạo mới một Bug cần INSERT vào 2 bảng trong cùng một transaction.</li><li><strong>Hiệu năng có thể giảm</strong> — mỗi lần JOIN là thêm chi phí. Với dữ liệu lớn và nhiều loại, điều này có thể trở thành bottleneck.</li><li><strong>ORM mapping phức tạp hơn</strong> — cần cấu hình cẩn thận để ORM hiểu mối quan hệ cha-con giữa các bảng.</li><li><strong>Integrity phức tạp</strong> — cần đảm bảo rằng một issue có <code>type = 'Bug'</code> thì phải có record trong <code>bug_details</code> và chỉ ở bảng đó. Database không tự enforce điều này, cần trigger hoặc application logic.</li></ul><h3 id=khi-nào-nên-dùng-2>Khi nào nên dùng?</h3><p>Class Table Inheritance phù hợp khi các loại chia sẻ nhiều trường chung, bạn thường xuyên cần truy vấn xuyên loại, nhưng mỗi loại cũng có khá nhiều trường riêng. Đây là lựa chọn cân bằng nhất và thường được ưu tiên trong các hệ thống enterprise phức tạp.</p><h2 id=kết-luận>Kết luận</h2><p>Ba pattern trên giải quyết cùng một bài toán theo ba hướng khác nhau, mỗi hướng tối ưu cho một tập ràng buộc nhất định:</p><div class=table-wrapper><table><thead><tr><th></th><th>STI</th><th>Concrete Table</th><th>Class Table</th></tr></thead><tbody><tr><td>Query đa hình</td><td>Dễ</td><td>Rất khó (UNION)</td><td>Dễ</td></tr><tr><td>Constraint DB</td><td>Yếu</td><td>Mạnh</td><td>Mạnh</td></tr><tr><td>NULL thừa</td><td>Nhiều</td><td>Không</td><td>Không</td></tr><tr><td>Trùng lặp schema</td><td>Không</td><td>Nhiều</td><td>Không</td></tr><tr><td>JOIN khi đọc chi tiết</td><td>Không cần</td><td>Không cần</td><td>Cần</td></tr><tr><td>Thêm loại mới</td><td>Nhanh</td><td>Trung bình</td><td>Nhanh</td></tr></tbody></table></div><p><strong>Quy tắc thực tế:</strong></p><ul><li><strong>Bắt đầu với STI</strong> nếu số loại ít và trường chung chiếm đa số. Đơn giản là lợi thế, đừng over-engineer sớm.</li><li><strong>Chuyển sang Class Table Inheritance</strong> khi bảng STI bắt đầu phình to, NULL vượt 40-50%, hoặc bạn cần enforce constraint ở tầng database.</li><li><strong>Dùng Concrete Table</strong> chỉ khi các loại thực sự tách biệt về domain — ví dụ mỗi loại do một team độc lập quản lý, hoặc cần scale riêng biệt.</li></ul><p>Điểm mấu chốt không nằm ở việc chọn đúng ngay từ đầu. Nó nằm ở chỗ bạn <strong>hiểu rõ khi nào pattern hiện tại đang trở thành gánh nặng</strong> — và có lộ trình migrate rõ ràng trước khi pain point đó thực sự xảy ra trong production.</p><hr></section><footer class=article-footer><section class=article-tags><a href=/tags/database/>Database</a></section><section class=article-copyright><svg class="icon icon-tabler icon-tabler-copyright" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><path d="M14.5 9a3.5 4 0 100 6"/></svg>
+<span>Licensed under CC BY-NC-SA 4.0</span></section></footer><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css integrity=sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV crossorigin=anonymous><script src=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js integrity=sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8 crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js integrity=sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05 crossorigin=anonymous defer></script><script>window.addEventListener("DOMContentLoaded",()=>{const e=[".main-article",".widget--toc"];e.forEach(e=>{const t=document.querySelector(e);t&&renderMathInElement(t,{delimiters:[{left:"$$",right:"$$",display:!0},{left:"$",right:"$",display:!1},{left:"\\(",right:"\\)",display:!1},{left:"\\[",right:"\\]",display:!0}],ignoredClasses:["gist"]})})})</script></article><aside class=related-content--wrapper><h2 class=section-title>Related content</h2><div class=related-content><div class="flex article-list--tile"><article><a href=/posts/designing-a-polling-lifecycle-with-celery-state-machines-and-template-method/><div class=article-details><h2 class=article-title>Designing a Polling Lifecycle with Celery: State Machines and Template Method</h2></div></a></article></div></div></aside><div class=disqus-container></div><style>.disqus-container{background-color:var(--card-background);border-radius:var(--card-border-radius);box-shadow:var(--shadow-l1);padding:var(--card-padding)}</style><script>window.addEventListener("onColorSchemeChange",e=>{typeof DISQUS=="object"&&DISQUS.reset({reload:!0})})</script><footer class=site-footer><section class=copyright>&copy;
+2026 phongthien</section><section class=powerby>Built with <a href=https://gohugo.io/ target=_blank rel=noopener>Hugo</a><br>Theme <b><a href=https://github.com/CaiJimmy/hugo-theme-stack target=_blank rel=noopener data-version=3.33.0>Stack</a></b> designed by <a href=https://jimmycai.com target=_blank rel=noopener>Jimmy</a></section></footer><div class=pswp tabindex=-1 role=dialog aria-hidden=true><div class=pswp__bg></div><div class=pswp__scroll-wrap><div class=pswp__container><div class=pswp__item></div><div class=pswp__item></div><div class=pswp__item></div></div><div class="pswp__ui pswp__ui--hidden"><div class=pswp__top-bar><div class=pswp__counter></div><button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+<button class="pswp__button pswp__button--share" title=Share></button>
+<button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+<button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button><div class=pswp__preloader><div class=pswp__preloader__icn><div class=pswp__preloader__cut><div class=pswp__preloader__donut></div></div></div></div></div><div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap"><div class=pswp__share-tooltip></div></div><button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+</button>
+<button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)"></button><div class=pswp__caption><div class=pswp__caption__center></div></div></div></div></div><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo=" crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU=" crossorigin=anonymous defer></script><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css crossorigin=anonymous><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css crossorigin=anonymous></main></div><script src=https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z+KMkF24hUW8WePSA9HM=" crossorigin=anonymous></script><script type=text/javascript src=/ts/main.c922af694cc257bf1ecc41c0dd7b0430f9114ec280ccf67cd2c6ad55f5316c4e.js defer></script><script>(function(){const e=document.createElement("link");e.href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap",e.type="text/css",e.rel="stylesheet",document.head.appendChild(e)})()</script></body></html>

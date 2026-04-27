@@ -1,0 +1,271 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Mcp on phongthien</title><link>https://phongthien99.github.io/tags/mcp/</link><description>Recent content in Mcp on phongthien</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Sun, 29 Mar 2026 10:00:00 +0700</lastBuildDate><atom:link href="https://phongthien99.github.io/tags/mcp/index.xml" rel="self" type="application/rss+xml"/><item><title>Designing MCP Skill Loader — From Markdown to AI Tool</title><link>https://phongthien99.github.io/posts/designing-mcp-skill-loader-from-markdown-to-ai-tool/</link><pubDate>Sun, 29 Mar 2026 10:00:00 +0700</pubDate><guid>https://phongthien99.github.io/posts/designing-mcp-skill-loader-from-markdown-to-ai-tool/</guid><description>&lt;h2 id="1-đặt-vấn-đề"&gt;1. Đặt vấn đề
+&lt;/h2&gt;&lt;p&gt;AI agents đang xuất hiện khắp nơi — từ code assistant trong IDE đến chatbot hỗ trợ khách hàng. Nhưng có một bài toán mà hầu như dự án nào cũng gặp: &lt;strong&gt;làm thế nào để &amp;ldquo;dạy&amp;rdquo; agent cách thực hiện một tác vụ cụ thể mà không cần viết code?&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Hãy tưởng tượng ta có một agent cần biết cách review code, viết commit message đúng chuẩn, hay debug một lỗi phức tạp. Cách tiếp cận truyền thống thường như sau:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;span class="lnt"&gt;3
+&lt;/span&gt;&lt;span class="lnt"&gt;4
+&lt;/span&gt;&lt;span class="lnt"&gt;5
+&lt;/span&gt;&lt;span class="lnt"&gt;6
+&lt;/span&gt;&lt;span class="lnt"&gt;7
+&lt;/span&gt;&lt;span class="lnt"&gt;8
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-go" data-lang="go"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="c1"&gt;// ❌ Hard-code mọi thứ vào system prompt&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="kd"&gt;func&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nf"&gt;buildSystemPrompt&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kt"&gt;string&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;return&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;`You are a code review expert.
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="s"&gt; When reviewing code: [200 dòng rules]
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="s"&gt; When writing commits: [100 dòng rules]
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="s"&gt; When debugging: [150 dòng rules]
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="s"&gt; ...`&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;Vấn đề với cách này:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Không tái sử dụng&lt;/strong&gt; — mỗi agent copy-paste cùng một đoạn instructions&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Khó bảo trì&lt;/strong&gt; — thay đổi một quy tắc phải sửa nhiều nơi&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Không version control&lt;/strong&gt; — prompt nằm trong code, khó track history&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Tốn token&lt;/strong&gt; — agent load toàn bộ dù chỉ cần một phần nhỏ&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Thêm một ràng buộc: &lt;strong&gt;Model Context Protocol (MCP)&lt;/strong&gt; đang nổi lên như giao thức chuẩn để AI agent giao tiếp với tools. Claude Desktop, VS Code, và nhiều AI client đều hỗ trợ MCP.&lt;/p&gt;
+&lt;p&gt;&lt;em&gt;Câu hỏi: Có cách nào quản lý &amp;ldquo;knowledge&amp;rdquo; của agent theo dạng file — version được, chia sẻ được, load động — và expose qua MCP không?&lt;/em&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="2-giải-pháp"&gt;2. Giải pháp
+&lt;/h2&gt;&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;Ý tưởng cốt lõi:&lt;/strong&gt; Mỗi &amp;ldquo;skill&amp;rdquo; là một thư mục chứa file &lt;code&gt;SKILL.md&lt;/code&gt;. Người viết skill chỉ cần biết Markdown — không cần code. Hệ thống tự scan, parse, và expose qua MCP.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Đây là pattern &lt;strong&gt;Convention over Configuration&lt;/strong&gt;: đặt file đúng chỗ, mọi thứ tự động chạy.&lt;/p&gt;
+&lt;pre class="mermaid"&gt;
+graph LR
+subgraph without[&amp;#34;❌ Không có Skill Loader&amp;#34;]
+A1[Agent 1] --&amp;gt; P1[Hard-coded Prompt]
+A2[Agent 2] --&amp;gt; P2[Copy-paste Prompt]
+A3[Agent 3] --&amp;gt; P3[Another Copy]
+end
+subgraph with[&amp;#34;✅ Có Skill Loader&amp;#34;]
+S1[SKILL.md] --&amp;gt; L[Skill Loader]
+S2[SKILL.md] --&amp;gt; L
+L --&amp;gt; MCP[MCP Server]
+MCP --&amp;gt; A4[Any Agent]
+end
+&lt;/pre&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Vấn đề&lt;/th&gt;
+&lt;th&gt;Trước&lt;/th&gt;
+&lt;th&gt;Sau&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Tái sử dụng&lt;/td&gt;
+&lt;td&gt;Copy-paste&lt;/td&gt;
+&lt;td&gt;Một file, nhiều agents&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Bảo trì&lt;/td&gt;
+&lt;td&gt;Sửa nhiều nơi&lt;/td&gt;
+&lt;td&gt;Sửa một &lt;code&gt;SKILL.md&lt;/code&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Token&lt;/td&gt;
+&lt;td&gt;Load toàn bộ&lt;/td&gt;
+&lt;td&gt;Lazy load qua Resource&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Thêm skill&lt;/td&gt;
+&lt;td&gt;Sửa code, redeploy&lt;/td&gt;
+&lt;td&gt;Thêm file, rescan&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;hr&gt;
+&lt;h2 id="3-thiết-kế"&gt;3. Thiết kế
+&lt;/h2&gt;&lt;h3 id="31-cấu-trúc-skill"&gt;3.1 Cấu trúc Skill
+&lt;/h3&gt;&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;span class="lnt"&gt;3
+&lt;/span&gt;&lt;span class="lnt"&gt;4
+&lt;/span&gt;&lt;span class="lnt"&gt;5
+&lt;/span&gt;&lt;span class="lnt"&gt;6
+&lt;/span&gt;&lt;span class="lnt"&gt;7
+&lt;/span&gt;&lt;span class="lnt"&gt;8
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-gdscript3" data-lang="gdscript3"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="o"&gt;~/.&lt;/span&gt;&lt;span class="n"&gt;skills&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;├──&lt;/span&gt; &lt;span class="n"&gt;code&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="n"&gt;review&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;│&lt;/span&gt; &lt;span class="err"&gt;├──&lt;/span&gt; &lt;span class="n"&gt;SKILL&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;md&lt;/span&gt; &lt;span class="err"&gt;←&lt;/span&gt; &lt;span class="err"&gt;đị&lt;/span&gt;&lt;span class="n"&gt;nh&lt;/span&gt; &lt;span class="n"&gt;nghĩa&lt;/span&gt; &lt;span class="n"&gt;skill&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;bắt&lt;/span&gt; &lt;span class="n"&gt;buộc&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;│&lt;/span&gt; &lt;span class="err"&gt;└──&lt;/span&gt; &lt;span class="n"&gt;checklist&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;md&lt;/span&gt; &lt;span class="err"&gt;←&lt;/span&gt; &lt;span class="n"&gt;tài&lt;/span&gt; &lt;span class="n"&gt;liệu&lt;/span&gt; &lt;span class="n"&gt;tham&lt;/span&gt; &lt;span class="n"&gt;khảo&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;lazy&lt;/span&gt; &lt;span class="nb"&gt;load&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;├──&lt;/span&gt; &lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="n"&gt;commit&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;│&lt;/span&gt; &lt;span class="err"&gt;└──&lt;/span&gt; &lt;span class="n"&gt;SKILL&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;md&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;└──&lt;/span&gt; &lt;span class="n"&gt;debug&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="n"&gt;go&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="err"&gt;└──&lt;/span&gt; &lt;span class="n"&gt;SKILL&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;md&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;File &lt;code&gt;SKILL.md&lt;/code&gt; = YAML frontmatter + Markdown:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;span class="lnt"&gt;3
+&lt;/span&gt;&lt;span class="lnt"&gt;4
+&lt;/span&gt;&lt;span class="lnt"&gt;5
+&lt;/span&gt;&lt;span class="lnt"&gt;6
+&lt;/span&gt;&lt;span class="lnt"&gt;7
+&lt;/span&gt;&lt;span class="lnt"&gt;8
+&lt;/span&gt;&lt;span class="lnt"&gt;9
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-markdown" data-lang="markdown"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;---
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;name: code-review
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;description: Expert code review guidance
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;references:
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="k"&gt;-&lt;/span&gt; checklist.md
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;---
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="gh"&gt;# Code Review Skill
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;When reviewing code, follow these guidelines...
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;h3 id="32-kiến-trúc-tổng-quan"&gt;3.2 Kiến trúc tổng quan
+&lt;/h3&gt;&lt;pre class="mermaid"&gt;
+graph TD
+subgraph Input[&amp;#34;📁 Input Layer&amp;#34;]
+F1[SKILL.md files]
+end
+subgraph Core[&amp;#34;⚙️ Core Layer&amp;#34;]
+P[Parser] --&amp;gt; R[Registry]
+end
+subgraph Output[&amp;#34;🔌 Output Layer&amp;#34;]
+MCP[MCP Server]
+MCP --&amp;gt; PR[Prompts]
+MCP --&amp;gt; RS[Resources]
+end
+F1 --&amp;gt; P
+R --&amp;gt; MCP
+subgraph Clients[&amp;#34;🤖 Clients&amp;#34;]
+C1[Claude Desktop]
+C2[VS Code]
+C3[Custom Agent]
+end
+PR --&amp;gt; C1
+RS --&amp;gt; C2
+PR --&amp;gt; C3
+&lt;/pre&gt;
+&lt;h3 id="33-các-thành-phần-chính"&gt;3.3 Các thành phần chính
+&lt;/h3&gt;&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Component&lt;/th&gt;
+&lt;th&gt;Trách nhiệm&lt;/th&gt;
+&lt;th&gt;Input&lt;/th&gt;
+&lt;th&gt;Output&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;Parser&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;Đọc SKILL.md, tách frontmatter/content&lt;/td&gt;
+&lt;td&gt;File path&lt;/td&gt;
+&lt;td&gt;Skill struct&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;Registry&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;Scan, lưu trữ, detect collision&lt;/td&gt;
+&lt;td&gt;Root dir&lt;/td&gt;
+&lt;td&gt;Map[name]Skill&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;MCP Server&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;Expose skills qua protocol&lt;/td&gt;
+&lt;td&gt;Registry&lt;/td&gt;
+&lt;td&gt;Prompts + Resources&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h3 id="34-luồng-xử-lý"&gt;3.4 Luồng xử lý
+&lt;/h3&gt;&lt;pre class="mermaid"&gt;
+sequenceDiagram
+participant FS as File System
+participant R as Registry
+participant MCP as MCP Server
+participant Agent as AI Agent
+Note over R: Startup
+R-&amp;gt;&amp;gt;FS: WalkDir(~/.skills)
+FS--&amp;gt;&amp;gt;R: List of SKILL.md paths
+loop Each SKILL.md
+R-&amp;gt;&amp;gt;R: Parse &amp;amp; Validate
+R-&amp;gt;&amp;gt;R: Check duplicates
+R-&amp;gt;&amp;gt;R: Store in memory
+end
+R-&amp;gt;&amp;gt;MCP: Register Prompts
+R-&amp;gt;&amp;gt;MCP: Register Resources
+Note over Agent: Runtime
+Agent-&amp;gt;&amp;gt;MCP: GetPrompt(&amp;#34;code_review&amp;#34;)
+MCP--&amp;gt;&amp;gt;Agent: Instructions markdown
+Agent-&amp;gt;&amp;gt;MCP: ReadResource(&amp;#34;skill://code-review/checklist.md&amp;#34;)
+MCP--&amp;gt;&amp;gt;Agent: Reference content (lazy)
+&lt;/pre&gt;
+&lt;h3 id="35-mcp-exposure-model"&gt;3.5 MCP Exposure Model
+&lt;/h3&gt;&lt;p&gt;Mỗi skill được expose theo 2 cách:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt; 1
+&lt;/span&gt;&lt;span class="lnt"&gt; 2
+&lt;/span&gt;&lt;span class="lnt"&gt; 3
+&lt;/span&gt;&lt;span class="lnt"&gt; 4
+&lt;/span&gt;&lt;span class="lnt"&gt; 5
+&lt;/span&gt;&lt;span class="lnt"&gt; 6
+&lt;/span&gt;&lt;span class="lnt"&gt; 7
+&lt;/span&gt;&lt;span class="lnt"&gt; 8
+&lt;/span&gt;&lt;span class="lnt"&gt; 9
+&lt;/span&gt;&lt;span class="lnt"&gt;10
+&lt;/span&gt;&lt;span class="lnt"&gt;11
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-gdscript3" data-lang="gdscript3"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;┌─────────────────────────────────────────────────────────┐&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;│&lt;/span&gt; &lt;span class="n"&gt;Skill&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="n"&gt;code&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="n"&gt;review&lt;/span&gt; &lt;span class="err"&gt;│&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;├─────────────────────────────────────────────────────────┤&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;│&lt;/span&gt; &lt;span class="err"&gt;📝&lt;/span&gt; &lt;span class="n"&gt;Prompt&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;code_review&amp;#34;&lt;/span&gt; &lt;span class="err"&gt;│&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;│&lt;/span&gt; &lt;span class="err"&gt;→&lt;/span&gt; &lt;span class="n"&gt;Agent&lt;/span&gt; &lt;span class="n"&gt;gọi&lt;/span&gt; &lt;span class="err"&gt;để&lt;/span&gt; &lt;span class="n"&gt;lấy&lt;/span&gt; &lt;span class="n"&gt;instructions&lt;/span&gt; &lt;span class="err"&gt;│&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;│&lt;/span&gt; &lt;span class="err"&gt;→&lt;/span&gt; &lt;span class="n"&gt;Load&lt;/span&gt; &lt;span class="n"&gt;ngay&lt;/span&gt; &lt;span class="n"&gt;khi&lt;/span&gt; &lt;span class="n"&gt;cần&lt;/span&gt; &lt;span class="err"&gt;│&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;├─────────────────────────────────────────────────────────┤&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;│&lt;/span&gt; &lt;span class="err"&gt;📎&lt;/span&gt; &lt;span class="ne"&gt;Resource&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;skill://code-review/checklist.md&amp;#34;&lt;/span&gt; &lt;span class="err"&gt;│&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;│&lt;/span&gt; &lt;span class="err"&gt;→&lt;/span&gt; &lt;span class="n"&gt;Agent&lt;/span&gt; &lt;span class="err"&gt;đọ&lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt; &lt;span class="n"&gt;khi&lt;/span&gt; &lt;span class="n"&gt;cần&lt;/span&gt; &lt;span class="n"&gt;thêm&lt;/span&gt; &lt;span class="n"&gt;context&lt;/span&gt; &lt;span class="err"&gt;│&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;│&lt;/span&gt; &lt;span class="err"&gt;→&lt;/span&gt; &lt;span class="n"&gt;Lazy&lt;/span&gt; &lt;span class="nb"&gt;load&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;không&lt;/span&gt; &lt;span class="n"&gt;tốn&lt;/span&gt; &lt;span class="n"&gt;token&lt;/span&gt; &lt;span class="n"&gt;trước&lt;/span&gt; &lt;span class="err"&gt;│&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;└─────────────────────────────────────────────────────────┘&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;hr&gt;
+&lt;h2 id="4-kết-luận"&gt;4. Kết luận
+&lt;/h2&gt;&lt;h3 id="tổng-kết-kiến-trúc"&gt;Tổng kết kiến trúc
+&lt;/h3&gt;&lt;pre class="mermaid"&gt;
+graph LR
+A[SKILL.md] --&amp;gt;|scan| B[Registry]
+B --&amp;gt;|expose| C[MCP Server]
+C --&amp;gt;|HTTP| E[Web Agents]
+&lt;/pre&gt;
+&lt;p&gt;Thiết kế này theo nguyên tắc &lt;strong&gt;Convention over Configuration&lt;/strong&gt;: đặt file đúng chỗ, system tự lo phần còn lại.&lt;/p&gt;
+&lt;h3 id="lợi-ích"&gt;Lợi ích
+&lt;/h3&gt;&lt;p&gt;&lt;strong&gt;Đơn giản cho người dùng — Simplicity&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Chỉ cần biết Markdown để viết skill&lt;/li&gt;
+&lt;li&gt;Không config, không registration thủ công&lt;/li&gt;
+&lt;li&gt;Thêm skill = tạo thư mục + file&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Tích hợp chuẩn — Standards Compliance&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;MCP protocol — hoạt động với mọi MCP client&lt;/li&gt;
+&lt;li&gt;File-based — git, backup, share dễ dàng&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Tiết kiệm tài nguyên — Efficiency&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Lazy load references qua Resource&lt;/li&gt;
+&lt;li&gt;Không nhồi nhét vào context window&lt;/li&gt;
+&lt;/ul&gt;</description></item></channel></rss>

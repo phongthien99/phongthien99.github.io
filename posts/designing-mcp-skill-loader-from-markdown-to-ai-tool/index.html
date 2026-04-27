@@ -1,0 +1,167 @@
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><meta name=description content="1. Đặt vấn đề AI agents đang xuất hiện khắp nơi — từ code assistant trong IDE đến chatbot hỗ trợ khách hàng. Nhưng có một bài toán mà hầu như dự án nào cũng gặp: làm thế nào để &ldquo;dạy&rdquo; agent cách thực hiện một tác vụ cụ thể mà không cần viết code?\nHãy tưởng tượng ta có một agent cần biết cách review code, viết commit message đúng chuẩn, hay debug một lỗi phức tạp. Cách tiếp cận truyền thống thường như sau:\n"><title>Designing MCP Skill Loader — From Markdown to AI Tool</title><link rel=canonical href=https://phongthien99.github.io/posts/designing-mcp-skill-loader-from-markdown-to-ai-tool/><link rel=stylesheet href=/scss/style.min.769133d016a4a1944b3a27800e000cccd439a8c1a9c0c61f7c4fa0bc0e42de57.css><meta property='og:title' content="Designing MCP Skill Loader — From Markdown to AI Tool"><meta property='og:description' content="1. Đặt vấn đề AI agents đang xuất hiện khắp nơi — từ code assistant trong IDE đến chatbot hỗ trợ khách hàng. Nhưng có một bài toán mà hầu như dự án nào cũng gặp: làm thế nào để &ldquo;dạy&rdquo; agent cách thực hiện một tác vụ cụ thể mà không cần viết code?\nHãy tưởng tượng ta có một agent cần biết cách review code, viết commit message đúng chuẩn, hay debug một lỗi phức tạp. Cách tiếp cận truyền thống thường như sau:\n"><meta property='og:url' content='https://phongthien99.github.io/posts/designing-mcp-skill-loader-from-markdown-to-ai-tool/'><meta property='og:site_name' content='phongthien'><meta property='og:type' content='article'><meta property='article:section' content='Post'><meta property='article:tag' content='mcp'><meta property='article:tag' content='ai-agent'><meta property='article:tag' content='design-pattern'><meta property='article:published_time' content='2026-03-29T10:00:00+07:00'><meta property='article:modified_time' content='2026-03-29T10:00:00+07:00'><meta name=twitter:title content="Designing MCP Skill Loader — From Markdown to AI Tool"><meta name=twitter:description content="1. Đặt vấn đề AI agents đang xuất hiện khắp nơi — từ code assistant trong IDE đến chatbot hỗ trợ khách hàng. Nhưng có một bài toán mà hầu như dự án nào cũng gặp: làm thế nào để &ldquo;dạy&rdquo; agent cách thực hiện một tác vụ cụ thể mà không cần viết code?\nHãy tưởng tượng ta có một agent cần biết cách review code, viết commit message đúng chuẩn, hay debug một lỗi phức tạp. Cách tiếp cận truyền thống thường như sau:\n"><link rel="shortcut icon" href=/favicon.png><script src=https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js></script><script>mermaid.initialize({startOnLoad:!0})</script></head><body class=article-page><script>(function(){const e="StackColorScheme";localStorage.getItem(e)||localStorage.setItem(e,"auto")})()</script><script>(function(){const t="StackColorScheme",e=localStorage.getItem(t),n=window.matchMedia("(prefers-color-scheme: dark)").matches===!0;e=="dark"||e==="auto"&&n?document.documentElement.dataset.scheme="dark":document.documentElement.dataset.scheme="light"})()</script><div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky"><button class="hamburger hamburger--spin" type=button id=toggle-menu aria-label="Toggle Menu">
+<span class=hamburger-box><span class=hamburger-inner></span></span></button><header><figure class=site-avatar><a href=/><img src=/img/avatar_hu_7ee69f593e8680d3.jpg width=300 height=300 class=site-logo loading=lazy alt=Avatar>
+</a><span class=emoji>🏅</span></figure><div class=site-meta><h1 class=site-name><a href=/>phongthien</a></h1><h2 class=site-description>Software Engineer</h2></div></header><ol class=menu-social><li><a href=https://github.com/phongthien99 target=_blank title=GitHub rel=me><svg class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6.0 00-1.3-3.2 4.2 4.2.0 00-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3.0 00-6.2.0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2.0 00-.1 3.2A4.6 4.6.0 004 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg></a></li><li><a href=https://twitter.com target=_blank title=linkedin rel=me><svg class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M10 14a3.5 3.5.0 005 0l4-4a3.5 3.5.0 00-5-5l-.5.5"/><path d="M14 10a3.5 3.5.0 00-5 0l-4 4a3.5 3.5.0 005 5l.5-.5"/></svg></a></li></ol><ol class=menu id=main-menu><li><a href=/><svg class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><polyline points="5 12 3 12 12 3 21 12 19 12"/><path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/><path d="M9 21v-6a2 2 0 012-2h2a2 2 0 012 2v6"/></svg>
+<span>Home</span></a></li><li><a href=/archives/><svg class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><rect x="3" y="4" width="18" height="4" rx="2"/><path d="M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+<span>Archives</span></a></li><li><a href=/search/><svg class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="10" cy="10" r="7"/><line x1="21" y1="21" x2="15" y2="15"/></svg>
+<span>Search</span></a></li><li><a href=/about-me/><svg class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="7" r="4"/><path d="M6 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/></svg>
+<span>About me</span></a></li><li class=menu-bottom-section><ol class=menu><li id=dark-mode-toggle><svg class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="8" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<svg class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="16" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<span>Dark Mode</span></li></ol></li></ol></aside><aside class="sidebar right-sidebar sticky"><section class="widget archives"><div class=widget-icon><svg class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><line x1="5" y1="9" x2="19" y2="9"/><line x1="5" y1="15" x2="19" y2="15"/><line x1="11" y1="4" x2="7" y2="20"/><line x1="17" y1="4" x2="13" y2="20"/></svg></div><h2 class="widget-title section-title">Table of contents</h2><div class=widget--toc><nav id=TableOfContents><ol><li><a href=#1-đặt-vấn-đề>1. Đặt vấn đề</a></li><li><a href=#2-giải-pháp>2. Giải pháp</a></li><li><a href=#3-thiết-kế>3. Thiết kế</a><ol><li><a href=#31-cấu-trúc-skill>3.1 Cấu trúc Skill</a></li><li><a href=#32-kiến-trúc-tổng-quan>3.2 Kiến trúc tổng quan</a></li><li><a href=#33-các-thành-phần-chính>3.3 Các thành phần chính</a></li><li><a href=#34-luồng-xử-lý>3.4 Luồng xử lý</a></li><li><a href=#35-mcp-exposure-model>3.5 MCP Exposure Model</a></li></ol></li><li><a href=#4-kết-luận>4. Kết luận</a><ol><li><a href=#tổng-kết-kiến-trúc>Tổng kết kiến trúc</a></li><li><a href=#lợi-ích>Lợi ích</a></li></ol></li></ol></nav></div></section></aside><main class="main full-width"><article class=main-article><header class=article-header><div class=article-details><header class=article-category><a href=/categories/ai/>Ai
+</a><a href=/categories/system-design/>System Design</a></header><div class=article-title-wrapper><h2 class=article-title><a href=/posts/designing-mcp-skill-loader-from-markdown-to-ai-tool/>Designing MCP Skill Loader — From Markdown to AI Tool</a></h2></div><footer class=article-time><div><svg class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M11.795 21H5a2 2 0 01-2-2V7a2 2 0 012-2h12a2 2 0 012 2v4"/><circle cx="18" cy="18" r="4"/><path d="M15 3v4"/><path d="M7 3v4"/><path d="M3 11h16"/><path d="M18 16.496V18l1 1"/></svg>
+<time class=article-time--published datetime=2026-03-29T10:00:00+07:00>Mar 29, 2026</time></div><div><svg class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+<time class=article-time--reading>4 minute read</time></div></footer></div></header><section class=article-content><h2 id=1-đặt-vấn-đề>1. Đặt vấn đề</h2><p>AI agents đang xuất hiện khắp nơi — từ code assistant trong IDE đến chatbot hỗ trợ khách hàng. Nhưng có một bài toán mà hầu như dự án nào cũng gặp: <strong>làm thế nào để &ldquo;dạy&rdquo; agent cách thực hiện một tác vụ cụ thể mà không cần viết code?</strong></p><p>Hãy tưởng tượng ta có một agent cần biết cách review code, viết commit message đúng chuẩn, hay debug một lỗi phức tạp. Cách tiếp cận truyền thống thường như sau:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span><span class=lnt>8
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-go data-lang=go><span class=line><span class=cl><span class=c1>// ❌ Hard-code mọi thứ vào system prompt</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=kd>func</span><span class=w> </span><span class=nf>buildSystemPrompt</span><span class=p>()</span><span class=w> </span><span class=kt>string</span><span class=w> </span><span class=p>{</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=k>return</span><span class=w> </span><span class=s>`You are a code review expert.
+</span></span></span><span class=line><span class=cl><span class=s>    When reviewing code: [200 dòng rules]
+</span></span></span><span class=line><span class=cl><span class=s>    When writing commits: [100 dòng rules]
+</span></span></span><span class=line><span class=cl><span class=s>    When debugging: [150 dòng rules]
+</span></span></span><span class=line><span class=cl><span class=s>    ...`</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=p>}</span><span class=w>
+</span></span></span></code></pre></td></tr></table></div></div><p>Vấn đề với cách này:</p><ul><li><strong>Không tái sử dụng</strong> — mỗi agent copy-paste cùng một đoạn instructions</li><li><strong>Khó bảo trì</strong> — thay đổi một quy tắc phải sửa nhiều nơi</li><li><strong>Không version control</strong> — prompt nằm trong code, khó track history</li><li><strong>Tốn token</strong> — agent load toàn bộ dù chỉ cần một phần nhỏ</li></ul><p>Thêm một ràng buộc: <strong>Model Context Protocol (MCP)</strong> đang nổi lên như giao thức chuẩn để AI agent giao tiếp với tools. Claude Desktop, VS Code, và nhiều AI client đều hỗ trợ MCP.</p><p><em>Câu hỏi: Có cách nào quản lý &ldquo;knowledge&rdquo; của agent theo dạng file — version được, chia sẻ được, load động — và expose qua MCP không?</em></p><hr><h2 id=2-giải-pháp>2. Giải pháp</h2><blockquote><p><strong>Ý tưởng cốt lõi:</strong> Mỗi &ldquo;skill&rdquo; là một thư mục chứa file <code>SKILL.md</code>. Người viết skill chỉ cần biết Markdown — không cần code. Hệ thống tự scan, parse, và expose qua MCP.</p></blockquote><p>Đây là pattern <strong>Convention over Configuration</strong>: đặt file đúng chỗ, mọi thứ tự động chạy.</p><pre class=mermaid>
+  graph LR
+    subgraph without[&#34;❌ Không có Skill Loader&#34;]
+        A1[Agent 1] --&gt; P1[Hard-coded Prompt]
+        A2[Agent 2] --&gt; P2[Copy-paste Prompt]
+        A3[Agent 3] --&gt; P3[Another Copy]
+    end
+    
+    subgraph with[&#34;✅ Có Skill Loader&#34;]
+        S1[SKILL.md] --&gt; L[Skill Loader]
+        S2[SKILL.md] --&gt; L
+        L --&gt; MCP[MCP Server]
+        MCP --&gt; A4[Any Agent]
+    end
+</pre><div class=table-wrapper><table><thead><tr><th>Vấn đề</th><th>Trước</th><th>Sau</th></tr></thead><tbody><tr><td>Tái sử dụng</td><td>Copy-paste</td><td>Một file, nhiều agents</td></tr><tr><td>Bảo trì</td><td>Sửa nhiều nơi</td><td>Sửa một <code>SKILL.md</code></td></tr><tr><td>Token</td><td>Load toàn bộ</td><td>Lazy load qua Resource</td></tr><tr><td>Thêm skill</td><td>Sửa code, redeploy</td><td>Thêm file, rescan</td></tr></tbody></table></div><hr><h2 id=3-thiết-kế>3. Thiết kế</h2><h3 id=31-cấu-trúc-skill>3.1 Cấu trúc Skill</h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span><span class=lnt>8
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-gdscript3 data-lang=gdscript3><span class=line><span class=cl><span class=o>~/.</span><span class=n>skills</span><span class=o>/</span>
+</span></span><span class=line><span class=cl><span class=err>├──</span> <span class=n>code</span><span class=o>-</span><span class=n>review</span><span class=o>/</span>
+</span></span><span class=line><span class=cl><span class=err>│</span>   <span class=err>├──</span> <span class=n>SKILL</span><span class=o>.</span><span class=n>md</span>           <span class=err>←</span> <span class=err>đị</span><span class=n>nh</span> <span class=n>nghĩa</span> <span class=n>skill</span> <span class=p>(</span><span class=n>bắt</span> <span class=n>buộc</span><span class=p>)</span>
+</span></span><span class=line><span class=cl><span class=err>│</span>   <span class=err>└──</span> <span class=n>checklist</span><span class=o>.</span><span class=n>md</span>       <span class=err>←</span> <span class=n>tài</span> <span class=n>liệu</span> <span class=n>tham</span> <span class=n>khảo</span> <span class=p>(</span><span class=n>lazy</span> <span class=nb>load</span><span class=p>)</span>
+</span></span><span class=line><span class=cl><span class=err>├──</span> <span class=n>write</span><span class=o>-</span><span class=n>commit</span><span class=o>/</span>
+</span></span><span class=line><span class=cl><span class=err>│</span>   <span class=err>└──</span> <span class=n>SKILL</span><span class=o>.</span><span class=n>md</span>
+</span></span><span class=line><span class=cl><span class=err>└──</span> <span class=n>debug</span><span class=o>-</span><span class=n>go</span><span class=o>/</span>
+</span></span><span class=line><span class=cl>    <span class=err>└──</span> <span class=n>SKILL</span><span class=o>.</span><span class=n>md</span>
+</span></span></code></pre></td></tr></table></div></div><p>File <code>SKILL.md</code> = YAML frontmatter + Markdown:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span><span class=lnt>8
+</span><span class=lnt>9
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-markdown data-lang=markdown><span class=line><span class=cl>---
+</span></span><span class=line><span class=cl>name: code-review
+</span></span><span class=line><span class=cl>description: Expert code review guidance
+</span></span><span class=line><span class=cl>references:
+</span></span><span class=line><span class=cl>  <span class=k>-</span> checklist.md
+</span></span><span class=line><span class=cl>---
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=gh># Code Review Skill
+</span></span></span><span class=line><span class=cl>When reviewing code, follow these guidelines...
+</span></span></code></pre></td></tr></table></div></div><h3 id=32-kiến-trúc-tổng-quan>3.2 Kiến trúc tổng quan</h3><pre class=mermaid>
+  graph TD
+    subgraph Input[&#34;📁 Input Layer&#34;]
+        F1[SKILL.md files]
+    end
+    
+    subgraph Core[&#34;⚙️ Core Layer&#34;]
+        P[Parser] --&gt; R[Registry]
+    
+    end
+    
+    subgraph Output[&#34;🔌 Output Layer&#34;]
+        MCP[MCP Server]
+        MCP --&gt; PR[Prompts]
+        MCP --&gt; RS[Resources]
+    end
+    
+    F1 --&gt; P
+    R --&gt; MCP
+    
+    subgraph Clients[&#34;🤖 Clients&#34;]
+        C1[Claude Desktop]
+        C2[VS Code]
+        C3[Custom Agent]
+    end
+    
+    PR --&gt; C1
+    RS --&gt; C2
+    PR --&gt; C3
+</pre><h3 id=33-các-thành-phần-chính>3.3 Các thành phần chính</h3><div class=table-wrapper><table><thead><tr><th>Component</th><th>Trách nhiệm</th><th>Input</th><th>Output</th></tr></thead><tbody><tr><td><strong>Parser</strong></td><td>Đọc SKILL.md, tách frontmatter/content</td><td>File path</td><td>Skill struct</td></tr><tr><td><strong>Registry</strong></td><td>Scan, lưu trữ, detect collision</td><td>Root dir</td><td>Map[name]Skill</td></tr><tr><td><strong>MCP Server</strong></td><td>Expose skills qua protocol</td><td>Registry</td><td>Prompts + Resources</td></tr></tbody></table></div><h3 id=34-luồng-xử-lý>3.4 Luồng xử lý</h3><pre class=mermaid>
+  sequenceDiagram
+    participant FS as File System
+    participant R as Registry
+    participant MCP as MCP Server
+    participant Agent as AI Agent
+
+    Note over R: Startup
+    R-&gt;&gt;FS: WalkDir(~/.skills)
+    FS--&gt;&gt;R: List of SKILL.md paths
+    
+    loop Each SKILL.md
+        R-&gt;&gt;R: Parse &amp; Validate
+        R-&gt;&gt;R: Check duplicates
+        R-&gt;&gt;R: Store in memory
+    end
+    
+    R-&gt;&gt;MCP: Register Prompts
+    R-&gt;&gt;MCP: Register Resources
+    
+    Note over Agent: Runtime
+    Agent-&gt;&gt;MCP: GetPrompt(&#34;code_review&#34;)
+    MCP--&gt;&gt;Agent: Instructions markdown
+    
+    Agent-&gt;&gt;MCP: ReadResource(&#34;skill://code-review/checklist.md&#34;)
+    MCP--&gt;&gt;Agent: Reference content (lazy)
+</pre><h3 id=35-mcp-exposure-model>3.5 MCP Exposure Model</h3><p>Mỗi skill được expose theo 2 cách:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-gdscript3 data-lang=gdscript3><span class=line><span class=cl><span class=err>┌─────────────────────────────────────────────────────────┐</span>
+</span></span><span class=line><span class=cl><span class=err>│</span>  <span class=n>Skill</span><span class=p>:</span> <span class=n>code</span><span class=o>-</span><span class=n>review</span>                                     <span class=err>│</span>
+</span></span><span class=line><span class=cl><span class=err>├─────────────────────────────────────────────────────────┤</span>
+</span></span><span class=line><span class=cl><span class=err>│</span>  <span class=err>📝</span> <span class=n>Prompt</span><span class=p>:</span> <span class=s2>&#34;code_review&#34;</span>                               <span class=err>│</span>
+</span></span><span class=line><span class=cl><span class=err>│</span>     <span class=err>→</span> <span class=n>Agent</span> <span class=n>gọi</span> <span class=err>để</span> <span class=n>lấy</span> <span class=n>instructions</span>                     <span class=err>│</span>
+</span></span><span class=line><span class=cl><span class=err>│</span>     <span class=err>→</span> <span class=n>Load</span> <span class=n>ngay</span> <span class=n>khi</span> <span class=n>cần</span>                                 <span class=err>│</span>
+</span></span><span class=line><span class=cl><span class=err>├─────────────────────────────────────────────────────────┤</span>
+</span></span><span class=line><span class=cl><span class=err>│</span>  <span class=err>📎</span> <span class=ne>Resource</span><span class=p>:</span> <span class=s2>&#34;skill://code-review/checklist.md&#34;</span>        <span class=err>│</span>
+</span></span><span class=line><span class=cl><span class=err>│</span>     <span class=err>→</span> <span class=n>Agent</span> <span class=err>đọ</span><span class=n>c</span> <span class=n>khi</span> <span class=n>cần</span> <span class=n>thêm</span> <span class=n>context</span>                    <span class=err>│</span>
+</span></span><span class=line><span class=cl><span class=err>│</span>     <span class=err>→</span> <span class=n>Lazy</span> <span class=nb>load</span><span class=p>,</span> <span class=n>không</span> <span class=n>tốn</span> <span class=n>token</span> <span class=n>trước</span>                  <span class=err>│</span>
+</span></span><span class=line><span class=cl><span class=err>└─────────────────────────────────────────────────────────┘</span>
+</span></span></code></pre></td></tr></table></div></div><hr><h2 id=4-kết-luận>4. Kết luận</h2><h3 id=tổng-kết-kiến-trúc>Tổng kết kiến trúc</h3><pre class=mermaid>
+  graph LR
+    A[SKILL.md] --&gt;|scan| B[Registry]
+    B --&gt;|expose| C[MCP Server]
+    C --&gt;|HTTP| E[Web Agents]
+</pre><p>Thiết kế này theo nguyên tắc <strong>Convention over Configuration</strong>: đặt file đúng chỗ, system tự lo phần còn lại.</p><h3 id=lợi-ích>Lợi ích</h3><p><strong>Đơn giản cho người dùng — Simplicity</strong></p><ul><li>Chỉ cần biết Markdown để viết skill</li><li>Không config, không registration thủ công</li><li>Thêm skill = tạo thư mục + file</li></ul><p><strong>Tích hợp chuẩn — Standards Compliance</strong></p><ul><li>MCP protocol — hoạt động với mọi MCP client</li><li>File-based — git, backup, share dễ dàng</li></ul><p><strong>Tiết kiệm tài nguyên — Efficiency</strong></p><ul><li>Lazy load references qua Resource</li><li>Không nhồi nhét vào context window</li></ul></section><footer class=article-footer><section class=article-tags><a href=/tags/mcp/>Mcp</a>
+<a href=/tags/ai-agent/>Ai-Agent</a>
+<a href=/tags/design-pattern/>Design-Pattern</a></section><section class=article-copyright><svg class="icon icon-tabler icon-tabler-copyright" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><path d="M14.5 9a3.5 4 0 100 6"/></svg>
+<span>Licensed under CC BY-NC-SA 4.0</span></section></footer></article><div class=disqus-container></div><style>.disqus-container{background-color:var(--card-background);border-radius:var(--card-border-radius);box-shadow:var(--shadow-l1);padding:var(--card-padding)}</style><script>window.addEventListener("onColorSchemeChange",e=>{typeof DISQUS=="object"&&DISQUS.reset({reload:!0})})</script><footer class=site-footer><section class=copyright>&copy;
+2026 phongthien</section><section class=powerby>Built with <a href=https://gohugo.io/ target=_blank rel=noopener>Hugo</a><br>Theme <b><a href=https://github.com/CaiJimmy/hugo-theme-stack target=_blank rel=noopener data-version=3.33.0>Stack</a></b> designed by <a href=https://jimmycai.com target=_blank rel=noopener>Jimmy</a></section></footer><div class=pswp tabindex=-1 role=dialog aria-hidden=true><div class=pswp__bg></div><div class=pswp__scroll-wrap><div class=pswp__container><div class=pswp__item></div><div class=pswp__item></div><div class=pswp__item></div></div><div class="pswp__ui pswp__ui--hidden"><div class=pswp__top-bar><div class=pswp__counter></div><button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+<button class="pswp__button pswp__button--share" title=Share></button>
+<button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+<button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button><div class=pswp__preloader><div class=pswp__preloader__icn><div class=pswp__preloader__cut><div class=pswp__preloader__donut></div></div></div></div></div><div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap"><div class=pswp__share-tooltip></div></div><button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+</button>
+<button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)"></button><div class=pswp__caption><div class=pswp__caption__center></div></div></div></div></div><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo=" crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU=" crossorigin=anonymous defer></script><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css crossorigin=anonymous><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css crossorigin=anonymous></main></div><script src=https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z+KMkF24hUW8WePSA9HM=" crossorigin=anonymous></script><script type=text/javascript src=/ts/main.c922af694cc257bf1ecc41c0dd7b0430f9114ec280ccf67cd2c6ad55f5316c4e.js defer></script><script>(function(){const e=document.createElement("link");e.href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap",e.type="text/css",e.rel="stylesheet",document.head.appendChild(e)})()</script></body></html>

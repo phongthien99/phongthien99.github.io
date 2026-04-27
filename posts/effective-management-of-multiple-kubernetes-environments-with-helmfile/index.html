@@ -1,0 +1,184 @@
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><meta name=description content="Effective Management of Multiple Kubernetes Environments with Helmfile 1. Đặt Vấn Đề Khi sử dụng Helm để triển khai ứng dụng lên Kubernetes, bạn sẽ sớm nhận ra một số vấn đề phổ biến:\n🔁 Cần quản lý nhiều chart cho các dịch vụ khác nhau. 🌍 Cần giữ cấu hình nhất quán giữa các môi trường (dev, staging, production). ⚙️ Cần khả năng diff trước khi deploy, cập nhật đồng loạt dễ kiểm soát. Việc dùng Helm thuần (helm install, helm upgrade) cho từng chart rất thủ công, dễ lỗi và khó mở rộng khi team hoặc dự án lớn lên.\n"><title>Effective Management of Multiple Kubernetes Environments with Helmfile</title><link rel=canonical href=https://phongthien99.github.io/posts/effective-management-of-multiple-kubernetes-environments-with-helmfile/><link rel=stylesheet href=/scss/style.min.769133d016a4a1944b3a27800e000cccd439a8c1a9c0c61f7c4fa0bc0e42de57.css><meta property='og:title' content="Effective Management of Multiple Kubernetes Environments with Helmfile"><meta property='og:description' content="Effective Management of Multiple Kubernetes Environments with Helmfile 1. Đặt Vấn Đề Khi sử dụng Helm để triển khai ứng dụng lên Kubernetes, bạn sẽ sớm nhận ra một số vấn đề phổ biến:\n🔁 Cần quản lý nhiều chart cho các dịch vụ khác nhau. 🌍 Cần giữ cấu hình nhất quán giữa các môi trường (dev, staging, production). ⚙️ Cần khả năng diff trước khi deploy, cập nhật đồng loạt dễ kiểm soát. Việc dùng Helm thuần (helm install, helm upgrade) cho từng chart rất thủ công, dễ lỗi và khó mở rộng khi team hoặc dự án lớn lên.\n"><meta property='og:url' content='https://phongthien99.github.io/posts/effective-management-of-multiple-kubernetes-environments-with-helmfile/'><meta property='og:site_name' content='phongthien'><meta property='og:type' content='article'><meta property='article:section' content='Post'><meta property='article:tag' content='kubernetes'><meta property='article:tag' content='helm'><meta property='article:tag' content='helmfile'><meta property='article:tag' content='devops'><meta property='article:published_time' content='2025-06-01T00:00:00+00:00'><meta property='article:modified_time' content='2025-06-01T00:00:00+00:00'><meta name=twitter:title content="Effective Management of Multiple Kubernetes Environments with Helmfile"><meta name=twitter:description content="Effective Management of Multiple Kubernetes Environments with Helmfile 1. Đặt Vấn Đề Khi sử dụng Helm để triển khai ứng dụng lên Kubernetes, bạn sẽ sớm nhận ra một số vấn đề phổ biến:\n🔁 Cần quản lý nhiều chart cho các dịch vụ khác nhau. 🌍 Cần giữ cấu hình nhất quán giữa các môi trường (dev, staging, production). ⚙️ Cần khả năng diff trước khi deploy, cập nhật đồng loạt dễ kiểm soát. Việc dùng Helm thuần (helm install, helm upgrade) cho từng chart rất thủ công, dễ lỗi và khó mở rộng khi team hoặc dự án lớn lên.\n"><link rel="shortcut icon" href=/favicon.png><script src=https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js></script><script>mermaid.initialize({startOnLoad:!0})</script></head><body class=article-page><script>(function(){const e="StackColorScheme";localStorage.getItem(e)||localStorage.setItem(e,"auto")})()</script><script>(function(){const t="StackColorScheme",e=localStorage.getItem(t),n=window.matchMedia("(prefers-color-scheme: dark)").matches===!0;e=="dark"||e==="auto"&&n?document.documentElement.dataset.scheme="dark":document.documentElement.dataset.scheme="light"})()</script><div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky"><button class="hamburger hamburger--spin" type=button id=toggle-menu aria-label="Toggle Menu">
+<span class=hamburger-box><span class=hamburger-inner></span></span></button><header><figure class=site-avatar><a href=/><img src=/img/avatar_hu_7ee69f593e8680d3.jpg width=300 height=300 class=site-logo loading=lazy alt=Avatar>
+</a><span class=emoji>🏅</span></figure><div class=site-meta><h1 class=site-name><a href=/>phongthien</a></h1><h2 class=site-description>Software Engineer</h2></div></header><ol class=menu-social><li><a href=https://github.com/phongthien99 target=_blank title=GitHub rel=me><svg class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6.0 00-1.3-3.2 4.2 4.2.0 00-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3.0 00-6.2.0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2.0 00-.1 3.2A4.6 4.6.0 004 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg></a></li><li><a href=https://twitter.com target=_blank title=linkedin rel=me><svg class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M10 14a3.5 3.5.0 005 0l4-4a3.5 3.5.0 00-5-5l-.5.5"/><path d="M14 10a3.5 3.5.0 00-5 0l-4 4a3.5 3.5.0 005 5l.5-.5"/></svg></a></li></ol><ol class=menu id=main-menu><li><a href=/><svg class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><polyline points="5 12 3 12 12 3 21 12 19 12"/><path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/><path d="M9 21v-6a2 2 0 012-2h2a2 2 0 012 2v6"/></svg>
+<span>Home</span></a></li><li><a href=/archives/><svg class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><rect x="3" y="4" width="18" height="4" rx="2"/><path d="M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+<span>Archives</span></a></li><li><a href=/search/><svg class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="10" cy="10" r="7"/><line x1="21" y1="21" x2="15" y2="15"/></svg>
+<span>Search</span></a></li><li><a href=/about-me/><svg class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="7" r="4"/><path d="M6 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/></svg>
+<span>About me</span></a></li><li class=menu-bottom-section><ol class=menu><li id=dark-mode-toggle><svg class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="8" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<svg class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="16" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<span>Dark Mode</span></li></ol></li></ol></aside><aside class="sidebar right-sidebar sticky"><section class="widget archives"><div class=widget-icon><svg class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><line x1="5" y1="9" x2="19" y2="9"/><line x1="5" y1="15" x2="19" y2="15"/><line x1="11" y1="4" x2="7" y2="20"/><line x1="17" y1="4" x2="13" y2="20"/></svg></div><h2 class="widget-title section-title">Table of contents</h2><div class=widget--toc><nav id=TableOfContents><ol><li><a href=#1-đặt-vấn-đề>1. Đặt Vấn Đề</a></li><li><a href=#2-giải-pháp-helmfile--helm-for-the-real-world>2. Giải Pháp: Helmfile – <em>Helm For The Real World</em></a><ol><li><a href=#-tính-năng-nổi-bật>🔍 Tính năng nổi bật:</a></li></ol></li><li><a href=#3-hiện-thực-hóa-cài-đặt-và-sử-dụng-helmfile>3. Hiện Thực Hóa: Cài Đặt Và Sử Dụng Helmfile</a><ol><li><a href=#-script-cài-đặt-helmfile-mới-nhất>🔧 Script Cài Đặt Helmfile Mới Nhất</a></li><li><a href=#-cấu-trúc-thư-mục-helmfile-nhiều-môi-trường>📁 Cấu Trúc Thư Mục Helmfile Nhiều Môi Trường</a></li></ol></li><li><a href=#4-triển-khai-nhiều-môi-trường-với-helmfile>4. Triển Khai Nhiều Môi Trường Với Helmfile</a><ol><li><a href=#-helmfileyaml-mẫu>🧩 <code>helmfile.yaml</code> Mẫu</a></li><li><a href=#-ví-dụ-file-environmentsdevyaml>📄 Ví Dụ File <code>environments/dev.yaml</code></a></li><li><a href=#-lệnh-triển-khai-theo-môi-trường>🚀 Lệnh Triển Khai Theo Môi Trường</a></li></ol></li><li><a href=#5-kết-luận>5. Kết Luận</a></li></ol></nav></div></section></aside><main class="main full-width"><article class=main-article><header class=article-header><div class=article-details><header class=article-category><a href=/categories/devops/>Devops
+</a><a href=/categories/kubernetes/>Kubernetes</a></header><div class=article-title-wrapper><h2 class=article-title><a href=/posts/effective-management-of-multiple-kubernetes-environments-with-helmfile/>Effective Management of Multiple Kubernetes Environments with Helmfile</a></h2></div><footer class=article-time><div><svg class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M11.795 21H5a2 2 0 01-2-2V7a2 2 0 012-2h12a2 2 0 012 2v4"/><circle cx="18" cy="18" r="4"/><path d="M15 3v4"/><path d="M7 3v4"/><path d="M3 11h16"/><path d="M18 16.496V18l1 1"/></svg>
+<time class=article-time--published datetime=2025-06-01T00:00:00Z>Jun 01, 2025</time></div><div><svg class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+<time class=article-time--reading>3 minute read</time></div></footer></div></header><section class=article-content><h1 id=effective-management-of-multiple-kubernetes-environments-with-helmfile>Effective Management of Multiple Kubernetes Environments with Helmfile</h1><h2 id=1-đặt-vấn-đề>1. Đặt Vấn Đề</h2><p>Khi sử dụng Helm để triển khai ứng dụng lên Kubernetes, bạn sẽ sớm nhận ra một số vấn đề phổ biến:</p><ul><li>🔁 Cần quản lý <strong>nhiều chart</strong> cho các dịch vụ khác nhau.</li><li>🌍 Cần giữ <strong>cấu hình nhất quán giữa các môi trường</strong> (dev, staging, production).</li><li>⚙️ Cần khả năng <strong>diff trước khi deploy</strong>, <strong>cập nhật đồng loạt</strong> dễ kiểm soát.</li></ul><p>Việc dùng Helm thuần (<code>helm install</code>, <code>helm upgrade</code>) cho từng chart rất thủ công, dễ lỗi và <strong>khó mở rộng</strong> khi team hoặc dự án lớn lên.</p><hr><h2 id=2-giải-pháp-helmfile--helm-for-the-real-world>2. Giải Pháp: Helmfile – <em>Helm For The Real World</em></h2><p><a class=link href=https://github.com/helmfile/helmfile target=_blank rel=noopener>Helmfile</a> là một công cụ mã nguồn mở giúp bạn quản lý nhiều Helm chart một cách có tổ chức và nhất quán giữa các môi trường.</p><h3 id=-tính-năng-nổi-bật>🔍 Tính năng nổi bật:</h3><ul><li>📦 <strong>Triển khai nhiều Helm chart</strong> với một file YAML duy nhất.</li><li>🌐 <strong>Hỗ trợ đa môi trường</strong> (<code>dev</code>, <code>staging</code>, <code>production</code>, v.v.).</li><li>🔄 <strong>Tích hợp sẵn <code>diff</code>, <code>template</code>, <code>sync</code>, <code>apply</code></strong> — cực kỳ tiện cho CI/CD và GitOps.</li><li>🧠 <strong>Hỗ trợ biến động (<code>env</code>), template Go, kế thừa giá trị cấu hình</strong>, dễ tái sử dụng.</li></ul><hr><h2 id=3-hiện-thực-hóa-cài-đặt-và-sử-dụng-helmfile>3. Hiện Thực Hóa: Cài Đặt Và Sử Dụng Helmfile</h2><h3 id=-script-cài-đặt-helmfile-mới-nhất>🔧 Script Cài Đặt Helmfile Mới Nhất</h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1>#!/bin/bash</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=nb>set</span> -e
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># Lấy phiên bản mới nhất từ GitHub API</span>
+</span></span><span class=line><span class=cl><span class=nv>LATEST_VERSION</span><span class=o>=</span><span class=k>$(</span>curl -s https://api.github.com/repos/helmfile/helmfile/releases/latest <span class=p>|</span> grep <span class=s1>&#39;&#34;tag_name&#34;:&#39;</span> <span class=p>|</span> sed -E <span class=s1>&#39;s/.*&#34;([^&#34;]+)&#34;.*/\1/&#39;</span><span class=k>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=nb>echo</span> <span class=s2>&#34;Phiên bản helmfile mới nhất: </span><span class=nv>$LATEST_VERSION</span><span class=s2>&#34;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># Tạo tên file tải về</span>
+</span></span><span class=line><span class=cl><span class=nv>FILE_TAR</span><span class=o>=</span><span class=s2>&#34;helmfile_</span><span class=si>${</span><span class=nv>LATEST_VERSION</span><span class=p>#v</span><span class=si>}</span><span class=s2>_linux_amd64.tar.gz&#34;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># URL tải về</span>
+</span></span><span class=line><span class=cl><span class=nv>DOWNLOAD_URL</span><span class=o>=</span><span class=s2>&#34;https://github.com/helmfile/helmfile/releases/download/</span><span class=si>${</span><span class=nv>LATEST_VERSION</span><span class=si>}</span><span class=s2>/</span><span class=si>${</span><span class=nv>FILE_TAR</span><span class=si>}</span><span class=s2>&#34;</span>
+</span></span><span class=line><span class=cl><span class=nb>echo</span> <span class=s2>&#34;URL tải về: </span><span class=nv>$DOWNLOAD_URL</span><span class=s2>&#34;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># Tải file tar.gz</span>
+</span></span><span class=line><span class=cl>curl -LO <span class=s2>&#34;</span><span class=nv>$DOWNLOAD_URL</span><span class=s2>&#34;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># Giải nén</span>
+</span></span><span class=line><span class=cl>tar -xzf <span class=s2>&#34;</span><span class=nv>$FILE_TAR</span><span class=s2>&#34;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># Cấp quyền thực thi và di chuyển</span>
+</span></span><span class=line><span class=cl>chmod +x helmfile
+</span></span><span class=line><span class=cl>sudo mv helmfile /usr/local/bin/
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># Xóa file tar.gz</span>
+</span></span><span class=line><span class=cl>rm <span class=s2>&#34;</span><span class=nv>$FILE_TAR</span><span class=s2>&#34;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=c1># Kiểm tra phiên bản</span>
+</span></span><span class=line><span class=cl><span class=nb>echo</span> <span class=s2>&#34;Cài đặt thành công. Phiên bản helmfile hiện tại:&#34;</span>
+</span></span><span class=line><span class=cl>helmfile --version
+</span></span></code></pre></td></tr></table></div></div><hr><h3 id=-cấu-trúc-thư-mục-helmfile-nhiều-môi-trường>📁 Cấu Trúc Thư Mục Helmfile Nhiều Môi Trường</h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>.
+</span></span><span class=line><span class=cl>├── helmfile.yaml
+</span></span><span class=line><span class=cl>├── environments/
+</span></span><span class=line><span class=cl>│   ├── dev.yaml
+</span></span><span class=line><span class=cl>│   ├── staging.yaml
+</span></span><span class=line><span class=cl>│   └── production.yaml
+</span></span><span class=line><span class=cl>├── values/
+</span></span><span class=line><span class=cl>│   └── shared-values.yaml
+</span></span><span class=line><span class=cl>└── charts/
+</span></span><span class=line><span class=cl>    ├── redis/
+</span></span><span class=line><span class=cl>    └── my-app/
+</span></span></code></pre></td></tr></table></div></div><hr><h2 id=4-triển-khai-nhiều-môi-trường-với-helmfile>4. Triển Khai Nhiều Môi Trường Với Helmfile</h2><h3 id=-helmfileyaml-mẫu>🧩 <code>helmfile.yaml</code> Mẫu</h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-yaml data-lang=yaml><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=nt>environments</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>dev</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>values</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>- <span class=l>environments/dev.yaml</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>staging</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>values</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>- <span class=l>environments/staging.yaml</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>production</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>values</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>- <span class=l>environments/production.yaml</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=nn>---</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=nt>releases</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span>- <span class=nt>name</span><span class=p>:</span><span class=w> </span><span class=l>redis</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>namespace</span><span class=p>:</span><span class=w> </span>{{<span class=w> </span><span class=l>.Environment.Name }}</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>chart</span><span class=p>:</span><span class=w> </span><span class=l>charts/redis</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>values</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>- <span class=l>values/shared-values.yaml</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span>- <span class=nt>name</span><span class=p>:</span><span class=w> </span><span class=l>my-app</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>namespace</span><span class=p>:</span><span class=w> </span>{{<span class=w> </span><span class=l>.Environment.Name }}</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>chart</span><span class=p>:</span><span class=w> </span><span class=l>charts/my-app</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>needs</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>- <span class=l>redis</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>values</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>- <span class=l>values/shared-values.yaml</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>- <span class=l>environments/{{ .Environment.Name }}.yaml</span><span class=w>
+</span></span></span></code></pre></td></tr></table></div></div><blockquote><p>📌 Lưu ý: dùng &mdash; để phân tách environments: và releases: đúng cú pháp Helmfile.</p></blockquote><hr><h3 id=-ví-dụ-file-environmentsdevyaml>📄 Ví Dụ File <code>environments/dev.yaml</code></h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-yaml data-lang=yaml><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=nt>replicaCount</span><span class=p>:</span><span class=w> </span><span class=m>1</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=nt>image</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>tag</span><span class=p>:</span><span class=w> </span><span class=l>dev-latest</span><span class=w>
+</span></span></span></code></pre></td></tr></table></div></div><hr><h3 id=-lệnh-triển-khai-theo-môi-trường>🚀 Lệnh Triển Khai Theo Môi Trường</h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl>bash
+</span></span><span class=line><span class=cl>CopyEdit
+</span></span><span class=line><span class=cl>helmfile -e dev apply         <span class=c1># Triển khai môi trường dev</span>
+</span></span><span class=line><span class=cl>helmfile -e staging diff      <span class=c1># Xem diff môi trường staging</span>
+</span></span><span class=line><span class=cl>helmfile -e production apply  <span class=c1># Triển khai production</span>
+</span></span></code></pre></td></tr></table></div></div><hr><h2 id=5-kết-luận>5. Kết Luận</h2><p>Helmfile là trợ thủ đắc lực nếu bạn đang triển khai ứng dụng với nhiều dịch vụ và môi trường:</p><ul><li>✅ <strong>Giảm rủi ro khi deploy thủ công</strong></li><li>✅ <strong>Quản lý môi trường rõ ràng, tách biệt</strong></li><li>✅ <strong>Tích hợp CI/CD dễ dàng</strong></li><li>✅ <strong>Hỗ trợ đầy đủ triết lý GitOps</strong></li></ul></section><footer class=article-footer><section class=article-tags><a href=/tags/kubernetes/>Kubernetes</a>
+<a href=/tags/helm/>Helm</a>
+<a href=/tags/helmfile/>Helmfile</a>
+<a href=/tags/devops/>DevOps</a></section><section class=article-copyright><svg class="icon icon-tabler icon-tabler-copyright" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><path d="M14.5 9a3.5 4 0 100 6"/></svg>
+<span>Licensed under CC BY-NC-SA 4.0</span></section></footer></article><aside class=related-content--wrapper><h2 class=section-title>Related content</h2><div class=related-content><div class="flex article-list--tile"><article><a href=/posts/guide-to-running-gitlab-runner-locally-for-building-and-testing-ci/cd-pipelines/><div class=article-details><h2 class=article-title>Guide to Running GitLab Runner Locally for Building and Testing CI/CD Pipelines</h2></div></a></article><article><a href=/posts/hosting-a-debian-repository-on-s3-using-reprepro-and-aws-cli/><div class=article-details><h2 class=article-title>Hosting a Debian Repository on S3 using Reprepro and AWS CLI</h2></div></a></article><article><a href=/posts/poc-centralized-logging-implementation-on-kubernetes-with-fluent-bit-grafana-loki-and-grafana/><div class=article-details><h2 class=article-title>POC: Centralized Logging Implementation on Kubernetes with Fluent Bit, Grafana Loki, and Grafana</h2></div></a></article><article><a href=/posts/log-observability-with-fluent-bit-loki-and-grafana/><div class=article-details><h2 class=article-title>Log Observability with Fluent Bit, Loki and Grafana</h2></div></a></article><article><a href=/posts/hybrid-helm-chart-combining-dependency-charts-and-embedded-subcharts/><div class=article-details><h2 class=article-title>Hybrid Helm Chart: Combining Dependency Charts and Embedded Subcharts</h2></div></a></article></div></div></aside><div class=disqus-container></div><style>.disqus-container{background-color:var(--card-background);border-radius:var(--card-border-radius);box-shadow:var(--shadow-l1);padding:var(--card-padding)}</style><script>window.addEventListener("onColorSchemeChange",e=>{typeof DISQUS=="object"&&DISQUS.reset({reload:!0})})</script><footer class=site-footer><section class=copyright>&copy;
+2026 phongthien</section><section class=powerby>Built with <a href=https://gohugo.io/ target=_blank rel=noopener>Hugo</a><br>Theme <b><a href=https://github.com/CaiJimmy/hugo-theme-stack target=_blank rel=noopener data-version=3.33.0>Stack</a></b> designed by <a href=https://jimmycai.com target=_blank rel=noopener>Jimmy</a></section></footer><div class=pswp tabindex=-1 role=dialog aria-hidden=true><div class=pswp__bg></div><div class=pswp__scroll-wrap><div class=pswp__container><div class=pswp__item></div><div class=pswp__item></div><div class=pswp__item></div></div><div class="pswp__ui pswp__ui--hidden"><div class=pswp__top-bar><div class=pswp__counter></div><button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+<button class="pswp__button pswp__button--share" title=Share></button>
+<button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+<button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button><div class=pswp__preloader><div class=pswp__preloader__icn><div class=pswp__preloader__cut><div class=pswp__preloader__donut></div></div></div></div></div><div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap"><div class=pswp__share-tooltip></div></div><button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+</button>
+<button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)"></button><div class=pswp__caption><div class=pswp__caption__center></div></div></div></div></div><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo=" crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU=" crossorigin=anonymous defer></script><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css crossorigin=anonymous><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css crossorigin=anonymous></main></div><script src=https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z+KMkF24hUW8WePSA9HM=" crossorigin=anonymous></script><script type=text/javascript src=/ts/main.c922af694cc257bf1ecc41c0dd7b0430f9114ec280ccf67cd2c6ad55f5316c4e.js defer></script><script>(function(){const e=document.createElement("link");e.href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap",e.type="text/css",e.rel="stylesheet",document.head.appendChild(e)})()</script></body></html>

@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Security on phongthien</title><link>https://phongthien99.github.io/categories/security/</link><description>Recent content in Security on phongthien</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Sun, 22 Mar 2026 00:00:00 +0700</lastBuildDate><atom:link href="https://phongthien99.github.io/categories/security/index.xml" rel="self" type="application/rss+xml"/><item><title>Envelope Encryption</title><link>https://phongthien99.github.io/posts/envelope-encryption/</link><pubDate>Sun, 22 Mar 2026 00:00:00 +0700</pubDate><guid>https://phongthien99.github.io/posts/envelope-encryption/</guid><description>&lt;h1 id="envelope-encryption"&gt;Envelope Encryption
+&lt;/h1&gt;&lt;h2 id="1-đặt-vấn-đề"&gt;1. Đặt vấn đề
+&lt;/h2&gt;&lt;p&gt;Trong kiến trúc hệ thống hiện đại, mã hóa dữ liệu (encryption at rest, encryption in transit) không còn là lựa chọn — nó là yêu cầu bắt buộc. Tuy nhiên, khi khối lượng dữ liệu tăng lên hàng terabyte, thậm chí petabyte, một câu hỏi kỹ thuật trọng yếu xuất hiện: &lt;strong&gt;làm thế nào để mã hóa hiệu quả mà vẫn đảm bảo an toàn cho khóa mã?&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Hãy hình dung tình huống: bạn vận hành một hệ thống lưu trữ hàng triệu file trên object storage hoặc một cụm database chứa hàng tỷ bản ghi. Nếu sử dụng một khóa duy nhất (master key) để mã hóa trực tiếp toàn bộ dữ liệu, bạn đối mặt với ba vấn đề nghiêm trọng:&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Thứ nhất, hiệu năng.&lt;/strong&gt; Các thuật toán mã hóa bất đối xứng (RSA, ECC) cung cấp mức bảo mật cao nhưng cực kỳ chậm khi xử lý dữ liệu lớn.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Thứ hai, blast radius.&lt;/strong&gt; Nếu master key bị lộ, toàn bộ dữ liệu trong hệ thống đều bị compromise. Không có cơ chế cách ly thiệt hại, một sự cố nhỏ biến thành thảm họa toàn diện.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Thứ ba, key rotation.&lt;/strong&gt; Khi cần xoay khóa (key rotation) — một thực hành bảo mật bắt buộc theo các chuẩn như PCI-DSS, HIPAA — bạn phải giải mã rồi mã hóa lại toàn bộ dữ liệu. Với hệ thống petabyte-scale, việc này đòi hỏi thời gian downtime không thể chấp nhận được và chi phí tính toán khổng lồ.&lt;/p&gt;
+&lt;p&gt;Mô hình dưới đây minh họa rõ điểm yếu của cách tiếp cận single-key truyền thống&lt;/p&gt;
+&lt;pre class="mermaid"&gt;
+flowchart LR
+subgraph Problem[&amp;#34;❌ Single-Key Encryption&amp;#34;]
+MK[&amp;#34;🔑 Master Key&amp;lt;br/&amp;gt;&amp;lt;i&amp;gt;Một khóa duy nhất&amp;lt;/i&amp;gt;&amp;#34;]
+D1[&amp;#34;📄 Data 1&amp;lt;br/&amp;gt;&amp;#34;]
+D2[&amp;#34;📄 Data 2&amp;lt;br/&amp;gt;&amp;#34;]
+D3[&amp;#34;📄 Data 3&amp;lt;br/&amp;gt;&amp;#34;]
+DN[&amp;#34;📄 ...&amp;lt;br/&amp;gt;&amp;#34;]
+MK --&amp;gt;|&amp;#34;RSA / trực tiếp&amp;#34;| D1
+MK --&amp;gt;|&amp;#34;RSA / trực tiếp&amp;#34;| D2
+MK --&amp;gt;|&amp;#34;RSA / trực tiếp&amp;#34;| D3
+MK --&amp;gt;|&amp;#34;RSA / trực tiếp&amp;#34;| DN
+end
+style Problem fill:#FFF0F0,stroke:#CC3333
+style MK fill:#FF6666,stroke:#CC0000,color:#fff
+&lt;/pre&gt;
+&lt;p&gt;Khi master key bị lộ → toàn bộ Data 1, 2, 3&amp;hellip; N đều bị compromise. Khi cần rotation → phải giải mã và mã hóa lại toàn bộ N terabyte. Rõ ràng, mô hình này không mở rộng được.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="2-giải-pháp-envelope-encryption"&gt;2. Giải pháp: Envelope Encryption
+&lt;/h2&gt;&lt;p&gt;Envelope Encryption (mã hóa phong bì) là mô hình phân tầng khóa, trong đó dữ liệu không bao giờ được mã hóa trực tiếp bằng master key. Thay vào đó, quy trình hoạt động theo nguyên tắc &lt;strong&gt;&amp;ldquo;dùng khóa để mã hóa khóa&amp;rdquo;&lt;/strong&gt;.&lt;/p&gt;
+&lt;h3 id="21-kiến-trúc-phân-tầng"&gt;2.1. Kiến trúc phân tầng
+&lt;/h3&gt;&lt;p&gt;Mô hình bao gồm hai lớp khóa:&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Data Encryption Key (DEK)&lt;/strong&gt; — khóa đối xứng (AES-256) được sinh ngẫu nhiên cho &lt;strong&gt;mỗi&lt;/strong&gt; đối tượng dữ liệu. DEK thực hiện việc mã hóa/giải mã dữ liệu thực tế. Do là khóa đối xứng, DEK xử lý dữ liệu lớn với tốc độ rất cao.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Key Encryption Key (KEK)&lt;/strong&gt; — khóa cấp cao hơn, được quản lý bởi dịch vụ chuyên biệt (KMS). KEK chỉ làm một việc duy nhất: mã hóa (wrap) và giải mã (unwrap) các DEK. Vì DEK chỉ là 32 bytes, thao tác này diễn ra gần như tức thì.&lt;/p&gt;
+&lt;pre class="mermaid"&gt;
+flowchart TB
+subgraph Envelope[&amp;#34;✅ Envelope Encryption&amp;#34;]
+KEK[&amp;#34;🔐 KEK &amp;lt;i&amp;gt;(Master Key)&amp;lt;/i&amp;gt;&amp;lt;br/&amp;gt;Nằm trong KMS / Vault&amp;lt;br/&amp;gt;Không bao giờ rời khỏi hệ thống quản lý khóa&amp;#34;]
+DEK1[&amp;#34;🔑 DEK 1&amp;#34;]
+DEK2[&amp;#34;🔑 DEK 2&amp;#34;]
+DEK3[&amp;#34;🔑 DEK 3&amp;#34;]
+DEKN[&amp;#34;🔑 DEK N&amp;#34;]
+D1[&amp;#34;📄 Data 1&amp;#34;]
+D2[&amp;#34;📄 Data 2&amp;#34;]
+D3[&amp;#34;📄 Data 3&amp;#34;]
+DN[&amp;#34;📄 Data N&amp;#34;]
+KEK --&amp;gt;|&amp;#34;AES-256-KW&amp;lt;br/&amp;gt;(RFC 3394)&amp;#34;| DEK1
+KEK --&amp;gt;|&amp;#34;AES-256-KW&amp;lt;br/&amp;gt;(RFC 3394)&amp;#34;| DEK2
+KEK --&amp;gt;|&amp;#34;AES-256-KW&amp;lt;br/&amp;gt;(RFC 3394)&amp;#34;| DEK3
+KEK --&amp;gt;|&amp;#34;AES-256-KW&amp;lt;br/&amp;gt;(RFC 3394)&amp;#34;| DEKN
+DEK1 --&amp;gt;|&amp;#34;AES-256-GCM&amp;lt;br/&amp;gt;(nhanh)&amp;#34;| D1
+DEK2 --&amp;gt;|&amp;#34;AES-256-GCM&amp;lt;br/&amp;gt;(nhanh)&amp;#34;| D2
+DEK3 --&amp;gt;|&amp;#34;AES-256-GCM&amp;lt;br/&amp;gt;(nhanh)&amp;#34;| D3
+DEKN --&amp;gt;|&amp;#34;AES-256-GCM&amp;lt;br/&amp;gt;(nhanh)&amp;#34;| DN
+end
+style Envelope fill:#F0FFF0,stroke:#339933
+style KEK fill:#2E75B6,stroke:#1A4D80,color:#fff
+style DEK1 fill:#70AD47,stroke:#507D32,color:#fff
+style DEK2 fill:#70AD47,stroke:#507D32,color:#fff
+style DEK3 fill:#70AD47,stroke:#507D32,color:#fff
+style DEKN fill:#70AD47,stroke:#507D32,color:#fff
+style D1 fill:#FFC000,stroke:#BF9000,color:#333
+style D2 fill:#FFC000,stroke:#BF9000,color:#333
+style D3 fill:#FFC000,stroke:#BF9000,color:#333
+style DN fill:#FFC000,stroke:#BF9000,color:#333
+&lt;/pre&gt;
+&lt;h3 id="22-luồng-encrypt--decrypt"&gt;2.2. Luồng Encrypt / Decrypt
+&lt;/h3&gt;&lt;pre class="mermaid"&gt;
+sequenceDiagram
+participant App as 🖥️ Application
+participant KMS as 🔐 Key Management Service
+participant Store as 🗄️ Object Storage
+Note over App,Store: ── ENCRYPT ──
+App-&amp;gt;&amp;gt;App: 1. Sinh DEK ngẫu nhiên (32 bytes)
+App-&amp;gt;&amp;gt;App: 2. AES-256-GCM Encrypt(data, DEK) → ciphertext
+App-&amp;gt;&amp;gt;KMS: 3. Wrap(DEK) bằng KEK
+KMS--&amp;gt;&amp;gt;App: Encrypted DEK
+App-&amp;gt;&amp;gt;Store: 4. Lưu ciphertext + Encrypted DEK
+App-&amp;gt;&amp;gt;App: 5. 🗑️ Xóa plaintext DEK khỏi RAM
+Note over App,Store: ── DECRYPT ──
+App-&amp;gt;&amp;gt;Store: 6. Đọc ciphertext + Encrypted DEK
+Store--&amp;gt;&amp;gt;App: ciphertext + Encrypted DEK
+App-&amp;gt;&amp;gt;KMS: 7. Unwrap(Encrypted DEK)
+KMS--&amp;gt;&amp;gt;App: Plaintext DEK
+App-&amp;gt;&amp;gt;App: 8. AES-256-GCM Decrypt(ciphertex, DEK) → data
+App-&amp;gt;&amp;gt;App: 9. 🗑️ Xóa plaintext DEK khỏi RAM
+&lt;/pre&gt;
+&lt;h3 id="23-lợi-ích"&gt;2.3. Lợi ích
+&lt;/h3&gt;&lt;p&gt;&lt;strong&gt;Hiệu năng&lt;/strong&gt; — Dữ liệu lớn được mã hóa bằng AES-256 (symmetric), nhanh gấp hàng nghìn lần so với RSA. KEK chỉ xử lý 32 bytes DEK nên không tạo bottleneck.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Blast radius&lt;/strong&gt; — Mỗi object có DEK riêng. Nếu một DEK bị lộ, chỉ object tương ứng bị ảnh hưởng. Master key vẫn an toàn trong KMS.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Key rotation&lt;/strong&gt; — Đây là lợi thế lớn nhất. Nhờ phân tầng, key rotation &lt;strong&gt;không bao giờ chạm vào dữ liệu gốc&lt;/strong&gt;. Ciphertext giữ nguyên 100%.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="3-kết-luận"&gt;3. Kết luận
+&lt;/h2&gt;&lt;p&gt;Envelope Encryption không phải là một ý tưởng mới — nó đã là tiêu chuẩn ngành từ nhiều năm. AWS S3 SSE, Google Cloud Storage, Azure Blob Storage đều sử dụng mô hình này bên dưới.&lt;/p&gt;
+&lt;p&gt;Bản chất của Envelope Encryption là phân tách hai mối quan tâm: &lt;strong&gt;hiệu năng&lt;/strong&gt; (AES symmetric cho dữ liệu lớn) và &lt;strong&gt;bảo mật khóa&lt;/strong&gt; (KMS/Vault quản lý KEK, key master không bao giờ rời khỏi hệ thống chuyên dụng). Sự phân tách này cho phép mỗi lớp tối ưu cho đúng mục tiêu của nó.&lt;/p&gt;</description></item></channel></rss>

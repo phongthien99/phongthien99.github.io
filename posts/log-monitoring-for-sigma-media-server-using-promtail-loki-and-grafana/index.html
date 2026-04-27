@@ -1,0 +1,832 @@
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><meta name=description content="Log Monitoring for Sigma Media Server Using Promtail, Loki, and Grafana Đặt vấn đề Trong quá trình vận hành Sigma Media Server, việc kiểm tra log là một nhiệm vụ quan trọng để đảm bảo hệ thống hoạt động ổn định. Tuy nhiên, các log này thường được lưu trữ tại thư mục /var/log/sigma-machine, và việc phải thường xuyên truy cập vào thư mục, sử dụng lệnh cat hoặc tail để theo dõi log không chỉ tốn thời gian mà còn gây khó khăn khi cần giám sát liên tục và xử lý log từ nhiều dịch vụ khác nhau. Điều này đặt ra nhu cầu cho một giải pháp giám sát log tập trung, giúp theo dõi và phân tích log nhanh chóng, hiệu quả hơn.\n"><title>Log Monitoring for Sigma Media Server Using Promtail, Loki, and Grafana</title><link rel=canonical href=https://phongthien99.github.io/posts/log-monitoring-for-sigma-media-server-using-promtail-loki-and-grafana/><link rel=stylesheet href=/scss/style.min.769133d016a4a1944b3a27800e000cccd439a8c1a9c0c61f7c4fa0bc0e42de57.css><meta property='og:title' content="Log Monitoring for Sigma Media Server Using Promtail, Loki, and Grafana"><meta property='og:description' content="Log Monitoring for Sigma Media Server Using Promtail, Loki, and Grafana Đặt vấn đề Trong quá trình vận hành Sigma Media Server, việc kiểm tra log là một nhiệm vụ quan trọng để đảm bảo hệ thống hoạt động ổn định. Tuy nhiên, các log này thường được lưu trữ tại thư mục /var/log/sigma-machine, và việc phải thường xuyên truy cập vào thư mục, sử dụng lệnh cat hoặc tail để theo dõi log không chỉ tốn thời gian mà còn gây khó khăn khi cần giám sát liên tục và xử lý log từ nhiều dịch vụ khác nhau. Điều này đặt ra nhu cầu cho một giải pháp giám sát log tập trung, giúp theo dõi và phân tích log nhanh chóng, hiệu quả hơn.\n"><meta property='og:url' content='https://phongthien99.github.io/posts/log-monitoring-for-sigma-media-server-using-promtail-loki-and-grafana/'><meta property='og:site_name' content='phongthien'><meta property='og:type' content='article'><meta property='article:section' content='Post'><meta property='article:tag' content='monitor'><meta property='article:published_time' content='2024-10-05T12:40:00+08:00'><meta property='article:modified_time' content='2024-10-05T12:40:00+08:00'><meta name=twitter:title content="Log Monitoring for Sigma Media Server Using Promtail, Loki, and Grafana"><meta name=twitter:description content="Log Monitoring for Sigma Media Server Using Promtail, Loki, and Grafana Đặt vấn đề Trong quá trình vận hành Sigma Media Server, việc kiểm tra log là một nhiệm vụ quan trọng để đảm bảo hệ thống hoạt động ổn định. Tuy nhiên, các log này thường được lưu trữ tại thư mục /var/log/sigma-machine, và việc phải thường xuyên truy cập vào thư mục, sử dụng lệnh cat hoặc tail để theo dõi log không chỉ tốn thời gian mà còn gây khó khăn khi cần giám sát liên tục và xử lý log từ nhiều dịch vụ khác nhau. Điều này đặt ra nhu cầu cho một giải pháp giám sát log tập trung, giúp theo dõi và phân tích log nhanh chóng, hiệu quả hơn.\n"><link rel="shortcut icon" href=/favicon.png><script src=https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js></script><script>mermaid.initialize({startOnLoad:!0})</script></head><body class=article-page><script>(function(){const e="StackColorScheme";localStorage.getItem(e)||localStorage.setItem(e,"auto")})()</script><script>(function(){const t="StackColorScheme",e=localStorage.getItem(t),n=window.matchMedia("(prefers-color-scheme: dark)").matches===!0;e=="dark"||e==="auto"&&n?document.documentElement.dataset.scheme="dark":document.documentElement.dataset.scheme="light"})()</script><div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky"><button class="hamburger hamburger--spin" type=button id=toggle-menu aria-label="Toggle Menu">
+<span class=hamburger-box><span class=hamburger-inner></span></span></button><header><figure class=site-avatar><a href=/><img src=/img/avatar_hu_7ee69f593e8680d3.jpg width=300 height=300 class=site-logo loading=lazy alt=Avatar>
+</a><span class=emoji>🏅</span></figure><div class=site-meta><h1 class=site-name><a href=/>phongthien</a></h1><h2 class=site-description>Software Engineer</h2></div></header><ol class=menu-social><li><a href=https://github.com/phongthien99 target=_blank title=GitHub rel=me><svg class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6.0 00-1.3-3.2 4.2 4.2.0 00-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3.0 00-6.2.0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2.0 00-.1 3.2A4.6 4.6.0 004 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg></a></li><li><a href=https://twitter.com target=_blank title=linkedin rel=me><svg class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M10 14a3.5 3.5.0 005 0l4-4a3.5 3.5.0 00-5-5l-.5.5"/><path d="M14 10a3.5 3.5.0 00-5 0l-4 4a3.5 3.5.0 005 5l.5-.5"/></svg></a></li></ol><ol class=menu id=main-menu><li><a href=/><svg class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><polyline points="5 12 3 12 12 3 21 12 19 12"/><path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/><path d="M9 21v-6a2 2 0 012-2h2a2 2 0 012 2v6"/></svg>
+<span>Home</span></a></li><li><a href=/archives/><svg class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><rect x="3" y="4" width="18" height="4" rx="2"/><path d="M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+<span>Archives</span></a></li><li><a href=/search/><svg class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="10" cy="10" r="7"/><line x1="21" y1="21" x2="15" y2="15"/></svg>
+<span>Search</span></a></li><li><a href=/about-me/><svg class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="7" r="4"/><path d="M6 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/></svg>
+<span>About me</span></a></li><li class=menu-bottom-section><ol class=menu><li id=dark-mode-toggle><svg class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="8" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<svg class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="16" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<span>Dark Mode</span></li></ol></li></ol></aside><aside class="sidebar right-sidebar sticky"><section class="widget archives"><div class=widget-icon><svg class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><line x1="5" y1="9" x2="19" y2="9"/><line x1="5" y1="15" x2="19" y2="15"/><line x1="11" y1="4" x2="7" y2="20"/><line x1="17" y1="4" x2="13" y2="20"/></svg></div><h2 class="widget-title section-title">Table of contents</h2><div class=widget--toc><nav id=TableOfContents><ol><li><a href=#đặt-vấn-đề>Đặt vấn đề</a></li><li><a href=#giải-pháp>Giải pháp</a></li><li><a href=#thực-hiện>Thực hiện</a><ol><li><a href=#bước-1-tạo-file-docker-compose>Bước 1: Tạo file Docker Compose</a></li><li><a href=#bước-2-cấu-hình-promtail>Bước 2: Cấu hình Promtail</a></li><li><a href=#bước-3-cấu-hình-loki>Bước 3: Cấu hình Loki</a></li><li><a href=#bước-5-cấu-hình-grafana>Bước 5: <strong>Cấu Hình Grafana</strong></a></li></ol></li><li><a href=#kết-luận>Kết luận</a></li></ol></nav></div></section></aside><main class="main full-width"><article class=main-article><header class=article-header><div class=article-details><header class=article-category><a href=/categories/devops/>Devops</a></header><div class=article-title-wrapper><h2 class=article-title><a href=/posts/log-monitoring-for-sigma-media-server-using-promtail-loki-and-grafana/>Log Monitoring for Sigma Media Server Using Promtail, Loki, and Grafana</a></h2></div><footer class=article-time><div><svg class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M11.795 21H5a2 2 0 01-2-2V7a2 2 0 012-2h12a2 2 0 012 2v4"/><circle cx="18" cy="18" r="4"/><path d="M15 3v4"/><path d="M7 3v4"/><path d="M3 11h16"/><path d="M18 16.496V18l1 1"/></svg>
+<time class=article-time--published datetime=2024-10-05T12:40:00+08:00>Oct 05, 2024</time></div><div><svg class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+<time class=article-time--reading>9 minute read</time></div></footer></div></header><section class=article-content><h1 id=log-monitoring-for-sigma-media-server-using-promtail-loki-and-grafana>Log Monitoring for Sigma Media Server Using Promtail, Loki, and Grafana</h1><h2 id=đặt-vấn-đề>Đặt vấn đề</h2><p>Trong quá trình vận hành <strong>Sigma Media Server</strong>, việc kiểm tra log là một nhiệm vụ quan trọng để đảm bảo hệ thống hoạt động ổn định. Tuy nhiên, các log này thường được lưu trữ tại thư mục <code>/var/log/sigma-machine</code>, và việc phải thường xuyên truy cập vào thư mục, sử dụng lệnh <code>cat</code> hoặc <code>tail</code> để theo dõi log không chỉ tốn thời gian mà còn gây khó khăn khi cần giám sát liên tục và xử lý log từ nhiều dịch vụ khác nhau. Điều này đặt ra nhu cầu cho một giải pháp giám sát log tập trung, giúp theo dõi và phân tích log nhanh chóng, hiệu quả hơn.</p><h2 id=giải-pháp>Giải pháp</h2><p>Để giải quyết vấn đề giám sát log của Sigma Media Server một cách hiệu quả, chúng ta sẽ triển khai một <strong>log monitoring stack</strong> gồm ba thành phần chính: <strong>Promtail</strong>, <strong>Loki</strong>, và <strong>Grafana</strong>.</p><ol><li><strong>Promtail</strong>: Đây là agent dùng để thu thập log từ Sigma Media Server. Promtail sẽ đọc các file log tại đường dẫn <code>/var/log/sigma-machine/</code>, sau đó chuyển chúng đến Loki để lưu trữ và xử lý. Việc này giúp tự động hóa quá trình lấy log, không cần truy cập thủ công vào thư mục log nữa.</li><li><strong>Loki</strong>: Loki là hệ thống lưu trữ log được thiết kế tối ưu cho việc lưu trữ và truy vấn dữ liệu log. Với kiến trúc nhẹ và tích hợp tốt với Promtail, Loki cho phép lưu trữ log một cách có tổ chức và hiệu quả. Dữ liệu log từ nhiều dịch vụ khác nhau trong Sigma Media Server sẽ được lưu tại một nơi, dễ dàng quản lý và truy vấn.</li><li><strong>Grafana</strong>: Để trực quan hóa log, Grafana sẽ kết nối với Loki như một nguồn dữ liệu. Từ đây, bạn có thể tạo các dashboard tùy chỉnh để theo dõi log theo thời gian thực, thiết lập cảnh báo, và phân tích log một cách nhanh chóng. Grafana cung cấp giao diện trực quan giúp dễ dàng tìm kiếm, lọc và giám sát log mà không cần lệnh dòng lệnh phức tạp</li></ol><h2 id=thực-hiện>Thực hiện</h2><p>Triển khai thực nghiệm qua docker-compose</p><h3 id=bước-1-tạo-file-docker-compose>Bước 1: Tạo file Docker Compose</h3><p>File Docker Compose cấu hình các dịch vụ chính gồm Sigma Media Server, Promtail, Loki và Grafana:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span><span class=lnt>40
+</span><span class=lnt>41
+</span><span class=lnt>42
+</span><span class=lnt>43
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-yaml data-lang=yaml><span class=line><span class=cl><span class=nt>version</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;3.8&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=nt>services</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>server-01</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>image</span><span class=p>:</span><span class=w> </span><span class=l>registry.gviet.vn:5000/sigma-livestream/sigma-media-server:4.1.35</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>privileged</span><span class=p>:</span><span class=w> </span><span class=kc>true</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>user</span><span class=p>:</span><span class=w> </span><span class=l>root </span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>volumes</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>       </span>- <span class=l>var-log:/var/log/sigma-machine:rw</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>networks</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span>- <span class=l>traefik-ingress</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>promtail</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>image</span><span class=p>:</span><span class=w> </span><span class=l>grafana/promtail:2.8.2</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>volumes</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>- <span class=l>./promtail-config.yml:/etc/promtail/promtail-config.yml</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>- <span class=l>var-log:/var/log/sigma-media-server-01:ro</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>- <span class=l>var-log-02:/var/log/sigma-media-server-02:ro</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>command</span><span class=p>:</span><span class=w> </span>-<span class=l>config.file=/etc/promtail/promtail-config.yml</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>networks</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span>- <span class=l>traefik-ingress</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>depends_on</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>- <span class=l>loki </span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>loki</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>image</span><span class=p>:</span><span class=w> </span><span class=l>grafana/loki:2.8.2</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>volumes</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>- <span class=l>./loki-config.yml:/etc/loki/local-config.yaml</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>command</span><span class=p>:</span><span class=w> </span>-<span class=l>config.file=/etc/loki/local-config.yaml</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>networks</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span>- <span class=l>traefik-ingress</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>grafana</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>image</span><span class=p>:</span><span class=w> </span><span class=l>grafana/grafana</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>ports</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>- <span class=m>3000</span><span class=p>:</span><span class=m>3000</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>networks</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span>- <span class=l>traefik-ingress</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w> 
+</span></span></span><span class=line><span class=cl><span class=w>  
+</span></span></span><span class=line><span class=cl><span class=nt>volumes</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>var-log</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=nt>networks</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>traefik-ingress</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>external</span><span class=p>:</span><span class=w> </span><span class=kc>true</span><span class=w>
+</span></span></span></code></pre></td></tr></table></div></div><h3 id=bước-2-cấu-hình-promtail>Bước 2: Cấu hình Promtail</h3><p>Promtail được cấu hình để thu thập log từ các file cụ thể của Sigma Media Server:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-gdscript3 data-lang=gdscript3><span class=line><span class=cl><span class=n>server</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>  <span class=n>http_listen_port</span><span class=p>:</span> <span class=mi>9080</span>
+</span></span><span class=line><span class=cl>  <span class=n>grpc_listen_port</span><span class=p>:</span> <span class=mi>0</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=n>positions</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>  <span class=n>filename</span><span class=p>:</span> <span class=o>/</span><span class=n>tmp</span><span class=o>/</span><span class=n>positions</span><span class=o>.</span><span class=n>yaml</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=n>clients</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>  <span class=o>-</span> <span class=n>url</span><span class=p>:</span> <span class=n>http</span><span class=p>:</span><span class=o>//</span><span class=n>loki</span><span class=p>:</span><span class=mi>3100</span><span class=o>/</span><span class=n>loki</span><span class=o>/</span><span class=n>api</span><span class=o>/</span><span class=n>v1</span><span class=o>/</span><span class=n>push</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=n>scrape_configs</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>  <span class=o>-</span> <span class=n>job_name</span><span class=p>:</span> <span class=nb>log</span><span class=o>-</span><span class=n>service</span><span class=o>-</span><span class=mi>01</span>
+</span></span><span class=line><span class=cl>    <span class=n>static_configs</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>      <span class=o>-</span> <span class=n>targets</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>          <span class=o>-</span> <span class=n>localhost</span>
+</span></span><span class=line><span class=cl>        <span class=n>labels</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>          <span class=n>container_name</span><span class=p>:</span> <span class=n>sigma</span><span class=o>-</span><span class=n>media</span><span class=o>-</span><span class=n>server</span><span class=o>-</span><span class=mi>01</span>
+</span></span><span class=line><span class=cl>          <span class=n>__path__</span><span class=p>:</span> <span class=o>/</span><span class=k>var</span><span class=o>/</span><span class=nb>log</span><span class=o>/</span><span class=n>sigma</span><span class=o>-</span><span class=n>media</span><span class=o>-</span><span class=n>server</span><span class=o>-</span><span class=mi>01</span><span class=o>/</span><span class=n>now</span><span class=o>.*</span>
+</span></span><span class=line><span class=cl>      <span class=o>-</span> <span class=n>targets</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>          <span class=o>-</span> <span class=n>localhost</span>
+</span></span><span class=line><span class=cl>        <span class=n>labels</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>          <span class=n>container_name</span><span class=p>:</span> <span class=n>sigma</span><span class=o>-</span><span class=n>media</span><span class=o>-</span><span class=n>server</span><span class=o>-</span><span class=mi>02</span>
+</span></span><span class=line><span class=cl>          <span class=n>__path__</span><span class=p>:</span> <span class=o>/</span><span class=k>var</span><span class=o>/</span><span class=nb>log</span><span class=o>/</span><span class=n>sigma</span><span class=o>-</span><span class=n>media</span><span class=o>-</span><span class=n>server</span><span class=o>-</span><span class=mi>02</span><span class=o>/</span><span class=n>now</span><span class=o>.*</span>
+</span></span></code></pre></td></tr></table></div></div><h3 id=bước-3-cấu-hình-loki>Bước 3: Cấu hình Loki</h3><p>Loki sẽ lưu trữ và quản lý log, được cấu hình như sau:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl>auth_enabled: <span class=nb>false</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>server:
+</span></span><span class=line><span class=cl>  http_listen_port: <span class=m>3100</span>
+</span></span><span class=line><span class=cl>  grpc_listen_port: <span class=m>9096</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>common:
+</span></span><span class=line><span class=cl>  instance_addr: 127.0.0.1
+</span></span><span class=line><span class=cl>  path_prefix: /tmp/loki
+</span></span><span class=line><span class=cl>  storage:
+</span></span><span class=line><span class=cl>    filesystem:
+</span></span><span class=line><span class=cl>      chunks_directory: /tmp/loki/chunks
+</span></span><span class=line><span class=cl>      rules_directory: /tmp/loki/rules
+</span></span><span class=line><span class=cl>  replication_factor: <span class=m>1</span>
+</span></span><span class=line><span class=cl>  ring:
+</span></span><span class=line><span class=cl>    kvstore:
+</span></span><span class=line><span class=cl>      store: inmemory
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>query_range:
+</span></span><span class=line><span class=cl>  results_cache:
+</span></span><span class=line><span class=cl>    cache:
+</span></span><span class=line><span class=cl>      embedded_cache:
+</span></span><span class=line><span class=cl>        enabled: <span class=nb>true</span>
+</span></span><span class=line><span class=cl>        max_size_mb: <span class=m>100</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>schema_config:
+</span></span><span class=line><span class=cl>  configs:
+</span></span><span class=line><span class=cl>    - from: 2024-10-01
+</span></span><span class=line><span class=cl>      store: tsdb
+</span></span><span class=line><span class=cl>      object_store: filesystem
+</span></span><span class=line><span class=cl>      schema: v12
+</span></span><span class=line><span class=cl>      index:
+</span></span><span class=line><span class=cl>        prefix: index_
+</span></span><span class=line><span class=cl>        period: 24h
+</span></span></code></pre></td></tr></table></div></div><h3 id=bước-5-cấu-hình-grafana>Bước 5: <strong>Cấu Hình Grafana</strong></h3><ol><li>Truy cập <strong>Grafana</strong> tại <code>http://localhost:3000</code> trên trình duyệt.</li><li>Đăng nhập với thông tin mặc định:<ul><li><strong>Username</strong>: <code>admin</code></li><li><strong>Password</strong>: <code>admin</code></li></ul></li><li>Sau khi đăng nhập, thêm <strong>Loki</strong> làm <strong>data source</strong>:<ul><li>Vào <strong>Configuration</strong> > <strong>Data Sources</strong> > <strong>Add data source</strong>.</li><li>Chọn <strong>Loki</strong>.</li><li>Trong phần URL, nhập <code>http://loki:3100</code>.</li><li>Nhấn <strong>Save & Test</strong> để xác minh kết nối.</li></ul></li></ol><p>Bạn có thể sử dụng json model này để sử dụng:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>  1
+</span><span class=lnt>  2
+</span><span class=lnt>  3
+</span><span class=lnt>  4
+</span><span class=lnt>  5
+</span><span class=lnt>  6
+</span><span class=lnt>  7
+</span><span class=lnt>  8
+</span><span class=lnt>  9
+</span><span class=lnt> 10
+</span><span class=lnt> 11
+</span><span class=lnt> 12
+</span><span class=lnt> 13
+</span><span class=lnt> 14
+</span><span class=lnt> 15
+</span><span class=lnt> 16
+</span><span class=lnt> 17
+</span><span class=lnt> 18
+</span><span class=lnt> 19
+</span><span class=lnt> 20
+</span><span class=lnt> 21
+</span><span class=lnt> 22
+</span><span class=lnt> 23
+</span><span class=lnt> 24
+</span><span class=lnt> 25
+</span><span class=lnt> 26
+</span><span class=lnt> 27
+</span><span class=lnt> 28
+</span><span class=lnt> 29
+</span><span class=lnt> 30
+</span><span class=lnt> 31
+</span><span class=lnt> 32
+</span><span class=lnt> 33
+</span><span class=lnt> 34
+</span><span class=lnt> 35
+</span><span class=lnt> 36
+</span><span class=lnt> 37
+</span><span class=lnt> 38
+</span><span class=lnt> 39
+</span><span class=lnt> 40
+</span><span class=lnt> 41
+</span><span class=lnt> 42
+</span><span class=lnt> 43
+</span><span class=lnt> 44
+</span><span class=lnt> 45
+</span><span class=lnt> 46
+</span><span class=lnt> 47
+</span><span class=lnt> 48
+</span><span class=lnt> 49
+</span><span class=lnt> 50
+</span><span class=lnt> 51
+</span><span class=lnt> 52
+</span><span class=lnt> 53
+</span><span class=lnt> 54
+</span><span class=lnt> 55
+</span><span class=lnt> 56
+</span><span class=lnt> 57
+</span><span class=lnt> 58
+</span><span class=lnt> 59
+</span><span class=lnt> 60
+</span><span class=lnt> 61
+</span><span class=lnt> 62
+</span><span class=lnt> 63
+</span><span class=lnt> 64
+</span><span class=lnt> 65
+</span><span class=lnt> 66
+</span><span class=lnt> 67
+</span><span class=lnt> 68
+</span><span class=lnt> 69
+</span><span class=lnt> 70
+</span><span class=lnt> 71
+</span><span class=lnt> 72
+</span><span class=lnt> 73
+</span><span class=lnt> 74
+</span><span class=lnt> 75
+</span><span class=lnt> 76
+</span><span class=lnt> 77
+</span><span class=lnt> 78
+</span><span class=lnt> 79
+</span><span class=lnt> 80
+</span><span class=lnt> 81
+</span><span class=lnt> 82
+</span><span class=lnt> 83
+</span><span class=lnt> 84
+</span><span class=lnt> 85
+</span><span class=lnt> 86
+</span><span class=lnt> 87
+</span><span class=lnt> 88
+</span><span class=lnt> 89
+</span><span class=lnt> 90
+</span><span class=lnt> 91
+</span><span class=lnt> 92
+</span><span class=lnt> 93
+</span><span class=lnt> 94
+</span><span class=lnt> 95
+</span><span class=lnt> 96
+</span><span class=lnt> 97
+</span><span class=lnt> 98
+</span><span class=lnt> 99
+</span><span class=lnt>100
+</span><span class=lnt>101
+</span><span class=lnt>102
+</span><span class=lnt>103
+</span><span class=lnt>104
+</span><span class=lnt>105
+</span><span class=lnt>106
+</span><span class=lnt>107
+</span><span class=lnt>108
+</span><span class=lnt>109
+</span><span class=lnt>110
+</span><span class=lnt>111
+</span><span class=lnt>112
+</span><span class=lnt>113
+</span><span class=lnt>114
+</span><span class=lnt>115
+</span><span class=lnt>116
+</span><span class=lnt>117
+</span><span class=lnt>118
+</span><span class=lnt>119
+</span><span class=lnt>120
+</span><span class=lnt>121
+</span><span class=lnt>122
+</span><span class=lnt>123
+</span><span class=lnt>124
+</span><span class=lnt>125
+</span><span class=lnt>126
+</span><span class=lnt>127
+</span><span class=lnt>128
+</span><span class=lnt>129
+</span><span class=lnt>130
+</span><span class=lnt>131
+</span><span class=lnt>132
+</span><span class=lnt>133
+</span><span class=lnt>134
+</span><span class=lnt>135
+</span><span class=lnt>136
+</span><span class=lnt>137
+</span><span class=lnt>138
+</span><span class=lnt>139
+</span><span class=lnt>140
+</span><span class=lnt>141
+</span><span class=lnt>142
+</span><span class=lnt>143
+</span><span class=lnt>144
+</span><span class=lnt>145
+</span><span class=lnt>146
+</span><span class=lnt>147
+</span><span class=lnt>148
+</span><span class=lnt>149
+</span><span class=lnt>150
+</span><span class=lnt>151
+</span><span class=lnt>152
+</span><span class=lnt>153
+</span><span class=lnt>154
+</span><span class=lnt>155
+</span><span class=lnt>156
+</span><span class=lnt>157
+</span><span class=lnt>158
+</span><span class=lnt>159
+</span><span class=lnt>160
+</span><span class=lnt>161
+</span><span class=lnt>162
+</span><span class=lnt>163
+</span><span class=lnt>164
+</span><span class=lnt>165
+</span><span class=lnt>166
+</span><span class=lnt>167
+</span><span class=lnt>168
+</span><span class=lnt>169
+</span><span class=lnt>170
+</span><span class=lnt>171
+</span><span class=lnt>172
+</span><span class=lnt>173
+</span><span class=lnt>174
+</span><span class=lnt>175
+</span><span class=lnt>176
+</span><span class=lnt>177
+</span><span class=lnt>178
+</span><span class=lnt>179
+</span><span class=lnt>180
+</span><span class=lnt>181
+</span><span class=lnt>182
+</span><span class=lnt>183
+</span><span class=lnt>184
+</span><span class=lnt>185
+</span><span class=lnt>186
+</span><span class=lnt>187
+</span><span class=lnt>188
+</span><span class=lnt>189
+</span><span class=lnt>190
+</span><span class=lnt>191
+</span><span class=lnt>192
+</span><span class=lnt>193
+</span><span class=lnt>194
+</span><span class=lnt>195
+</span><span class=lnt>196
+</span><span class=lnt>197
+</span><span class=lnt>198
+</span><span class=lnt>199
+</span><span class=lnt>200
+</span><span class=lnt>201
+</span><span class=lnt>202
+</span><span class=lnt>203
+</span><span class=lnt>204
+</span><span class=lnt>205
+</span><span class=lnt>206
+</span><span class=lnt>207
+</span><span class=lnt>208
+</span><span class=lnt>209
+</span><span class=lnt>210
+</span><span class=lnt>211
+</span><span class=lnt>212
+</span><span class=lnt>213
+</span><span class=lnt>214
+</span><span class=lnt>215
+</span><span class=lnt>216
+</span><span class=lnt>217
+</span><span class=lnt>218
+</span><span class=lnt>219
+</span><span class=lnt>220
+</span><span class=lnt>221
+</span><span class=lnt>222
+</span><span class=lnt>223
+</span><span class=lnt>224
+</span><span class=lnt>225
+</span><span class=lnt>226
+</span><span class=lnt>227
+</span><span class=lnt>228
+</span><span class=lnt>229
+</span><span class=lnt>230
+</span><span class=lnt>231
+</span><span class=lnt>232
+</span><span class=lnt>233
+</span><span class=lnt>234
+</span><span class=lnt>235
+</span><span class=lnt>236
+</span><span class=lnt>237
+</span><span class=lnt>238
+</span><span class=lnt>239
+</span><span class=lnt>240
+</span><span class=lnt>241
+</span><span class=lnt>242
+</span><span class=lnt>243
+</span><span class=lnt>244
+</span><span class=lnt>245
+</span><span class=lnt>246
+</span><span class=lnt>247
+</span><span class=lnt>248
+</span><span class=lnt>249
+</span><span class=lnt>250
+</span><span class=lnt>251
+</span><span class=lnt>252
+</span><span class=lnt>253
+</span><span class=lnt>254
+</span><span class=lnt>255
+</span><span class=lnt>256
+</span><span class=lnt>257
+</span><span class=lnt>258
+</span><span class=lnt>259
+</span><span class=lnt>260
+</span><span class=lnt>261
+</span><span class=lnt>262
+</span><span class=lnt>263
+</span><span class=lnt>264
+</span><span class=lnt>265
+</span><span class=lnt>266
+</span><span class=lnt>267
+</span><span class=lnt>268
+</span><span class=lnt>269
+</span><span class=lnt>270
+</span><span class=lnt>271
+</span><span class=lnt>272
+</span><span class=lnt>273
+</span><span class=lnt>274
+</span><span class=lnt>275
+</span><span class=lnt>276
+</span><span class=lnt>277
+</span><span class=lnt>278
+</span><span class=lnt>279
+</span><span class=lnt>280
+</span><span class=lnt>281
+</span><span class=lnt>282
+</span><span class=lnt>283
+</span><span class=lnt>284
+</span><span class=lnt>285
+</span><span class=lnt>286
+</span><span class=lnt>287
+</span><span class=lnt>288
+</span><span class=lnt>289
+</span><span class=lnt>290
+</span><span class=lnt>291
+</span><span class=lnt>292
+</span><span class=lnt>293
+</span><span class=lnt>294
+</span><span class=lnt>295
+</span><span class=lnt>296
+</span><span class=lnt>297
+</span><span class=lnt>298
+</span><span class=lnt>299
+</span><span class=lnt>300
+</span><span class=lnt>301
+</span><span class=lnt>302
+</span><span class=lnt>303
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-yaml data-lang=yaml><span class=line><span class=cl>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>&#34;annotations&#34;: </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>&#34;list&#34;: </span><span class=p>[</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;builtIn&#34;: </span><span class=m>1</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;datasource&#34;: </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;type&#34;: </span><span class=s2>&#34;datasource&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;uid&#34;: </span><span class=s2>&#34;grafana&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span>}<span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;enable&#34;: </span><span class=kc>true</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;hide&#34;: </span><span class=kc>true</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;iconColor&#34;: </span><span class=s2>&#34;rgba(0, 211, 255, 1)&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;name&#34;: </span><span class=s2>&#34;Annotations &amp; Alerts&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;type&#34;: </span><span class=s2>&#34;dashboard&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>}<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=p>]</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span>}<span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>&#34;description&#34;: </span><span class=s2>&#34;Universal and flexible dashboard for logging&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>&#34;editable&#34;: </span><span class=kc>true</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>&#34;fiscalYearStartMonth&#34;: </span><span class=m>0</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>&#34;gnetId&#34;: </span><span class=m>18042</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>&#34;graphTooltip&#34;: </span><span class=m>0</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>&#34;id&#34;: </span><span class=m>3</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>&#34;links&#34;: </span><span class=p>[],</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>&#34;panels&#34;: </span><span class=p>[</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>&#34;datasource&#34;: </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;type&#34;: </span><span class=s2>&#34;loki&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;uid&#34;: </span><span class=s2>&#34;adzuilqytpp1cc&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>}<span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>&#34;description&#34;: </span><span class=s2>&#34;Live logs is a like &#39;tail -f&#39; in a real time&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>&#34;gridPos&#34;: </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;h&#34;: </span><span class=m>9</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;w&#34;: </span><span class=m>24</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;x&#34;: </span><span class=m>0</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;y&#34;: </span><span class=m>0</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>}<span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>&#34;id&#34;: </span><span class=m>6</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>&#34;options&#34;: </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;dedupStrategy&#34;: </span><span class=s2>&#34;none&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;enableLogDetails&#34;: </span><span class=kc>true</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;prettifyLogMessage&#34;: </span><span class=kc>false</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;showCommonLabels&#34;: </span><span class=kc>false</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;showLabels&#34;: </span><span class=kc>true</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;showTime&#34;: </span><span class=kc>false</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;sortOrder&#34;: </span><span class=s2>&#34;Descending&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;wrapLogMessage&#34;: </span><span class=kc>false</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>}<span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>&#34;targets&#34;: </span><span class=p>[</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;datasource&#34;: </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>            </span><span class=nt>&#34;type&#34;: </span><span class=s2>&#34;loki&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>            </span><span class=nt>&#34;uid&#34;: </span><span class=s2>&#34;adzuilqytpp1cc&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span>}<span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;editorMode&#34;: </span><span class=s2>&#34;code&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;expr&#34;: </span><span class=s2>&#34;{filename=\&#34;/var/log/${container_name}/now.debug\&#34;}&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;hide&#34;: </span><span class=kc>false</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;queryType&#34;: </span><span class=s2>&#34;range&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;refId&#34;: </span><span class=s2>&#34;A&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span>}<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=p>],</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>&#34;title&#34;: </span><span class=s2>&#34;Debug log&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>&#34;type&#34;: </span><span class=s2>&#34;logs&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span>}<span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>&#34;datasource&#34;: </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;type&#34;: </span><span class=s2>&#34;loki&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;uid&#34;: </span><span class=s2>&#34;adzuilqytpp1cc&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>}<span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>&#34;description&#34;: </span><span class=s2>&#34;Live logs is a like &#39;tail -f&#39; in a real time&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>&#34;gridPos&#34;: </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;h&#34;: </span><span class=m>9</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;w&#34;: </span><span class=m>24</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;x&#34;: </span><span class=m>0</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;y&#34;: </span><span class=m>9</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>}<span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>&#34;id&#34;: </span><span class=m>4</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>&#34;options&#34;: </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;dedupStrategy&#34;: </span><span class=s2>&#34;none&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;enableLogDetails&#34;: </span><span class=kc>true</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;prettifyLogMessage&#34;: </span><span class=kc>false</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;showCommonLabels&#34;: </span><span class=kc>false</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;showLabels&#34;: </span><span class=kc>true</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;showTime&#34;: </span><span class=kc>false</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;sortOrder&#34;: </span><span class=s2>&#34;Descending&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;wrapLogMessage&#34;: </span><span class=kc>false</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>}<span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>&#34;targets&#34;: </span><span class=p>[</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;datasource&#34;: </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>            </span><span class=nt>&#34;type&#34;: </span><span class=s2>&#34;loki&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>            </span><span class=nt>&#34;uid&#34;: </span><span class=s2>&#34;adzuilqytpp1cc&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span>}<span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;editorMode&#34;: </span><span class=s2>&#34;code&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;expr&#34;: </span><span class=s2>&#34;{filename=\&#34;/var/log/${container_name}/now.nginx\&#34;}&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;hide&#34;: </span><span class=kc>false</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;queryType&#34;: </span><span class=s2>&#34;range&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;refId&#34;: </span><span class=s2>&#34;A&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span>}<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=p>],</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>&#34;title&#34;: </span><span class=s2>&#34;Nginx log&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>&#34;type&#34;: </span><span class=s2>&#34;logs&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span>}<span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>&#34;datasource&#34;: </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;type&#34;: </span><span class=s2>&#34;loki&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;uid&#34;: </span><span class=s2>&#34;adzuilqytpp1cc&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>}<span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>&#34;description&#34;: </span><span class=s2>&#34;Live logs is a like &#39;tail -f&#39; in a real time&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>&#34;gridPos&#34;: </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;h&#34;: </span><span class=m>9</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;w&#34;: </span><span class=m>24</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;x&#34;: </span><span class=m>0</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;y&#34;: </span><span class=m>18</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>}<span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>&#34;id&#34;: </span><span class=m>3</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>&#34;options&#34;: </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;dedupStrategy&#34;: </span><span class=s2>&#34;none&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;enableLogDetails&#34;: </span><span class=kc>true</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;prettifyLogMessage&#34;: </span><span class=kc>false</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;showCommonLabels&#34;: </span><span class=kc>false</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;showLabels&#34;: </span><span class=kc>true</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;showTime&#34;: </span><span class=kc>false</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;sortOrder&#34;: </span><span class=s2>&#34;Descending&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;wrapLogMessage&#34;: </span><span class=kc>false</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>}<span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>&#34;targets&#34;: </span><span class=p>[</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;datasource&#34;: </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>            </span><span class=nt>&#34;type&#34;: </span><span class=s2>&#34;loki&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>            </span><span class=nt>&#34;uid&#34;: </span><span class=s2>&#34;adzuilqytpp1cc&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span>}<span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;editorMode&#34;: </span><span class=s2>&#34;code&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;expr&#34;: </span><span class=s2>&#34;{filename=~\&#34;/var/log/${container_name}/now\\\\.origin\&#34;}&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;hide&#34;: </span><span class=kc>false</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;queryType&#34;: </span><span class=s2>&#34;range&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;refId&#34;: </span><span class=s2>&#34;A&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span>}<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=p>],</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>&#34;title&#34;: </span><span class=s2>&#34;Origin log&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>&#34;type&#34;: </span><span class=s2>&#34;logs&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span>}<span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>&#34;datasource&#34;: </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;type&#34;: </span><span class=s2>&#34;loki&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;uid&#34;: </span><span class=s2>&#34;adzuilqytpp1cc&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>}<span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>&#34;description&#34;: </span><span class=s2>&#34;Live logs is a like &#39;tail -f&#39; in a real time&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>&#34;gridPos&#34;: </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;h&#34;: </span><span class=m>9</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;w&#34;: </span><span class=m>24</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;x&#34;: </span><span class=m>0</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;y&#34;: </span><span class=m>27</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>}<span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>&#34;id&#34;: </span><span class=m>5</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>&#34;options&#34;: </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;dedupStrategy&#34;: </span><span class=s2>&#34;none&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;enableLogDetails&#34;: </span><span class=kc>true</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;prettifyLogMessage&#34;: </span><span class=kc>false</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;showCommonLabels&#34;: </span><span class=kc>false</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;showLabels&#34;: </span><span class=kc>true</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;showTime&#34;: </span><span class=kc>false</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;sortOrder&#34;: </span><span class=s2>&#34;Descending&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;wrapLogMessage&#34;: </span><span class=kc>false</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>}<span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>&#34;targets&#34;: </span><span class=p>[</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;datasource&#34;: </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>            </span><span class=nt>&#34;type&#34;: </span><span class=s2>&#34;loki&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>            </span><span class=nt>&#34;uid&#34;: </span><span class=s2>&#34;adzuilqytpp1cc&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span>}<span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;editorMode&#34;: </span><span class=s2>&#34;code&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;expr&#34;: </span><span class=s2>&#34;{filename=\&#34;/var/log/${container_name}/now.srs\&#34;}&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;hide&#34;: </span><span class=kc>false</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;queryType&#34;: </span><span class=s2>&#34;range&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;refId&#34;: </span><span class=s2>&#34;A&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span>}<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=p>],</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>&#34;title&#34;: </span><span class=s2>&#34;Srs log&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>&#34;type&#34;: </span><span class=s2>&#34;logs&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span>}<span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>&#34;datasource&#34;: </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;type&#34;: </span><span class=s2>&#34;loki&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;uid&#34;: </span><span class=s2>&#34;adzuilqytpp1cc&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>}<span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>&#34;description&#34;: </span><span class=s2>&#34;Live logs is a like &#39;tail -f&#39; in a real time&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>&#34;gridPos&#34;: </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;h&#34;: </span><span class=m>9</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;w&#34;: </span><span class=m>24</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;x&#34;: </span><span class=m>0</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;y&#34;: </span><span class=m>36</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>}<span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>&#34;id&#34;: </span><span class=m>2</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>&#34;options&#34;: </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;dedupStrategy&#34;: </span><span class=s2>&#34;none&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;enableLogDetails&#34;: </span><span class=kc>true</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;prettifyLogMessage&#34;: </span><span class=kc>false</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;showCommonLabels&#34;: </span><span class=kc>false</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;showLabels&#34;: </span><span class=kc>true</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;showTime&#34;: </span><span class=kc>false</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;sortOrder&#34;: </span><span class=s2>&#34;Descending&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;wrapLogMessage&#34;: </span><span class=kc>false</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>}<span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>&#34;targets&#34;: </span><span class=p>[</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;datasource&#34;: </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>            </span><span class=nt>&#34;type&#34;: </span><span class=s2>&#34;loki&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>            </span><span class=nt>&#34;uid&#34;: </span><span class=s2>&#34;adzuilqytpp1cc&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span>}<span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;editorMode&#34;: </span><span class=s2>&#34;code&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;expr&#34;: </span><span class=s2>&#34;{filename=~\&#34;/var/log/${container_name}/now\\\\.portal-local\&#34;}&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;hide&#34;: </span><span class=kc>false</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;queryType&#34;: </span><span class=s2>&#34;range&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;refId&#34;: </span><span class=s2>&#34;A&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span>}<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=p>],</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>&#34;title&#34;: </span><span class=s2>&#34;Portal log&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>&#34;type&#34;: </span><span class=s2>&#34;logs&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span>}<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=p>],</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>&#34;refresh&#34;: </span><span class=s2>&#34;10s&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>&#34;schemaVersion&#34;: </span><span class=m>39</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>&#34;tags&#34;: </span><span class=p>[],</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>&#34;templating&#34;: </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>&#34;list&#34;: </span><span class=p>[</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;current&#34;: </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;isNone&#34;: </span><span class=kc>true</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;selected&#34;: </span><span class=kc>false</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;text&#34;: </span><span class=s2>&#34;None&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;value&#34;: </span><span class=s2>&#34;&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span>}<span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;datasource&#34;: </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;type&#34;: </span><span class=s2>&#34;loki&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;uid&#34;: </span><span class=s2>&#34;adzuilqytpp1cc&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span>}<span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;definition&#34;: </span><span class=s2>&#34;&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;hide&#34;: </span><span class=m>0</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;includeAll&#34;: </span><span class=kc>false</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;label&#34;: </span><span class=s2>&#34;Container&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;multi&#34;: </span><span class=kc>false</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;name&#34;: </span><span class=s2>&#34;container_name&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;options&#34;: </span><span class=p>[],</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;query&#34;: </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;label&#34;: </span><span class=s2>&#34;container_name&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;refId&#34;: </span><span class=s2>&#34;LokiVariableQueryEditor-VariableQuery&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;stream&#34;: </span><span class=s2>&#34;{container_name=~\&#34;.+\&#34;}&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;type&#34;: </span><span class=m>1</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span>}<span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;refresh&#34;: </span><span class=m>1</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;regex&#34;: </span><span class=s2>&#34;&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;skipUrlSync&#34;: </span><span class=kc>false</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;sort&#34;: </span><span class=m>0</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;tagValuesQuery&#34;: </span><span class=s2>&#34;&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;tagsQuery&#34;: </span><span class=s2>&#34;&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;type&#34;: </span><span class=s2>&#34;query&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;useTags&#34;: </span><span class=kc>false</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>}<span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;current&#34;: </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;selected&#34;: </span><span class=kc>false</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;text&#34;: </span><span class=s2>&#34;&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>&#34;value&#34;: </span><span class=s2>&#34;&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span>}<span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;hide&#34;: </span><span class=m>0</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;name&#34;: </span><span class=s2>&#34;search&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;options&#34;: </span><span class=p>[</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>            </span><span class=nt>&#34;selected&#34;: </span><span class=kc>true</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>            </span><span class=nt>&#34;text&#34;: </span><span class=s2>&#34;&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>            </span><span class=nt>&#34;value&#34;: </span><span class=s2>&#34;&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span>}<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=p>],</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;query&#34;: </span><span class=s2>&#34;&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;skipUrlSync&#34;: </span><span class=kc>false</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;type&#34;: </span><span class=s2>&#34;textbox&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>}<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=p>]</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span>}<span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>&#34;time&#34;: </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>&#34;from&#34;: </span><span class=s2>&#34;now-15m&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>&#34;to&#34;: </span><span class=s2>&#34;now&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span>}<span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>&#34;timepicker&#34;: </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>&#34;refresh_intervals&#34;: </span><span class=p>[</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=s2>&#34;10s&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=s2>&#34;30s&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=s2>&#34;1m&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=s2>&#34;5m&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=s2>&#34;15m&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=s2>&#34;30m&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=s2>&#34;1h&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=s2>&#34;2h&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=s2>&#34;1d&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=p>]</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span>}<span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>&#34;timezone&#34;: </span><span class=s2>&#34;&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>&#34;title&#34;: </span><span class=s2>&#34;Monitor sigma server&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>&#34;uid&#34;: </span><span class=s2>&#34;cdzv1t37ajzeoc&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>&#34;version&#34;: </span><span class=m>15</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>&#34;weekStart&#34;: </span><span class=s2>&#34;&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl>}<span class=w>
+</span></span></span></code></pre></td></tr></table></div></div><p>Thay đổi các uid của datasource tương ứng</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-yaml data-lang=yaml><span class=line><span class=cl><span class=w> </span><span class=nt>&#34;datasource&#34;: </span>{<span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;type&#34;: </span><span class=s2>&#34;loki&#34;</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>&#34;uid&#34;: </span><span class=s2>&#34;adzuilqytpp1cc&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>}<span class=p>,</span><span class=w>
+</span></span></span></code></pre></td></tr></table></div></div><h2 id=kết-luận>Kết luận</h2><p>Việc sử dụng stack <strong>Promtail-Loki-Grafana</strong> giúp giám sát log của Sigma Media Server một cách tập trung, hiệu quả và trực quan. Nó giải quyết được bài toán theo dõi log từ nhiều dịch vụ khác nhau mà không cần thao tác thủ công phức tạp</p></section><footer class=article-footer><section class=article-tags><a href=/tags/monitor/>Monitor</a></section><section class=article-copyright><svg class="icon icon-tabler icon-tabler-copyright" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><path d="M14.5 9a3.5 4 0 100 6"/></svg>
+<span>Licensed under CC BY-NC-SA 4.0</span></section></footer><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css integrity=sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV crossorigin=anonymous><script src=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js integrity=sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8 crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js integrity=sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05 crossorigin=anonymous defer></script><script>window.addEventListener("DOMContentLoaded",()=>{const e=[".main-article",".widget--toc"];e.forEach(e=>{const t=document.querySelector(e);t&&renderMathInElement(t,{delimiters:[{left:"$$",right:"$$",display:!0},{left:"$",right:"$",display:!1},{left:"\\(",right:"\\)",display:!1},{left:"\\[",right:"\\]",display:!0}],ignoredClasses:["gist"]})})})</script></article><aside class=related-content--wrapper><h2 class=section-title>Related content</h2><div class=related-content><div class="flex article-list--tile"><article><a href=/posts/lightweight-and-fast-real-time-log-viewer/><div class=article-details><h2 class=article-title>Lightweight and Fast Real-Time Log Viewer</h2></div></a></article><article><a href=/posts/optimizing-the-development-workflow-with-taskfile-in-spring-boot/><div class=article-details><h2 class=article-title>Optimizing the Development Workflow with Taskfile in Spring Boot</h2></div></a></article><article><a href=/posts/poc-centralized-logging-implementation-on-kubernetes-with-fluent-bit-grafana-loki-and-grafana/><div class=article-details><h2 class=article-title>POC: Centralized Logging Implementation on Kubernetes with Fluent Bit, Grafana Loki, and Grafana</h2></div></a></article><article><a href=/posts/log-observability-with-fluent-bit-loki-and-grafana/><div class=article-details><h2 class=article-title>Log Observability with Fluent Bit, Loki and Grafana</h2></div></a></article><article><a href=/posts/hybrid-helm-chart-combining-dependency-charts-and-embedded-subcharts/><div class=article-details><h2 class=article-title>Hybrid Helm Chart: Combining Dependency Charts and Embedded Subcharts</h2></div></a></article></div></div></aside><div class=disqus-container></div><style>.disqus-container{background-color:var(--card-background);border-radius:var(--card-border-radius);box-shadow:var(--shadow-l1);padding:var(--card-padding)}</style><script>window.addEventListener("onColorSchemeChange",e=>{typeof DISQUS=="object"&&DISQUS.reset({reload:!0})})</script><footer class=site-footer><section class=copyright>&copy;
+2026 phongthien</section><section class=powerby>Built with <a href=https://gohugo.io/ target=_blank rel=noopener>Hugo</a><br>Theme <b><a href=https://github.com/CaiJimmy/hugo-theme-stack target=_blank rel=noopener data-version=3.33.0>Stack</a></b> designed by <a href=https://jimmycai.com target=_blank rel=noopener>Jimmy</a></section></footer><div class=pswp tabindex=-1 role=dialog aria-hidden=true><div class=pswp__bg></div><div class=pswp__scroll-wrap><div class=pswp__container><div class=pswp__item></div><div class=pswp__item></div><div class=pswp__item></div></div><div class="pswp__ui pswp__ui--hidden"><div class=pswp__top-bar><div class=pswp__counter></div><button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+<button class="pswp__button pswp__button--share" title=Share></button>
+<button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+<button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button><div class=pswp__preloader><div class=pswp__preloader__icn><div class=pswp__preloader__cut><div class=pswp__preloader__donut></div></div></div></div></div><div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap"><div class=pswp__share-tooltip></div></div><button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+</button>
+<button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)"></button><div class=pswp__caption><div class=pswp__caption__center></div></div></div></div></div><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo=" crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU=" crossorigin=anonymous defer></script><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css crossorigin=anonymous><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css crossorigin=anonymous></main></div><script src=https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z+KMkF24hUW8WePSA9HM=" crossorigin=anonymous></script><script type=text/javascript src=/ts/main.c922af694cc257bf1ecc41c0dd7b0430f9114ec280ccf67cd2c6ad55f5316c4e.js defer></script><script>(function(){const e=document.createElement("link");e.href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap",e.type="text/css",e.rel="stylesheet",document.head.appendChild(e)})()</script></body></html>

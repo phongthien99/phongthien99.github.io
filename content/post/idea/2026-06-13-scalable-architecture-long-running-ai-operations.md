@@ -2,7 +2,7 @@
 title: A Scalable Architecture for Long-Running AI Operations
 author: phongthien99
 date: 2026-06-13 00:40:00 +0800
-categories: [http-server]
+categories: [AI chat bot]
 tags: [idea]
 math: true
 media_subpath: '/posts/20180809'

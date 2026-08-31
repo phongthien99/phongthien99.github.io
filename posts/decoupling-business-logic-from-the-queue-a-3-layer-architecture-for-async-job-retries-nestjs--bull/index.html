@@ -1,0 +1,651 @@
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><meta name=description content="Decoupling Business Logic from the Queue: A 3-Layer Architecture for Async Job Retries (NestJS + Bull) Problem Khi xây dựng một tác vụ bất đồng bộ có khả năng retry — ví dụ: gửi job sang một hệ thống bên thứ ba, chờ kết quả, rồi hoàn tất — ta thường thấy code kiểu này ngay trong processor:\n1 2 3 4 5 6 7 8 9 10 11 12 13 @Process() async handle(job: Job) { try { const result = await this.externalService.submit(job.data); if (result.status === 'PENDING') { throw new Error('retry'); // để Bull tự retry } await this.finalize(result); } catch (err) { await this.handleFailure(err); throw err; // Bull retry tiếp theo cấu hình attempts/backoff } } Vấn đề nằm ở chỗ business logic (gửi job, kiểm tra trạng thái, hoàn tất, xử lý lỗi) và cơ chế retry của hàng đợi (delay, jitter, số lần thử, timeout, backoff) bị trộn lẫn trong cùng một hàm.\n"><title>Decoupling Business Logic from the Queue: A 3-Layer Architecture for Async Job Retries (NestJS + Bull)</title><link rel=canonical href=https://phongthien99.github.io/posts/decoupling-business-logic-from-the-queue-a-3-layer-architecture-for-async-job-retries-nestjs--bull/><link rel=stylesheet href=/scss/style.min.8d6880436f99fcfb5a78cf2fd6035ad960dd796615463369572246440858aff1.css><meta property='og:title' content="Decoupling Business Logic from the Queue: A 3-Layer Architecture for Async Job Retries (NestJS + Bull)"><meta property='og:description' content="Decoupling Business Logic from the Queue: A 3-Layer Architecture for Async Job Retries (NestJS + Bull) Problem Khi xây dựng một tác vụ bất đồng bộ có khả năng retry — ví dụ: gửi job sang một hệ thống bên thứ ba, chờ kết quả, rồi hoàn tất — ta thường thấy code kiểu này ngay trong processor:\n1 2 3 4 5 6 7 8 9 10 11 12 13 @Process() async handle(job: Job) { try { const result = await this.externalService.submit(job.data); if (result.status === 'PENDING') { throw new Error('retry'); // để Bull tự retry } await this.finalize(result); } catch (err) { await this.handleFailure(err); throw err; // Bull retry tiếp theo cấu hình attempts/backoff } } Vấn đề nằm ở chỗ business logic (gửi job, kiểm tra trạng thái, hoàn tất, xử lý lỗi) và cơ chế retry của hàng đợi (delay, jitter, số lần thử, timeout, backoff) bị trộn lẫn trong cùng một hàm.\n"><meta property='og:url' content='https://phongthien99.github.io/posts/decoupling-business-logic-from-the-queue-a-3-layer-architecture-for-async-job-retries-nestjs--bull/'><meta property='og:site_name' content='phongthien'><meta property='og:type' content='article'><meta property='article:section' content='Post'><meta property='article:tag' content='nestjs'><meta property='article:tag' content='bull'><meta property='article:tag' content='queue'><meta property='article:tag' content='retry'><meta property='article:tag' content='architecture'><meta property='article:published_time' content='2026-08-09T00:40:00+08:00'><meta property='article:modified_time' content='2026-08-09T00:40:00+08:00'><meta name=twitter:title content="Decoupling Business Logic from the Queue: A 3-Layer Architecture for Async Job Retries (NestJS + Bull)"><meta name=twitter:description content="Decoupling Business Logic from the Queue: A 3-Layer Architecture for Async Job Retries (NestJS + Bull) Problem Khi xây dựng một tác vụ bất đồng bộ có khả năng retry — ví dụ: gửi job sang một hệ thống bên thứ ba, chờ kết quả, rồi hoàn tất — ta thường thấy code kiểu này ngay trong processor:\n1 2 3 4 5 6 7 8 9 10 11 12 13 @Process() async handle(job: Job) { try { const result = await this.externalService.submit(job.data); if (result.status === 'PENDING') { throw new Error('retry'); // để Bull tự retry } await this.finalize(result); } catch (err) { await this.handleFailure(err); throw err; // Bull retry tiếp theo cấu hình attempts/backoff } } Vấn đề nằm ở chỗ business logic (gửi job, kiểm tra trạng thái, hoàn tất, xử lý lỗi) và cơ chế retry của hàng đợi (delay, jitter, số lần thử, timeout, backoff) bị trộn lẫn trong cùng một hàm.\n"><link rel="shortcut icon" href=/favicon.png><script src=https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js></script><script>mermaid.initialize({startOnLoad:!0})</script></head><body class=article-page><script>(function(){const e="StackColorScheme";localStorage.getItem(e)||localStorage.setItem(e,"auto")})()</script><script>(function(){const t="StackColorScheme",e=localStorage.getItem(t),n=window.matchMedia("(prefers-color-scheme: dark)").matches===!0;e=="dark"||e==="auto"&&n?document.documentElement.dataset.scheme="dark":document.documentElement.dataset.scheme="light"})()</script><div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky"><button class="hamburger hamburger--spin" type=button id=toggle-menu aria-label="Toggle Menu">
+<span class=hamburger-box><span class=hamburger-inner></span></span></button><header><figure class=site-avatar><a href=/><img src=/img/avatar_hu_7ee69f593e8680d3.jpg width=300 height=300 class=site-logo loading=lazy alt=Avatar>
+</a><span class=emoji>🏅</span></figure><div class=site-meta><h1 class=site-name><a href=/>phongthien</a></h1><h2 class=site-description>Software Engineer</h2></div></header><ol class=menu-social><li><a href=https://github.com/phongthien99 target=_blank title=GitHub rel=me><svg class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6.0 00-1.3-3.2 4.2 4.2.0 00-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3.0 00-6.2.0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2.0 00-.1 3.2A4.6 4.6.0 004 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg></a></li><li><a href=https://twitter.com target=_blank title=linkedin rel=me><svg class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M10 14a3.5 3.5.0 005 0l4-4a3.5 3.5.0 00-5-5l-.5.5"/><path d="M14 10a3.5 3.5.0 00-5 0l-4 4a3.5 3.5.0 005 5l.5-.5"/></svg></a></li></ol><ol class=menu id=main-menu><li><a href=/><svg class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><polyline points="5 12 3 12 12 3 21 12 19 12"/><path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/><path d="M9 21v-6a2 2 0 012-2h2a2 2 0 012 2v6"/></svg>
+<span>Home</span></a></li><li><a href=/archives/><svg class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><rect x="3" y="4" width="18" height="4" rx="2"/><path d="M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+<span>Archives</span></a></li><li><a href=/search/><svg class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="10" cy="10" r="7"/><line x1="21" y1="21" x2="15" y2="15"/></svg>
+<span>Search</span></a></li><li><a href=/about-me/><svg class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="7" r="4"/><path d="M6 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/></svg>
+<span>About me</span></a></li><li class=menu-bottom-section><ol class=menu><li id=dark-mode-toggle><svg class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="8" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<svg class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="16" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<span>Dark Mode</span></li></ol></li></ol></aside><aside class="sidebar right-sidebar sticky"><section class="widget archives"><div class=widget-icon><svg class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><line x1="5" y1="9" x2="19" y2="9"/><line x1="5" y1="15" x2="19" y2="15"/><line x1="11" y1="4" x2="7" y2="20"/><line x1="17" y1="4" x2="13" y2="20"/></svg></div><h2 class="widget-title section-title">Table of contents</h2><div class=widget--toc><nav id=TableOfContents><ol><li><a href=#problem>Problem</a></li><li><a href=#solution>Solution</a></li><li><a href=#implementation-nestjs--nestjsbull>Implementation (NestJS + <code>@nestjs/bull</code>)</a><ol><li><a href=#setup--module>Setup & Module</a></li><li><a href=#layer-1--businessoperationservice-pure-provider>Layer 1 — <code>BusinessOperationService</code>: pure provider</a></li><li><a href=#layer-2--operationexecutorservice-state-machine-control-flow-boundary>Layer 2 — <code>OperationExecutorService</code>: state machine, control-flow boundary</a></li><li><a href=#layer-3--submitjobprocessor-the-only-layer-that-knows-bull-exists>Layer 3 — <code>SubmitJobProcessor</code>: the only layer that knows Bull exists</a></li><li><a href=#jobs-without-a-total-timeout--per-job-opt-out-not-global-config>Jobs Without a Total Timeout — per-job opt-out, not global config</a></li></ol></li><li><a href=#conclusion>Conclusion</a></li></ol></nav></div></section></aside><main class="main full-width"><article class=main-article><header class=article-header><div class=article-details><header class=article-category><a href=/categories/design-pattern/>Design-Pattern</a></header><div class=article-title-wrapper><h2 class=article-title><a href=/posts/decoupling-business-logic-from-the-queue-a-3-layer-architecture-for-async-job-retries-nestjs--bull/>Decoupling Business Logic from the Queue: A 3-Layer Architecture for Async Job Retries (NestJS + Bull)</a></h2></div><footer class=article-time><div><svg class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M11.795 21H5a2 2 0 01-2-2V7a2 2 0 012-2h12a2 2 0 012 2v4"/><circle cx="18" cy="18" r="4"/><path d="M15 3v4"/><path d="M7 3v4"/><path d="M3 11h16"/><path d="M18 16.496V18l1 1"/></svg>
+<time class=article-time--published datetime=2026-08-09T00:40:00+08:00>Aug 09, 2026</time></div><div><svg class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+<time class=article-time--reading>16 minute read</time></div></footer></div></header><section class=article-content><h1 id=decoupling-business-logic-from-the-queue-a-3-layer-architecture-for-async-job-retries-nestjs--bull>Decoupling Business Logic from the Queue: A 3-Layer Architecture for Async Job Retries (NestJS + Bull)</h1><h2 id=problem>Problem</h2><p>Khi xây dựng một tác vụ bất đồng bộ có khả năng retry — ví dụ: gửi job sang một hệ thống bên thứ ba, chờ kết quả, rồi hoàn tất — ta thường thấy code kiểu này ngay trong processor:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-ts data-lang=ts><span class=line><span class=cl><span class=kd>@Process</span><span class=p>()</span>
+</span></span><span class=line><span class=cl><span class=kr>async</span> <span class=nx>handle</span><span class=p>(</span><span class=nx>job</span>: <span class=kt>Job</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=k>try</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=kr>const</span> <span class=nx>result</span> <span class=o>=</span> <span class=k>await</span> <span class=k>this</span><span class=p>.</span><span class=nx>externalService</span><span class=p>.</span><span class=nx>submit</span><span class=p>(</span><span class=nx>job</span><span class=p>.</span><span class=nx>data</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=k>if</span> <span class=p>(</span><span class=nx>result</span><span class=p>.</span><span class=nx>status</span> <span class=o>===</span> <span class=s1>&#39;PENDING&#39;</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>      <span class=k>throw</span> <span class=k>new</span> <span class=nb>Error</span><span class=p>(</span><span class=s1>&#39;retry&#39;</span><span class=p>);</span> <span class=c1>// để Bull tự retry
+</span></span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>    <span class=k>await</span> <span class=k>this</span><span class=p>.</span><span class=nx>finalize</span><span class=p>(</span><span class=nx>result</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span> <span class=k>catch</span> <span class=p>(</span><span class=nx>err</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=k>await</span> <span class=k>this</span><span class=p>.</span><span class=nx>handleFailure</span><span class=p>(</span><span class=nx>err</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=k>throw</span> <span class=nx>err</span><span class=p>;</span> <span class=c1>// Bull retry tiếp theo cấu hình attempts/backoff
+</span></span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><p>Vấn đề nằm ở chỗ <strong>business logic</strong> (gửi job, kiểm tra trạng thái, hoàn tất, xử lý lỗi) và <strong>cơ chế retry của hàng đợi</strong> (delay, jitter, số lần thử, timeout, backoff) bị trộn lẫn trong cùng một hàm.</p><p>Hệ quả cụ thể:</p><ul><li>Muốn unit test logic nghiệp vụ, buộc phải mock cả <code>Job</code>, cả Bull, hoặc dựng Redis thật.</li><li>Muốn thay đổi chiến lược retry (ví dụ thêm timeout tổng, thêm jitter riêng), phải sửa vào đúng chỗ đang gọi external service — dễ vỡ.</li><li>Muốn đổi từ Bull sang một hàng đợi khác, phải viết lại toàn bộ, vì logic nghiệp vụ và logic hạ tầng nằm chung một khối.</li></ul><p>Câu hỏi đặt ra: làm sao tách 3 mối quan tâm này — <strong>nghiệp vụ thuần</strong>, <strong>quy tắc điều phối retry</strong>, và <strong>cơ chế hàng đợi cụ thể</strong> — thành các đơn vị độc lập, test được riêng, và chỉ phụ thuộc một chiều?</p><h2 id=solution>Solution</h2><p>Chia kiến trúc thành 3 layer, phụ thuộc chỉ chảy một chiều từ trên xuống:</p><pre class=mermaid>
+  flowchart TB
+    BO[&#34;&lt;b&gt;BusinessOperationService&lt;/b&gt;&lt;br/&gt;submit / check / finalize / onFailure&lt;br/&gt;&lt;i&gt;Pure business logic&lt;/i&gt;&lt;br/&gt;&lt;i&gt;Không phụ thuộc Bull&lt;/i&gt;&#34;]
+    OE[&#34;&lt;b&gt;OperationExecutorService&lt;/b&gt;&lt;br/&gt;START → CHECK → FINALIZE&lt;br/&gt;timeout · retry delay · jitter&lt;br/&gt;error routing · state transition&lt;br/&gt;&lt;i&gt;Không phụ thuộc Bull&lt;/i&gt;&#34;]
+    SJ[&#34;&lt;b&gt;SubmitJobProcessor&lt;/b&gt;&lt;br/&gt;@Processor / @Process&lt;br/&gt;nhận job từ Bull · khôi phục execution state&lt;br/&gt;gọi Executor · map retry → cơ chế Bull&lt;br/&gt;&lt;i&gt;Chỉ layer này import Bull&lt;/i&gt;&#34;]
+    BULL[(&#34;Bull Worker&lt;br/&gt;Redis&#34;)]
+
+    BO --&gt; OE
+    OE -- &#34;scheduleRetry()&#34; --&gt; SJ
+    SJ --&gt; BULL
+</pre><p><strong>Nguyên tắc cốt lõi</strong>: <code>BusinessOperationService</code> không biết <code>Executor</code> tồn tại. <code>Executor</code> không biết mình đang chạy trên Bull, BullMQ hay SQS. Chỉ có <code>SubmitJobProcessor</code> là &ldquo;bẩn&rdquo; — nơi duy nhất <code>import</code> từ <code>bull</code>/<code>@nestjs/bull</code>.</p><p>Điểm hay nhất nằm ở cách nối layer 2 và layer 3: <code>Executor</code> không tự gọi lại chính nó để retry. Nó nhận một hàm <code>scheduleRetry</code> được <strong>truyền từ bên ngoài vào</strong>, và hàm đó có nghĩa vụ ngắt luồng thực thi hiện tại bằng cách <code>throw</code>. Đây là một <strong>control-flow boundary</strong> tường minh: tại điểm gọi <code>scheduleRetry</code>, ta biết chắc luồng thực thi hiện tại kết thúc ngay, và một lần thực thi mới sẽ được lên lịch ở layer bên ngoài — không phải một side-effect ẩn nấp trong logic nghiệp vụ.</p><p>Vòng đời một job minh họa quan hệ này:</p><pre class=mermaid>
+  flowchart TD
+    START([&#34;START&lt;br/&gt;submit job&#34;]) --&gt; CHECK{&#34;CHECK&lt;br/&gt;job status&#34;}
+    CHECK -- SUCCESS --&gt; FINALIZE([&#34;FINALIZE&#34;])
+    CHECK -- ERROR --&gt; ONFAIL([&#34;ON_FAILURE&#34;])
+    CHECK -- PENDING --&gt; TIMEOUT{&#34;timeout?&#34;}
+    TIMEOUT -- &#34;có&#34; --&gt; ONFAIL
+    TIMEOUT -- &#34;không&#34; --&gt; RETRY[&#34;scheduleRetry()&#34;]
+    RETRY --&gt; CHECK
+</pre><h2 id=implementation-nestjs--nestjsbull>Implementation (NestJS + <code>@nestjs/bull</code>)</h2><h3 id=setup--module>Setup & Module</h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl>npm install @nestjs/bull bull
+</span></span></code></pre></td></tr></table></div></div><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-ts data-lang=ts><span class=line><span class=cl><span class=c1>// app.module.ts
+</span></span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>Module</span> <span class=p>}</span> <span class=kr>from</span> <span class=s1>&#39;@nestjs/common&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>BullModule</span> <span class=p>}</span> <span class=kr>from</span> <span class=s1>&#39;@nestjs/bull&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>SubmitJobModule</span> <span class=p>}</span> <span class=kr>from</span> <span class=s1>&#39;./submit-job/submit-job.module&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kd>@Module</span><span class=p>({</span>
+</span></span><span class=line><span class=cl>  <span class=nx>imports</span><span class=o>:</span> <span class=p>[</span>
+</span></span><span class=line><span class=cl>    <span class=nx>BullModule</span><span class=p>.</span><span class=nx>forRoot</span><span class=p>({</span> <span class=nx>redis</span><span class=o>:</span> <span class=p>{</span> <span class=nx>host</span><span class=o>:</span> <span class=s1>&#39;localhost&#39;</span><span class=p>,</span> <span class=nx>port</span>: <span class=kt>6379</span> <span class=p>}</span> <span class=p>}),</span>
+</span></span><span class=line><span class=cl>    <span class=nx>SubmitJobModule</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>  <span class=p>],</span>
+</span></span><span class=line><span class=cl><span class=p>})</span>
+</span></span><span class=line><span class=cl><span class=kr>export</span> <span class=kr>class</span> <span class=nx>AppModule</span> <span class=p>{}</span>
+</span></span></code></pre></td></tr></table></div></div><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span><span class=lnt>40
+</span><span class=lnt>41
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-ts data-lang=ts><span class=line><span class=cl><span class=c1>// submit-job.module.ts
+</span></span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>Module</span> <span class=p>}</span> <span class=kr>from</span> <span class=s1>&#39;@nestjs/common&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>BullModule</span> <span class=p>}</span> <span class=kr>from</span> <span class=s1>&#39;@nestjs/bull&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>BusinessOperationService</span> <span class=p>}</span> <span class=kr>from</span> <span class=s1>&#39;./business-operation.service&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>OperationExecutorService</span> <span class=p>}</span> <span class=kr>from</span> <span class=s1>&#39;./operation-executor.service&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>SubmitJobProcessor</span> <span class=p>}</span> <span class=kr>from</span> <span class=s1>&#39;./submit-job.processor&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>SubmitJobController</span> <span class=p>}</span> <span class=kr>from</span> <span class=s1>&#39;./submit-job.controller&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>RetryScheduled</span> <span class=p>}</span> <span class=kr>from</span> <span class=s1>&#39;./operation-executor.service&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kd>@Module</span><span class=p>({</span>
+</span></span><span class=line><span class=cl>  <span class=nx>imports</span><span class=o>:</span> <span class=p>[</span>
+</span></span><span class=line><span class=cl>    <span class=nx>BullModule</span><span class=p>.</span><span class=nx>registerQueue</span><span class=p>({</span>
+</span></span><span class=line><span class=cl>      <span class=nx>name</span><span class=o>:</span> <span class=s1>&#39;submit-job&#39;</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>      <span class=nx>defaultJobOptions</span><span class=o>:</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=nx>attempts</span>: <span class=kt>20</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>        <span class=nx>backoff</span><span class=o>:</span> <span class=p>{</span> <span class=kr>type</span><span class=o>:</span> <span class=s1>&#39;custom&#39;</span> <span class=p>},</span> <span class=c1>// bắt buộc khai báo để Bull dùng backoffStrategies.custom bên dưới
+</span></span></span><span class=line><span class=cl>      <span class=p>},</span>
+</span></span><span class=line><span class=cl>      <span class=nx>settings</span><span class=o>:</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=nx>backoffStrategies</span><span class=o>:</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>          <span class=c1>// Bull gọi hàm này mỗi lần job fail để tính delay trước lần thử tiếp theo.
+</span></span></span><span class=line><span class=cl>          <span class=c1>// err chính là exception mà processor throw ra bên dưới.
+</span></span></span><span class=line><span class=cl>          <span class=nx>custom</span><span class=o>:</span> <span class=p>(</span><span class=nx>attemptsMade</span>: <span class=kt>number</span><span class=p>,</span> <span class=nx>err</span>: <span class=kt>unknown</span><span class=p>)</span> <span class=o>=&gt;</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>            <span class=k>if</span> <span class=p>(</span><span class=nx>err</span> <span class=k>instanceof</span> <span class=nx>RetryScheduled</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>              <span class=k>return</span> <span class=nx>err</span><span class=p>.</span><span class=nx>delayMs</span><span class=p>;</span> <span class=c1>// dùng đúng jitter đã tính trong OperationExecutorService
+</span></span></span><span class=line><span class=cl>            <span class=p>}</span>
+</span></span><span class=line><span class=cl>            <span class=k>return</span> <span class=mi>1000</span> <span class=o>*</span> <span class=nx>attemptsMade</span><span class=p>;</span> <span class=c1>// fallback cho lỗi không lường trước
+</span></span></span><span class=line><span class=cl>          <span class=p>},</span>
+</span></span><span class=line><span class=cl>        <span class=p>},</span>
+</span></span><span class=line><span class=cl>        <span class=c1>// Chống &#34;ma job&#34;: nếu worker crash/bị kill giữa lúc đang xử lý,
+</span></span></span><span class=line><span class=cl>        <span class=c1>// Bull tự phát hiện job &#34;stalled&#34; sau lockDuration và đưa lại vào hàng đợi,
+</span></span></span><span class=line><span class=cl>        <span class=c1>// thay vì để nó kẹt ở trạng thái active vĩnh viễn.
+</span></span></span><span class=line><span class=cl>        <span class=nx>lockDuration</span>: <span class=kt>60_000</span><span class=p>,</span>    <span class=c1>// phải &gt; callTimeoutMs của Executor để không tự đá job đang chạy bình thường
+</span></span></span><span class=line><span class=cl>        <span class=nx>stalledInterval</span>: <span class=kt>30_000</span><span class=p>,</span> <span class=c1>// chu kỳ Bull quét job stalled
+</span></span></span><span class=line><span class=cl>        <span class=nx>maxStalledCount</span>: <span class=kt>2</span><span class=p>,</span>      <span class=c1>// stalled quá số lần này -&gt; Bull coi là failed hẳn
+</span></span></span><span class=line><span class=cl>      <span class=p>},</span>
+</span></span><span class=line><span class=cl>    <span class=p>}),</span>
+</span></span><span class=line><span class=cl>  <span class=p>],</span>
+</span></span><span class=line><span class=cl>  <span class=nx>controllers</span><span class=o>:</span> <span class=p>[</span><span class=nx>SubmitJobController</span><span class=p>],</span>
+</span></span><span class=line><span class=cl>  <span class=nx>providers</span><span class=o>:</span> <span class=p>[</span><span class=nx>BusinessOperationService</span><span class=p>,</span> <span class=nx>OperationExecutorService</span><span class=p>,</span> <span class=nx>SubmitJobProcessor</span><span class=p>],</span>
+</span></span><span class=line><span class=cl><span class=p>})</span>
+</span></span><span class=line><span class=cl><span class=kr>export</span> <span class=kr>class</span> <span class=nx>SubmitJobModule</span> <span class=p>{}</span>
+</span></span></code></pre></td></tr></table></div></div><h3 id=layer-1--businessoperationservice-pure-provider>Layer 1 — <code>BusinessOperationService</code>: pure provider</h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-ts data-lang=ts><span class=line><span class=cl><span class=c1>// business-operation.service.ts
+</span></span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>Injectable</span> <span class=p>}</span> <span class=kr>from</span> <span class=s1>&#39;@nestjs/common&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>ExternalService</span> <span class=p>}</span> <span class=kr>from</span> <span class=s1>&#39;./external.service&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>JobRepository</span> <span class=p>}</span> <span class=kr>from</span> <span class=s1>&#39;./job.repository&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kr>export</span> <span class=kr>enum</span> <span class=nx>JobStatus</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=nx>PENDING</span> <span class=o>=</span> <span class=s1>&#39;PENDING&#39;</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>  <span class=nx>SUCCESS</span> <span class=o>=</span> <span class=s1>&#39;SUCCESS&#39;</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>  <span class=nx>ERROR</span> <span class=o>=</span> <span class=s1>&#39;ERROR&#39;</span><span class=p>,</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kd>@Injectable</span><span class=p>()</span>
+</span></span><span class=line><span class=cl><span class=kr>export</span> <span class=kr>class</span> <span class=nx>BusinessOperationService</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=kr>constructor</span><span class=p>(</span>
+</span></span><span class=line><span class=cl>    <span class=kr>private</span> <span class=kr>readonly</span> <span class=nx>externalService</span>: <span class=kt>ExternalService</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=kr>private</span> <span class=kr>readonly</span> <span class=nx>jobRepository</span>: <span class=kt>JobRepository</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>  <span class=p>)</span> <span class=p>{}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=kr>async</span> <span class=nx>submit</span><span class=p>(</span><span class=nx>payload</span>: <span class=kt>Record</span><span class=p>&lt;</span><span class=nt>string</span><span class=p>,</span> <span class=na>unknown</span><span class=p>&gt;)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=kr>const</span> <span class=nx>externalId</span> <span class=o>=</span> <span class=k>await</span> <span class=k>this</span><span class=p>.</span><span class=nx>externalService</span><span class=p>.</span><span class=nx>submit</span><span class=p>(</span><span class=nx>payload</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=p>{</span> <span class=nx>externalId</span><span class=p>,</span> <span class=nx>status</span>: <span class=kt>JobStatus.PENDING</span> <span class=p>};</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=kr>async</span> <span class=nx>check</span><span class=p>(</span><span class=nx>externalId</span>: <span class=kt>string</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=k>this</span><span class=p>.</span><span class=nx>externalService</span><span class=p>.</span><span class=nx>getStatus</span><span class=p>(</span><span class=nx>externalId</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=kr>async</span> <span class=nx>finalize</span><span class=p>(</span><span class=nx>result</span><span class=o>:</span> <span class=p>{</span> <span class=nx>jobId</span>: <span class=kt>string</span><span class=p>;</span> <span class=nx>status</span>: <span class=kt>JobStatus</span> <span class=p>})</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=k>await</span> <span class=k>this</span><span class=p>.</span><span class=nx>jobRepository</span><span class=p>.</span><span class=nx>markCompleted</span><span class=p>(</span><span class=nx>result</span><span class=p>.</span><span class=nx>jobId</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=kr>async</span> <span class=nx>onFailure</span><span class=p>(</span><span class=nx>error</span>: <span class=kt>Error</span><span class=p>,</span> <span class=nx>context</span><span class=o>:</span> <span class=p>{</span> <span class=nx>jobId</span>: <span class=kt>string</span> <span class=p>})</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=k>await</span> <span class=k>this</span><span class=p>.</span><span class=nx>jobRepository</span><span class=p>.</span><span class=nx>markFailed</span><span class=p>(</span><span class=nx>context</span><span class=p>.</span><span class=nx>jobId</span><span class=p>,</span> <span class=nx>error</span><span class=p>.</span><span class=nx>message</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><h3 id=layer-2--operationexecutorservice-state-machine-control-flow-boundary>Layer 2 — <code>OperationExecutorService</code>: state machine, control-flow boundary</h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span><span class=lnt>8
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-ts data-lang=ts><span class=line><span class=cl><span class=c1>// with-timeout.ts
+</span></span></span><span class=line><span class=cl><span class=kr>export</span> <span class=kd>function</span> <span class=nx>withTimeout</span><span class=p>&lt;</span><span class=nt>T</span><span class=p>&gt;(</span><span class=nx>promise</span>: <span class=kt>Promise</span><span class=p>&lt;</span><span class=nt>T</span><span class=p>&gt;,</span> <span class=nx>ms</span>: <span class=kt>number</span><span class=p>,</span> <span class=nx>label</span>: <span class=kt>string</span><span class=p>)</span><span class=o>:</span> <span class=nx>Promise</span><span class=p>&lt;</span><span class=nt>T</span><span class=p>&gt;</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=kd>let</span> <span class=nx>timer</span>: <span class=kt>NodeJS.Timeout</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=kr>const</span> <span class=nx>timeout</span> <span class=o>=</span> <span class=k>new</span> <span class=nx>Promise</span><span class=p>&lt;</span><span class=nt>never</span><span class=p>&gt;((</span><span class=nx>_</span><span class=p>,</span> <span class=nx>reject</span><span class=p>)</span> <span class=o>=&gt;</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=nx>timer</span> <span class=o>=</span> <span class=nx>setTimeout</span><span class=p>(()</span> <span class=o>=&gt;</span> <span class=nx>reject</span><span class=p>(</span><span class=k>new</span> <span class=nb>Error</span><span class=p>(</span><span class=sb>`</span><span class=si>${</span><span class=nx>label</span><span class=si>}</span><span class=sb>-timeout`</span><span class=p>)),</span> <span class=nx>ms</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=p>});</span>
+</span></span><span class=line><span class=cl>  <span class=k>return</span> <span class=nx>Promise</span><span class=p>.</span><span class=nx>race</span><span class=p>([</span><span class=nx>promise</span><span class=p>,</span> <span class=nx>timeout</span><span class=p>]).</span><span class=k>finally</span><span class=p>(()</span> <span class=o>=&gt;</span> <span class=nx>clearTimeout</span><span class=p>(</span><span class=nx>timer</span><span class=p>));</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>  1
+</span><span class=lnt>  2
+</span><span class=lnt>  3
+</span><span class=lnt>  4
+</span><span class=lnt>  5
+</span><span class=lnt>  6
+</span><span class=lnt>  7
+</span><span class=lnt>  8
+</span><span class=lnt>  9
+</span><span class=lnt> 10
+</span><span class=lnt> 11
+</span><span class=lnt> 12
+</span><span class=lnt> 13
+</span><span class=lnt> 14
+</span><span class=lnt> 15
+</span><span class=lnt> 16
+</span><span class=lnt> 17
+</span><span class=lnt> 18
+</span><span class=lnt> 19
+</span><span class=lnt> 20
+</span><span class=lnt> 21
+</span><span class=lnt> 22
+</span><span class=lnt> 23
+</span><span class=lnt> 24
+</span><span class=lnt> 25
+</span><span class=lnt> 26
+</span><span class=lnt> 27
+</span><span class=lnt> 28
+</span><span class=lnt> 29
+</span><span class=lnt> 30
+</span><span class=lnt> 31
+</span><span class=lnt> 32
+</span><span class=lnt> 33
+</span><span class=lnt> 34
+</span><span class=lnt> 35
+</span><span class=lnt> 36
+</span><span class=lnt> 37
+</span><span class=lnt> 38
+</span><span class=lnt> 39
+</span><span class=lnt> 40
+</span><span class=lnt> 41
+</span><span class=lnt> 42
+</span><span class=lnt> 43
+</span><span class=lnt> 44
+</span><span class=lnt> 45
+</span><span class=lnt> 46
+</span><span class=lnt> 47
+</span><span class=lnt> 48
+</span><span class=lnt> 49
+</span><span class=lnt> 50
+</span><span class=lnt> 51
+</span><span class=lnt> 52
+</span><span class=lnt> 53
+</span><span class=lnt> 54
+</span><span class=lnt> 55
+</span><span class=lnt> 56
+</span><span class=lnt> 57
+</span><span class=lnt> 58
+</span><span class=lnt> 59
+</span><span class=lnt> 60
+</span><span class=lnt> 61
+</span><span class=lnt> 62
+</span><span class=lnt> 63
+</span><span class=lnt> 64
+</span><span class=lnt> 65
+</span><span class=lnt> 66
+</span><span class=lnt> 67
+</span><span class=lnt> 68
+</span><span class=lnt> 69
+</span><span class=lnt> 70
+</span><span class=lnt> 71
+</span><span class=lnt> 72
+</span><span class=lnt> 73
+</span><span class=lnt> 74
+</span><span class=lnt> 75
+</span><span class=lnt> 76
+</span><span class=lnt> 77
+</span><span class=lnt> 78
+</span><span class=lnt> 79
+</span><span class=lnt> 80
+</span><span class=lnt> 81
+</span><span class=lnt> 82
+</span><span class=lnt> 83
+</span><span class=lnt> 84
+</span><span class=lnt> 85
+</span><span class=lnt> 86
+</span><span class=lnt> 87
+</span><span class=lnt> 88
+</span><span class=lnt> 89
+</span><span class=lnt> 90
+</span><span class=lnt> 91
+</span><span class=lnt> 92
+</span><span class=lnt> 93
+</span><span class=lnt> 94
+</span><span class=lnt> 95
+</span><span class=lnt> 96
+</span><span class=lnt> 97
+</span><span class=lnt> 98
+</span><span class=lnt> 99
+</span><span class=lnt>100
+</span><span class=lnt>101
+</span><span class=lnt>102
+</span><span class=lnt>103
+</span><span class=lnt>104
+</span><span class=lnt>105
+</span><span class=lnt>106
+</span><span class=lnt>107
+</span><span class=lnt>108
+</span><span class=lnt>109
+</span><span class=lnt>110
+</span><span class=lnt>111
+</span><span class=lnt>112
+</span><span class=lnt>113
+</span><span class=lnt>114
+</span><span class=lnt>115
+</span><span class=lnt>116
+</span><span class=lnt>117
+</span><span class=lnt>118
+</span><span class=lnt>119
+</span><span class=lnt>120
+</span><span class=lnt>121
+</span><span class=lnt>122
+</span><span class=lnt>123
+</span><span class=lnt>124
+</span><span class=lnt>125
+</span><span class=lnt>126
+</span><span class=lnt>127
+</span><span class=lnt>128
+</span><span class=lnt>129
+</span><span class=lnt>130
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-ts data-lang=ts><span class=line><span class=cl><span class=c1>// operation-executor.service.ts
+</span></span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>Injectable</span> <span class=p>}</span> <span class=kr>from</span> <span class=s1>&#39;@nestjs/common&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>BusinessOperationService</span><span class=p>,</span> <span class=nx>JobStatus</span> <span class=p>}</span> <span class=kr>from</span> <span class=s1>&#39;./business-operation.service&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>withTimeout</span> <span class=p>}</span> <span class=kr>from</span> <span class=s1>&#39;./with-timeout&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kr>export</span> <span class=kr>class</span> <span class=nx>RetryScheduled</span> <span class=kr>extends</span> <span class=nb>Error</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=kr>constructor</span><span class=p>(</span>
+</span></span><span class=line><span class=cl>    <span class=kr>public</span> <span class=kr>readonly</span> <span class=nx>nextState</span>: <span class=kt>Record</span><span class=p>&lt;</span><span class=nt>string</span><span class=p>,</span> <span class=na>any</span><span class=p>&gt;,</span>
+</span></span><span class=line><span class=cl>    <span class=kr>public</span> <span class=kr>readonly</span> <span class=nx>delayMs</span>: <span class=kt>number</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>  <span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=kr>super</span><span class=p>(</span><span class=s1>&#39;retry-scheduled&#39;</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=k>this</span><span class=p>.</span><span class=nx>name</span> <span class=o>=</span> <span class=s1>&#39;RetryScheduled&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kr>export</span> <span class=kr>type</span> <span class=nx>ScheduleRetryFn</span> <span class=o>=</span> <span class=p>(</span><span class=nx>nextState</span>: <span class=kt>Record</span><span class=p>&lt;</span><span class=nt>string</span><span class=p>,</span> <span class=na>any</span><span class=p>&gt;,</span> <span class=nx>delayMs</span>: <span class=kt>number</span><span class=p>)</span> <span class=o>=&gt;</span> <span class=kt>never</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kr>export</span> <span class=kr>enum</span> <span class=nx>JobPhase</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=nx>START</span> <span class=o>=</span> <span class=s1>&#39;START&#39;</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>  <span class=nx>CHECK</span> <span class=o>=</span> <span class=s1>&#39;CHECK&#39;</span><span class=p>,</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kr>interface</span> <span class=nx>ExecutorOptions</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=nx>baseDelayMs?</span>: <span class=kt>number</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=nx>maxDelayMs?</span>: <span class=kt>number</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=nx>timeoutMs?</span>: <span class=kt>number</span> <span class=o>|</span> <span class=kc>null</span><span class=p>;</span> <span class=c1>// deadline TỔNG mặc định; null = job không có deadline trừ khi state ghi đè
+</span></span></span><span class=line><span class=cl>  <span class=nx>callTimeoutMs?</span>: <span class=kt>number</span><span class=p>;</span>    <span class=c1>// giới hạn cho MỖI lệnh gọi submit()/check() riêng lẻ — luôn bật, không tắt được
+</span></span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kd>@Injectable</span><span class=p>()</span>
+</span></span><span class=line><span class=cl><span class=kr>export</span> <span class=kr>class</span> <span class=nx>OperationExecutorService</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=kr>private</span> <span class=kr>readonly</span> <span class=nx>baseDelayMs</span>: <span class=kt>number</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=kr>private</span> <span class=kr>readonly</span> <span class=nx>maxDelayMs</span>: <span class=kt>number</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=kr>private</span> <span class=kr>readonly</span> <span class=nx>defaultTimeoutMs</span>: <span class=kt>number</span> <span class=o>|</span> <span class=kc>null</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=kr>private</span> <span class=kr>readonly</span> <span class=nx>callTimeoutMs</span>: <span class=kt>number</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=kr>constructor</span><span class=p>(</span>
+</span></span><span class=line><span class=cl>    <span class=kr>private</span> <span class=kr>readonly</span> <span class=nx>operation</span>: <span class=kt>BusinessOperationService</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=nx>options</span>: <span class=kt>ExecutorOptions</span> <span class=o>=</span> <span class=p>{},</span>
+</span></span><span class=line><span class=cl>  <span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=k>this</span><span class=p>.</span><span class=nx>baseDelayMs</span> <span class=o>=</span> <span class=nx>options</span><span class=p>.</span><span class=nx>baseDelayMs</span> <span class=o>??</span> <span class=mi>1000</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=k>this</span><span class=p>.</span><span class=nx>maxDelayMs</span> <span class=o>=</span> <span class=nx>options</span><span class=p>.</span><span class=nx>maxDelayMs</span> <span class=o>??</span> <span class=mi>60</span><span class=nx>_000</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=c1>// undefined -&gt; dùng mặc định 5 phút; truyền thẳng `null` nghĩa là mặc định KHÔNG giới hạn cho toàn service.
+</span></span></span><span class=line><span class=cl>    <span class=k>this</span><span class=p>.</span><span class=nx>defaultTimeoutMs</span> <span class=o>=</span> <span class=nx>options</span><span class=p>.</span><span class=nx>timeoutMs</span> <span class=o>===</span> <span class=kc>undefined</span> <span class=o>?</span> <span class=mi>5</span> <span class=o>*</span> <span class=nx>60_000</span> : <span class=kt>options.timeoutMs</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=k>this</span><span class=p>.</span><span class=nx>callTimeoutMs</span> <span class=o>=</span> <span class=nx>options</span><span class=p>.</span><span class=nx>callTimeoutMs</span> <span class=o>??</span> <span class=mi>30</span><span class=nx>_000</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=kr>async</span> <span class=nx>run</span><span class=p>(</span><span class=nx>state</span>: <span class=kt>Record</span><span class=p>&lt;</span><span class=nt>string</span><span class=p>,</span> <span class=na>any</span><span class=p>&gt;,</span> <span class=nx>scheduleRetry</span>: <span class=kt>ScheduleRetryFn</span><span class=p>)</span><span class=o>:</span> <span class=nx>Promise</span><span class=p>&lt;</span><span class=nt>void</span><span class=p>&gt;</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=kr>const</span> <span class=nx>startedAt</span> <span class=o>=</span> <span class=nx>state</span><span class=p>.</span><span class=nx>startedAt</span> <span class=o>??</span> <span class=nb>Date</span><span class=p>.</span><span class=nx>now</span><span class=p>();</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=c1>// Ưu tiên timeoutMs được ghi trong CHÍNH job (đặt từ lúc tạo, ở phase START) nếu có;
+</span></span></span><span class=line><span class=cl>    <span class=c1>// nếu job không khai báo gì thì rơi về mặc định của service.
+</span></span></span><span class=line><span class=cl>    <span class=c1>// Set tường minh `timeoutMs: null` trong state -&gt; job này KHÔNG có deadline tổng.
+</span></span></span><span class=line><span class=cl>    <span class=kr>const</span> <span class=nx>timeoutMs</span> <span class=o>=</span> <span class=s1>&#39;timeoutMs&#39;</span> <span class=k>in</span> <span class=nx>state</span> <span class=o>?</span> <span class=nx>state.timeoutMs</span> : <span class=kt>this.defaultTimeoutMs</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=c1>// Deadline tuyệt đối được kiểm tra TRƯỚC MỌI THỨ, mỗi lần run() được gọi lại —
+</span></span></span><span class=line><span class=cl>    <span class=c1>// dù job có bị delay lâu tới đâu giữa các lần retry, tổng vòng đời không bao giờ vượt quá timeoutMs.
+</span></span></span><span class=line><span class=cl>    <span class=c1>// timeoutMs == null -&gt; bỏ qua hẳn bước này, job được phép retry vô thời hạn (chỉ còn bị chặn bởi
+</span></span></span><span class=line><span class=cl>    <span class=c1>// attempts/backoff của Bull và cơ chế stalled ở Queue Adapter).
+</span></span></span><span class=line><span class=cl>    <span class=k>if</span> <span class=p>(</span><span class=nx>timeoutMs</span> <span class=o>!=</span> <span class=kc>null</span> <span class=o>&amp;&amp;</span> <span class=nb>Date</span><span class=p>.</span><span class=nx>now</span><span class=p>()</span> <span class=o>-</span> <span class=nx>startedAt</span> <span class=o>&gt;</span> <span class=nx>timeoutMs</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>      <span class=k>await</span> <span class=k>this</span><span class=p>.</span><span class=nx>operation</span><span class=p>.</span><span class=nx>onFailure</span><span class=p>(</span><span class=k>new</span> <span class=nb>Error</span><span class=p>(</span><span class=s1>&#39;timeout&#39;</span><span class=p>),</span> <span class=nx>state</span> <span class=kr>as</span> <span class=kt>any</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>      <span class=k>return</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=k>try</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>      <span class=k>switch</span> <span class=p>(</span><span class=nx>state</span><span class=p>.</span><span class=nx>phase</span> <span class=kr>as</span> <span class=nx>JobPhase</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=k>case</span> <span class=nx>JobPhase</span><span class=p>.</span><span class=nx>START</span><span class=o>:</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>          <span class=kr>const</span> <span class=nx>submitted</span> <span class=o>=</span> <span class=k>await</span> <span class=nx>withTimeout</span><span class=p>(</span>
+</span></span><span class=line><span class=cl>            <span class=k>this</span><span class=p>.</span><span class=nx>operation</span><span class=p>.</span><span class=nx>submit</span><span class=p>(</span><span class=nx>state</span><span class=p>.</span><span class=nx>payload</span><span class=p>),</span>
+</span></span><span class=line><span class=cl>            <span class=k>this</span><span class=p>.</span><span class=nx>callTimeoutMs</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>            <span class=s1>&#39;submit&#39;</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>          <span class=p>);</span>
+</span></span><span class=line><span class=cl>          <span class=k>this</span><span class=p>.</span><span class=nx>advance</span><span class=p>(</span>
+</span></span><span class=line><span class=cl>            <span class=p>{</span> <span class=p>...</span><span class=nx>state</span><span class=p>,</span> <span class=p>...</span><span class=nx>submitted</span><span class=p>,</span> <span class=nx>phase</span>: <span class=kt>JobPhase.CHECK</span><span class=p>,</span> <span class=nx>startedAt</span> <span class=p>},</span>
+</span></span><span class=line><span class=cl>            <span class=nx>scheduleRetry</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>          <span class=p>);</span>
+</span></span><span class=line><span class=cl>          <span class=k>return</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>        <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>        <span class=k>case</span> <span class=nx>JobPhase</span><span class=p>.</span><span class=nx>CHECK</span><span class=o>:</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>          <span class=kr>const</span> <span class=nx>result</span> <span class=o>=</span> <span class=k>await</span> <span class=nx>withTimeout</span><span class=p>(</span>
+</span></span><span class=line><span class=cl>            <span class=k>this</span><span class=p>.</span><span class=nx>operation</span><span class=p>.</span><span class=nx>check</span><span class=p>(</span><span class=nx>state</span><span class=p>.</span><span class=nx>externalId</span><span class=p>),</span>
+</span></span><span class=line><span class=cl>            <span class=k>this</span><span class=p>.</span><span class=nx>callTimeoutMs</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>            <span class=s1>&#39;check&#39;</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>          <span class=p>);</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>          <span class=k>switch</span> <span class=p>(</span><span class=nx>result</span><span class=p>.</span><span class=nx>status</span> <span class=kr>as</span> <span class=nx>JobStatus</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>            <span class=k>case</span> <span class=nx>JobStatus.SUCCESS</span>:
+</span></span><span class=line><span class=cl>              <span class=kt>await</span> <span class=k>this</span><span class=p>.</span><span class=nx>operation</span><span class=p>.</span><span class=nx>finalize</span><span class=p>(</span><span class=nx>result</span> <span class=kr>as</span> <span class=kt>any</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>              <span class=k>return</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>            <span class=k>case</span> <span class=nx>JobStatus.ERROR</span>:
+</span></span><span class=line><span class=cl>              <span class=kt>await</span> <span class=k>this</span><span class=p>.</span><span class=nx>operation</span><span class=p>.</span><span class=nx>onFailure</span><span class=p>(</span>
+</span></span><span class=line><span class=cl>                <span class=k>new</span> <span class=nb>Error</span><span class=p>((</span><span class=nx>result</span> <span class=kr>as</span> <span class=kt>any</span><span class=p>).</span><span class=nx>message</span> <span class=o>??</span> <span class=s1>&#39;error&#39;</span><span class=p>),</span>
+</span></span><span class=line><span class=cl>                <span class=nx>state</span> <span class=kr>as</span> <span class=kt>any</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>              <span class=p>);</span>
+</span></span><span class=line><span class=cl>              <span class=k>return</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>            <span class=k>case</span> <span class=nx>JobStatus.PENDING</span>:
+</span></span><span class=line><span class=cl>            <span class=kt>default</span><span class=o>:</span>
+</span></span><span class=line><span class=cl>              <span class=k>this</span><span class=p>.</span><span class=nx>advance</span><span class=p>({</span> <span class=p>...</span><span class=nx>state</span><span class=p>,</span> <span class=nx>startedAt</span> <span class=p>},</span> <span class=nx>scheduleRetry</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>              <span class=k>return</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>          <span class=p>}</span>
+</span></span><span class=line><span class=cl>        <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>        <span class=k>default</span><span class=o>:</span>
+</span></span><span class=line><span class=cl>          <span class=k>throw</span> <span class=k>new</span> <span class=nb>Error</span><span class=p>(</span><span class=sb>`Unknown phase: </span><span class=si>${</span><span class=nx>state</span><span class=p>.</span><span class=nx>phase</span><span class=si>}</span><span class=sb>`</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>      <span class=p>}</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span> <span class=k>catch</span> <span class=p>(</span><span class=nx>err</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>      <span class=k>if</span> <span class=p>(</span><span class=nx>err</span> <span class=k>instanceof</span> <span class=nx>RetryScheduled</span><span class=p>)</span> <span class=k>throw</span> <span class=nx>err</span><span class=p>;</span> <span class=c1>// boundary hợp lệ, để nó lan lên Processor
+</span></span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>      <span class=c1>// Bất kỳ lỗi nào khác — kể cả call-timeout ở trên — được coi là PENDING và thử lại,
+</span></span></span><span class=line><span class=cl>      <span class=c1>// deadline tuyệt đối ở đầu hàm sẽ là nơi thực sự chặn job &#34;kéo dài vĩnh viễn&#34;.
+</span></span></span><span class=line><span class=cl>      <span class=k>this</span><span class=p>.</span><span class=nx>advance</span><span class=p>({</span> <span class=p>...</span><span class=nx>state</span><span class=p>,</span> <span class=nx>startedAt</span> <span class=p>},</span> <span class=nx>scheduleRetry</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=kr>private</span> <span class=nx>advance</span><span class=p>(</span><span class=nx>nextState</span>: <span class=kt>Record</span><span class=p>&lt;</span><span class=nt>string</span><span class=p>,</span> <span class=na>any</span><span class=p>&gt;,</span> <span class=nx>scheduleRetry</span>: <span class=kt>ScheduleRetryFn</span><span class=p>)</span><span class=o>:</span> <span class=kt>never</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=kr>const</span> <span class=nx>attempt</span> <span class=o>=</span> <span class=p>(</span><span class=nx>nextState</span><span class=p>.</span><span class=nx>attempt</span> <span class=o>??</span> <span class=mi>0</span><span class=p>)</span> <span class=o>+</span> <span class=mi>1</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=kr>const</span> <span class=nx>delay</span> <span class=o>=</span> <span class=k>this</span><span class=p>.</span><span class=nx>delayWithJitter</span><span class=p>(</span><span class=nx>attempt</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=c1>// control-flow boundary: scheduleRetry() PHẢI throw.
+</span></span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=nx>scheduleRetry</span><span class=p>({</span> <span class=p>...</span><span class=nx>nextState</span><span class=p>,</span> <span class=nx>attempt</span> <span class=p>},</span> <span class=nx>delay</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=kr>private</span> <span class=nx>delayWithJitter</span><span class=p>(</span><span class=nx>attempt</span>: <span class=kt>number</span><span class=p>)</span><span class=o>:</span> <span class=kt>number</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=kr>const</span> <span class=nx>exp</span> <span class=o>=</span> <span class=nb>Math</span><span class=p>.</span><span class=nx>min</span><span class=p>(</span><span class=k>this</span><span class=p>.</span><span class=nx>baseDelayMs</span> <span class=o>*</span> <span class=mi>2</span> <span class=o>**</span> <span class=nx>attempt</span><span class=p>,</span> <span class=k>this</span><span class=p>.</span><span class=nx>maxDelayMs</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=kr>const</span> <span class=nx>jitter</span> <span class=o>=</span> <span class=nb>Math</span><span class=p>.</span><span class=nx>random</span><span class=p>()</span> <span class=o>*</span> <span class=nx>exp</span> <span class=o>*</span> <span class=mf>0.2</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=nb>Math</span><span class=p>.</span><span class=nx>floor</span><span class=p>(</span><span class=nx>exp</span> <span class=o>+</span> <span class=nx>jitter</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><p>Hai layer bảo vệ chống &ldquo;job kéo dài vĩnh viễn&rdquo; ở trên hoạt động độc lập, bù cho nhau:</p><ul><li><strong><code>timeoutMs</code> (deadline tuyệt đối)</strong> được kiểm tra ở đầu <code>run()</code>, trước khi làm bất cứ điều gì — dù job bị delay lại bao nhiêu lần, hoặc bị Bull retry vô số lần, tổng thời gian sống tính từ <code>startedAt</code> ban đầu không bao giờ vượt ngưỡng này. Đây là giới hạn ở tầng <strong>nghiệp vụ</strong> (logic của <code>OperationExecutorService</code>), không phụ thuộc Bull.</li><li><strong><code>callTimeoutMs</code> (timeout từng lệnh gọi)</strong> bọc quanh mỗi <code>await this.operation.submit(...)</code>/<code>check(...)</code> bằng <code>withTimeout</code>. Nếu external service không bao giờ trả lời, <code>Promise.race</code> sẽ ép <code>run()</code> thoát ra sau <code>callTimeoutMs</code> thay vì treo mãi mãi — lỗi đó được xử lý như một lần <code>PENDING</code> bình thường, để <code>timeoutMs</code> ở trên quyết định khi nào thực sự dừng hẳn.</li><li><strong><code>lockDuration</code>/<code>stalledInterval</code>/<code>maxStalledCount</code></strong> ở tầng <code>Queue Adapter</code> là layer bảo vệ thứ ba, khác về bản chất: nó không xử lý logic timeout, mà xử lý trường hợp <em>worker process chết</em> giữa lúc đang xử lý (crash, bị kill, deploy) — khi đó <code>Executor</code> không có cơ hội chạy nốt <code>try/catch</code> của mình, nên Bull phải tự phát hiện qua cơ chế lock riêng.</li></ul><h3 id=layer-3--submitjobprocessor-the-only-layer-that-knows-bull-exists>Layer 3 — <code>SubmitJobProcessor</code>: the only layer that knows Bull exists</h3><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-ts data-lang=ts><span class=line><span class=cl><span class=c1>// submit-job.processor.ts
+</span></span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>Process</span><span class=p>,</span> <span class=nx>Processor</span> <span class=p>}</span> <span class=kr>from</span> <span class=s1>&#39;@nestjs/bull&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>Logger</span> <span class=p>}</span> <span class=kr>from</span> <span class=s1>&#39;@nestjs/common&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>Job</span> <span class=p>}</span> <span class=kr>from</span> <span class=s1>&#39;bull&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>OperationExecutorService</span><span class=p>,</span> <span class=nx>RetryScheduled</span><span class=p>,</span> <span class=nx>ScheduleRetryFn</span> <span class=p>}</span> <span class=kr>from</span> <span class=s1>&#39;./operation-executor.service&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kd>@Processor</span><span class=p>(</span><span class=s1>&#39;submit-job&#39;</span><span class=p>)</span>
+</span></span><span class=line><span class=cl><span class=kr>export</span> <span class=kr>class</span> <span class=nx>SubmitJobProcessor</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=kr>private</span> <span class=kr>readonly</span> <span class=nx>logger</span> <span class=o>=</span> <span class=k>new</span> <span class=nx>Logger</span><span class=p>(</span><span class=nx>SubmitJobProcessor</span><span class=p>.</span><span class=nx>name</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=kr>constructor</span><span class=p>(</span><span class=kr>private</span> <span class=kr>readonly</span> <span class=nx>executor</span>: <span class=kt>OperationExecutorService</span><span class=p>)</span> <span class=p>{}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=kd>@Process</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>  <span class=kr>async</span> <span class=nx>handle</span><span class=p>(</span><span class=nx>job</span>: <span class=kt>Job</span><span class=p>)</span><span class=o>:</span> <span class=nx>Promise</span><span class=p>&lt;</span><span class=nt>void</span><span class=p>&gt;</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=kr>const</span> <span class=nx>scheduleRetry</span>: <span class=kt>ScheduleRetryFn</span> <span class=o>=</span> <span class=p>(</span><span class=nx>nextState</span><span class=p>,</span> <span class=nx>delayMs</span><span class=p>)</span> <span class=o>=&gt;</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>      <span class=k>throw</span> <span class=k>new</span> <span class=nx>RetryScheduled</span><span class=p>(</span><span class=nx>nextState</span><span class=p>,</span> <span class=nx>delayMs</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=p>};</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=k>try</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>      <span class=k>await</span> <span class=k>this</span><span class=p>.</span><span class=nx>executor</span><span class=p>.</span><span class=nx>run</span><span class=p>(</span><span class=nx>job</span><span class=p>.</span><span class=nx>data</span><span class=p>,</span> <span class=nx>scheduleRetry</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span> <span class=k>catch</span> <span class=p>(</span><span class=nx>err</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>      <span class=k>if</span> <span class=p>(</span><span class=nx>err</span> <span class=k>instanceof</span> <span class=nx>RetryScheduled</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=k>this</span><span class=p>.</span><span class=nx>logger</span><span class=p>.</span><span class=nx>log</span><span class=p>(</span><span class=sb>`Job </span><span class=si>${</span><span class=nx>job</span><span class=p>.</span><span class=nx>id</span><span class=si>}</span><span class=sb> retry sau </span><span class=si>${</span><span class=nx>err</span><span class=p>.</span><span class=nx>delayMs</span><span class=si>}</span><span class=sb>ms, attempt </span><span class=si>${</span><span class=nx>err</span><span class=p>.</span><span class=nx>nextState</span><span class=p>.</span><span class=nx>attempt</span><span class=si>}</span><span class=sb>`</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>        <span class=k>await</span> <span class=nx>job</span><span class=p>.</span><span class=nx>update</span><span class=p>(</span><span class=nx>err</span><span class=p>.</span><span class=nx>nextState</span><span class=p>);</span> <span class=c1>// cùng job.id, chỉ cập nhật execution state
+</span></span></span><span class=line><span class=cl>        <span class=k>throw</span> <span class=nx>err</span><span class=p>;</span> <span class=c1>// Bull bắt lỗi, gọi backoffStrategies.custom(attemptsMade, err) để tính delay
+</span></span></span><span class=line><span class=cl>      <span class=p>}</span>
+</span></span><span class=line><span class=cl>      <span class=k>throw</span> <span class=nx>err</span><span class=p>;</span> <span class=c1>// lỗi thật -&gt; Bull vẫn retry theo cùng cấu hình attempts/backoff
+</span></span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-ts data-lang=ts><span class=line><span class=cl><span class=c1>// submit-job.controller.ts
+</span></span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>Controller</span><span class=p>,</span> <span class=nx>Post</span><span class=p>,</span> <span class=nx>Body</span> <span class=p>}</span> <span class=kr>from</span> <span class=s1>&#39;@nestjs/common&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>InjectQueue</span> <span class=p>}</span> <span class=kr>from</span> <span class=s1>&#39;@nestjs/bull&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>Queue</span> <span class=p>}</span> <span class=kr>from</span> <span class=s1>&#39;bull&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>JobPhase</span> <span class=p>}</span> <span class=kr>from</span> <span class=s1>&#39;./operation-executor.service&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kd>@Controller</span><span class=p>(</span><span class=s1>&#39;jobs&#39;</span><span class=p>)</span>
+</span></span><span class=line><span class=cl><span class=kr>export</span> <span class=kr>class</span> <span class=nx>SubmitJobController</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=kr>constructor</span><span class=p>(</span><span class=kd>@InjectQueue</span><span class=p>(</span><span class=s1>&#39;submit-job&#39;</span><span class=p>)</span> <span class=kr>private</span> <span class=kr>readonly</span> <span class=nx>queue</span>: <span class=kt>Queue</span><span class=p>)</span> <span class=p>{}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=kd>@Post</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>  <span class=kr>async</span> <span class=nx>create</span><span class=p>(</span><span class=kd>@Body</span><span class=p>()</span> <span class=nx>payload</span>: <span class=kt>Record</span><span class=p>&lt;</span><span class=nt>string</span><span class=p>,</span> <span class=na>unknown</span><span class=p>&gt;)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=c1>// Job bình thường: dùng timeoutMs mặc định của OperationExecutorService (5 phút).
+</span></span></span><span class=line><span class=cl>    <span class=kr>const</span> <span class=nx>job</span> <span class=o>=</span> <span class=k>await</span> <span class=k>this</span><span class=p>.</span><span class=nx>queue</span><span class=p>.</span><span class=nx>add</span><span class=p>({</span> <span class=nx>phase</span>: <span class=kt>JobPhase.START</span><span class=p>,</span> <span class=nx>payload</span> <span class=p>});</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=p>{</span> <span class=nx>jobId</span>: <span class=kt>job.id</span> <span class=p>};</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=kd>@Post</span><span class=p>(</span><span class=s1>&#39;long-running&#39;</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>  <span class=kr>async</span> <span class=nx>createLongRunning</span><span class=p>(</span><span class=kd>@Body</span><span class=p>()</span> <span class=nx>payload</span>: <span class=kt>Record</span><span class=p>&lt;</span><span class=nt>string</span><span class=p>,</span> <span class=na>unknown</span><span class=p>&gt;)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=c1>// Job không cần deadline tổng — ví dụ chờ con người phê duyệt thủ công,
+</span></span></span><span class=line><span class=cl>    <span class=c1>// có thể mất vài giờ tới vài ngày mà vẫn là hợp lệ, không phải &#34;treo&#34;.
+</span></span></span><span class=line><span class=cl>    <span class=kr>const</span> <span class=nx>job</span> <span class=o>=</span> <span class=k>await</span> <span class=k>this</span><span class=p>.</span><span class=nx>queue</span><span class=p>.</span><span class=nx>add</span><span class=p>({</span>
+</span></span><span class=line><span class=cl>      <span class=nx>phase</span>: <span class=kt>JobPhase.START</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>      <span class=nx>payload</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>      <span class=nx>timeoutMs</span>: <span class=kt>null</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=p>});</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=p>{</span> <span class=nx>jobId</span>: <span class=kt>job.id</span> <span class=p>};</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><p>Dùng chung <code>JobPhase</code> giữa controller và executor tránh gõ nhầm chuỗi <code>'START'</code> ở hai nơi khác nhau, và <code>switch</code> với <code>default: throw</code> giúp bắt lỗi sớm nếu <code>state.phase</code> bị hỏng do serialize/deserialize sai thay vì âm thầm không làm gì.</p><p>Lưu ý về cách retry: cùng một <code>job.id</code> được giữ nguyên xuyên suốt các lần thử. <code>OperationExecutorService</code> vẫn là nơi duy nhất tính jitter (<code>delayWithJitter</code>), nhưng thay vì tự thêm job mới, <code>RetryScheduled</code> được <code>throw</code> lên để Bull bắt và tự gọi <code>backoffStrategies.custom(attemptsMade, err)</code> — hàm này chỉ đơn giản đọc <code>err.delayMs</code> mà <code>Executor</code> đã tính sẵn, không tính lại. Nhờ vậy <code>attemptsMade</code> của Bull, <code>job.id</code>, và lịch sử retry trong Bull Board đều nhất quán, trong khi công thức backoff/jitter vẫn hoàn toàn do <code>OperationExecutorService</code> quyết định — Processor không biết gì về công thức đó, chỉ chuyển tiếp con số.</p><p>Về deadline tổng (<code>timeoutMs</code>): mặc định mọi job đều có giới hạn (5 phút, hoặc chỉnh khi khởi tạo <code>OperationExecutorService</code>), nhưng vì <code>run()</code> đọc <code>timeoutMs</code> từ chính <code>state</code> trước khi rơi về mặc định, <strong>từng job riêng lẻ</strong> có thể khai báo <code>timeoutMs: null</code> ngay lúc tạo để tắt hẳn deadline tổng cho job đó — phù hợp với các job có bản chất &ldquo;chờ vô thời hạn&rdquo; (chờ người phê duyệt, chờ một sự kiện bên ngoài không có SLA cố định) mà không cần đổi cấu hình của toàn bộ service. <code>callTimeoutMs</code> (giới hạn từng lệnh gọi <code>submit()</code>/<code>check()</code>) thì luôn bật, không tắt được — dù job không có deadline tổng, một lệnh gọi ra ngoài vẫn không được phép treo vô thời hạn.</p><p>Một điểm cần cấu hình đúng: nếu job có <code>timeoutMs</code>, <code>attempts</code> trong <code>defaultJobOptions</code> phải đủ lớn (ví dụ 20) để không hết lượt thử trước khi <code>timeoutMs</code> kích hoạt. Với job <code>timeoutMs: null</code>, <code>attempts</code> gần như là giới hạn thực sự duy nhất ở tầng số-lần-thử — nên cân nhắc đặt <code>attempts</code> rất lớn hoặc dùng một cơ chế hủy job thủ công (ví dụ endpoint hủy job theo <code>jobId</code>) thay vì trông chờ nó tự dừng.</p><h3 id=jobs-without-a-total-timeout--per-job-opt-out-not-global-config>Jobs Without a Total Timeout — per-job opt-out, not global config</h3><p><code>timeoutMs</code> mặc định bảo vệ mọi job khỏi &ldquo;kéo dài vĩnh viễn&rdquo; theo nghĩa business logic (mãi ở <code>CHECK</code>, mãi <code>PENDING</code>). Nhưng không phải job nào cũng nên có giới hạn này — có những job <strong>bản chất là dài hơi</strong>: chờ con người phê duyệt, chờ một webhook không có SLA, chờ một tiến trình offline khác hoàn tất. Áp cùng một <code>timeoutMs</code> 5 phút hay 1 giờ cho các job này sẽ khiến chúng bị <code>onFailure</code> gọi oan trong khi job vẫn đang tiến triển bình thường.</p><p>Ba nguyên tắc khi thiết kế phần này:</p><ul><li><strong>Không tắt <code>timeoutMs</code> bằng cách sửa constructor của service</strong> — vì <code>OperationExecutorService</code> là provider dùng chung cho mọi job đi qua nó; đổi giá trị mặc định nghĩa là đổi cho tất cả.</li><li><strong>Cho phép ghi đè theo từng job</strong>, vì quyết định &ldquo;job này có cần timeout tổng hay không&rdquo; là một thuộc tính của bản thân job (biết được ngay lúc tạo), không phải của service.</li><li><strong>Không đụng đến <code>callTimeoutMs</code></strong> — dù job không có deadline tổng, một lệnh gọi <code>submit()</code>/<code>check()</code> treo vô thời hạn vẫn luôn là lỗi, nên giới hạn từng lệnh gọi giữ nguyên, không cho tắt.</li></ul><p><code>run()</code> (đã cập nhật ở phần 03) đọc <code>timeoutMs</code> ưu tiên từ <code>state</code>, rơi về mặc định của service nếu job không khai báo:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-ts data-lang=ts><span class=line><span class=cl><span class=kr>const</span> <span class=nx>timeoutMs</span> <span class=o>=</span> <span class=s1>&#39;timeoutMs&#39;</span> <span class=k>in</span> <span class=nx>state</span> <span class=o>?</span> <span class=nx>state.timeoutMs</span> : <span class=kt>this.defaultTimeoutMs</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=k>if</span> <span class=p>(</span><span class=nx>timeoutMs</span> <span class=o>!=</span> <span class=kc>null</span> <span class=o>&amp;&amp;</span> <span class=nb>Date</span><span class=p>.</span><span class=nx>now</span><span class=p>()</span> <span class=o>-</span> <span class=nx>startedAt</span> <span class=o>&gt;</span> <span class=nx>timeoutMs</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=k>await</span> <span class=k>this</span><span class=p>.</span><span class=nx>operation</span><span class=p>.</span><span class=nx>onFailure</span><span class=p>(</span><span class=k>new</span> <span class=nb>Error</span><span class=p>(</span><span class=s1>&#39;timeout&#39;</span><span class=p>),</span> <span class=nx>state</span> <span class=kr>as</span> <span class=kt>any</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>  <span class=k>return</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><p>Job muốn không có deadline tổng chỉ cần khai báo <code>timeoutMs: null</code> ngay khi tạo (xem <code>SubmitJobController.createLongRunning</code> ở phần 03) — không cần đổi gì ở <code>OperationExecutorService</code>, <code>SubmitJobProcessor</code>, hay cấu hình Bull.</p><p>Với những job dạng này, giới hạn thực sự còn lại là <code>attempts</code> của Bull và cơ chế <code>stalled</code> (<code>lockDuration</code>/<code>stalledInterval</code>/<code>maxStalledCount</code>) đã cấu hình ở phần 03 — hai cơ chế đó vẫn hoạt động bình thường vì chúng nằm ở tầng hạ tầng (Queue Adapter), độc lập hoàn toàn với <code>timeoutMs</code> ở tầng nghiệp vụ. Nếu cần dừng một job dạng &ldquo;chờ vô thời hạn&rdquo; theo yêu cầu (ví dụ người dùng huỷ), nên làm qua một endpoint riêng gọi <code>queue.getJob(jobId)</code> rồi <code>job.remove()</code>/<code>job.discard()</code>, thay vì cố nhồi thêm một điều kiện dừng vào <code>OperationExecutorService</code>.</p><h2 id=conclusion>Conclusion</h2><p>Kiến trúc 3 layer tách nghiệp vụ, quy tắc retry, và cơ chế hàng đợi thành 3 đơn vị độc lập, phụ thuộc một chiều — đúng vấn đề đặt ra ở đầu bài.</p><p>Lợi ích chính:</p><ul><li><strong>Tách biệt rõ ràng</strong>: <code>BusinessOperationService</code>/<code>OperationExecutorService</code> không phụ thuộc Bull, dễ đọc và dễ thay hàng đợi (chỉ <code>SubmitJobProcessor</code> bị ảnh hưởng nếu đổi sang BullMQ, SQS&mldr;).</li><li><strong><code>scheduleRetry</code> là ranh giới control-flow tường minh</strong>: tách &ldquo;khi nào retry&rdquo; khỏi &ldquo;retry bằng cơ chế nào&rdquo;, đồng thời giữ nguyên <code>job.id</code> xuyên suốt nhờ <code>backoffStrategies.custom</code>.</li><li><strong>Ba layer phòng vệ độc lập</strong> chống job treo vĩnh viễn: <code>attempts</code>/backoff, <code>callTimeoutMs</code>/<code>timeoutMs</code>, và cơ chế <code>stalled</code> của Bull — mỗi layer bắt một loại lỗi khác nhau.</li><li><strong><code>timeoutMs</code> tùy chọn theo từng job</strong>: job &ldquo;chờ vô thời hạn&rdquo; chỉ cần khai báo <code>timeoutMs: null</code>, không ảnh hưởng job khác.</li></ul><p>Đánh đổi:</p><ul><li>Thêm 2 layer trừu tượng là boilerplate thừa với job quá đơn giản.</li><li><code>attempts</code>, <code>timeoutMs</code>, <code>callTimeoutMs</code>, <code>lockDuration</code> là các giới hạn độc lập nhưng liên quan — cần cấu hình nhất quán (ví dụ <code>lockDuration</code> > <code>callTimeoutMs</code>, <code>attempts</code> đủ lớn để không hết lượt trước khi <code>timeoutMs</code> kích hoạt).</li><li><code>backoffStrategies.custom</code> là API riêng của Bull — đổi sang BullMQ cần viết lại phần này, nhưng chỉ nằm gọn trong Queue Adapter.</li></ul><p>Kiến trúc này đáng giá nhất khi nghiệp vụ đủ phức tạp để cần tách bạch rõ ràng, hoặc khi có khả năng đổi hạ tầng hàng đợi trong tương lai.</p></section><footer class=article-footer><section class=article-tags><a href=/tags/nestjs/>Nestjs</a>
+<a href=/tags/bull/>Bull</a>
+<a href=/tags/queue/>Queue</a>
+<a href=/tags/retry/>Retry</a>
+<a href=/tags/architecture/>Architecture</a></section><section class=article-copyright><svg class="icon icon-tabler icon-tabler-copyright" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><path d="M14.5 9a3.5 4 0 100 6"/></svg>
+<span>Licensed under CC BY-NC-SA 4.0</span></section></footer><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css integrity=sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV crossorigin=anonymous><script src=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js integrity=sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8 crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js integrity=sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05 crossorigin=anonymous defer></script><script>window.addEventListener("DOMContentLoaded",()=>{const e=[".main-article",".widget--toc"];e.forEach(e=>{const t=document.querySelector(e);t&&renderMathInElement(t,{delimiters:[{left:"$$",right:"$$",display:!0},{left:"$",right:"$",display:!1},{left:"\\(",right:"\\)",display:!1},{left:"\\[",right:"\\]",display:!0}],ignoredClasses:["gist"]})})})</script></article><aside class=related-content--wrapper><h2 class=section-title>Related content</h2><div class=related-content><div class="flex article-list--tile"><article><a href=/posts/standardizing-configuration-management-from-scattered-env-variables-to-controlled-lazy-remote-config/><div class=article-details><h2 class=article-title>Standardizing Configuration Management: From Scattered ENV Variables to Controlled Lazy Remote Config</h2></div></a></article><article><a href=/posts/database-centric-architecture/><div class=article-details><h2 class=article-title>Database-Centric Architecture</h2></div></a></article><article><a href=/posts/sum-type-and-pattern-matching/><div class=article-details><h2 class=article-title>Sum Type and Pattern Matching</h2></div></a></article><article><a href=/posts/standardizing-adapter-lifecycle-in-frameworks-with-the-template-method-pattern/><div class=article-details><h2 class=article-title>Standardizing Adapter Lifecycle in Frameworks with the Template Method Pattern</h2></div></a></article><article><a href=/posts/comparing-decorator-pattern-and-proxy-pattern-in-programming/><div class=article-details><h2 class=article-title>Comparing Decorator Pattern and Proxy Pattern in Programming</h2></div></a></article></div></div></aside><div class=disqus-container></div><style>.disqus-container{background-color:var(--card-background);border-radius:var(--card-border-radius);box-shadow:var(--shadow-l1);padding:var(--card-padding)}</style><script>window.addEventListener("onColorSchemeChange",e=>{typeof DISQUS=="object"&&DISQUS.reset({reload:!0})})</script><footer class=site-footer><section class=copyright>&copy;
+2026 phongthien</section><section class=powerby>Built with <a href=https://gohugo.io/ target=_blank rel=noopener>Hugo</a><br>Theme <b><a href=https://github.com/CaiJimmy/hugo-theme-stack target=_blank rel=noopener data-version=3.33.0>Stack</a></b> designed by <a href=https://jimmycai.com target=_blank rel=noopener>Jimmy</a></section></footer><div class=pswp tabindex=-1 role=dialog aria-hidden=true><div class=pswp__bg></div><div class=pswp__scroll-wrap><div class=pswp__container><div class=pswp__item></div><div class=pswp__item></div><div class=pswp__item></div></div><div class="pswp__ui pswp__ui--hidden"><div class=pswp__top-bar><div class=pswp__counter></div><button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+<button class="pswp__button pswp__button--share" title=Share></button>
+<button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+<button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button><div class=pswp__preloader><div class=pswp__preloader__icn><div class=pswp__preloader__cut><div class=pswp__preloader__donut></div></div></div></div></div><div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap"><div class=pswp__share-tooltip></div></div><button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+</button>
+<button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)"></button><div class=pswp__caption><div class=pswp__caption__center></div></div></div></div></div><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo=" crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU=" crossorigin=anonymous defer></script><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css crossorigin=anonymous><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css crossorigin=anonymous></main></div><script src=https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z+KMkF24hUW8WePSA9HM=" crossorigin=anonymous></script><script type=text/javascript src=/ts/main.c922af694cc257bf1ecc41c0dd7b0430f9114ec280ccf67cd2c6ad55f5316c4e.js defer></script><script>(function(){const e=document.createElement("link");e.href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap",e.type="text/css",e.rel="stylesheet",document.head.appendChild(e)})()</script></body></html>

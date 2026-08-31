@@ -1,0 +1,513 @@
+<!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><meta name=description content="SPA Cache Strategy & ChunkLoadError Prevention Vấn đề 1.1 Bối cảnh & Mục tiêu Đảm bảo người dùng luôn nhận được phiên bản giao diện mới nhất ngay sau mỗi lần triển khai (deploy). Tối ưu băng thông và giảm tải cho máy chủ/CDN thông qua cơ chế revalidation (304 Not Modified). Tận dụng cache dài hạn cho static assets (JS/CSS/Image) mà vẫn đảm bảo tính nhất quán giữa index.html và các bundle được tham chiếu. Không để lỗi tải chunk xảy ra ngay cả với những tab đã mở sẵn từ trước khi deploy — đây là use case dễ bị bỏ sót nếu chỉ nghĩ tới cache header. Phạm vi áp dụng:\n"><title>SPA Cache Strategy & ChunkLoadError Prevention</title><link rel=canonical href=https://phongthien99.github.io/posts/spa-cache-strategy-chunkloaderror-prevention/><link rel=stylesheet href=/scss/style.min.8d6880436f99fcfb5a78cf2fd6035ad960dd796615463369572246440858aff1.css><meta property='og:title' content="SPA Cache Strategy & ChunkLoadError Prevention"><meta property='og:description' content="SPA Cache Strategy & ChunkLoadError Prevention Vấn đề 1.1 Bối cảnh & Mục tiêu Đảm bảo người dùng luôn nhận được phiên bản giao diện mới nhất ngay sau mỗi lần triển khai (deploy). Tối ưu băng thông và giảm tải cho máy chủ/CDN thông qua cơ chế revalidation (304 Not Modified). Tận dụng cache dài hạn cho static assets (JS/CSS/Image) mà vẫn đảm bảo tính nhất quán giữa index.html và các bundle được tham chiếu. Không để lỗi tải chunk xảy ra ngay cả với những tab đã mở sẵn từ trước khi deploy — đây là use case dễ bị bỏ sót nếu chỉ nghĩ tới cache header. Phạm vi áp dụng:\n"><meta property='og:url' content='https://phongthien99.github.io/posts/spa-cache-strategy-chunkloaderror-prevention/'><meta property='og:site_name' content='phongthien'><meta property='og:type' content='article'><meta property='article:section' content='Post'><meta property='article:tag' content='FE'><meta property='article:tag' content='devops'><meta property='article:published_time' content='2026-08-15T00:00:00+00:00'><meta property='article:modified_time' content='2026-08-15T00:00:00+00:00'><meta name=twitter:title content="SPA Cache Strategy & ChunkLoadError Prevention"><meta name=twitter:description content="SPA Cache Strategy & ChunkLoadError Prevention Vấn đề 1.1 Bối cảnh & Mục tiêu Đảm bảo người dùng luôn nhận được phiên bản giao diện mới nhất ngay sau mỗi lần triển khai (deploy). Tối ưu băng thông và giảm tải cho máy chủ/CDN thông qua cơ chế revalidation (304 Not Modified). Tận dụng cache dài hạn cho static assets (JS/CSS/Image) mà vẫn đảm bảo tính nhất quán giữa index.html và các bundle được tham chiếu. Không để lỗi tải chunk xảy ra ngay cả với những tab đã mở sẵn từ trước khi deploy — đây là use case dễ bị bỏ sót nếu chỉ nghĩ tới cache header. Phạm vi áp dụng:\n"><link rel="shortcut icon" href=/favicon.png><script src=https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js></script><script>mermaid.initialize({startOnLoad:!0})</script></head><body class=article-page><script>(function(){const e="StackColorScheme";localStorage.getItem(e)||localStorage.setItem(e,"auto")})()</script><script>(function(){const t="StackColorScheme",e=localStorage.getItem(t),n=window.matchMedia("(prefers-color-scheme: dark)").matches===!0;e=="dark"||e==="auto"&&n?document.documentElement.dataset.scheme="dark":document.documentElement.dataset.scheme="light"})()</script><div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky"><button class="hamburger hamburger--spin" type=button id=toggle-menu aria-label="Toggle Menu">
+<span class=hamburger-box><span class=hamburger-inner></span></span></button><header><figure class=site-avatar><a href=/><img src=/img/avatar_hu_7ee69f593e8680d3.jpg width=300 height=300 class=site-logo loading=lazy alt=Avatar>
+</a><span class=emoji>🏅</span></figure><div class=site-meta><h1 class=site-name><a href=/>phongthien</a></h1><h2 class=site-description>Software Engineer</h2></div></header><ol class=menu-social><li><a href=https://github.com/phongthien99 target=_blank title=GitHub rel=me><svg class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6.0 00-1.3-3.2 4.2 4.2.0 00-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3.0 00-6.2.0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2.0 00-.1 3.2A4.6 4.6.0 004 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg></a></li><li><a href=https://twitter.com target=_blank title=linkedin rel=me><svg class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M10 14a3.5 3.5.0 005 0l4-4a3.5 3.5.0 00-5-5l-.5.5"/><path d="M14 10a3.5 3.5.0 00-5 0l-4 4a3.5 3.5.0 005 5l.5-.5"/></svg></a></li></ol><ol class=menu id=main-menu><li><a href=/><svg class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><polyline points="5 12 3 12 12 3 21 12 19 12"/><path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/><path d="M9 21v-6a2 2 0 012-2h2a2 2 0 012 2v6"/></svg>
+<span>Home</span></a></li><li><a href=/archives/><svg class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><rect x="3" y="4" width="18" height="4" rx="2"/><path d="M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+<span>Archives</span></a></li><li><a href=/search/><svg class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="10" cy="10" r="7"/><line x1="21" y1="21" x2="15" y2="15"/></svg>
+<span>Search</span></a></li><li><a href=/about-me/><svg class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="7" r="4"/><path d="M6 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/></svg>
+<span>About me</span></a></li><li class=menu-bottom-section><ol class=menu><li id=dark-mode-toggle><svg class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="8" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<svg class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="16" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<span>Dark Mode</span></li></ol></li></ol></aside><aside class="sidebar right-sidebar sticky"><section class="widget archives"><div class=widget-icon><svg class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><line x1="5" y1="9" x2="19" y2="9"/><line x1="5" y1="15" x2="19" y2="15"/><line x1="11" y1="4" x2="7" y2="20"/><line x1="17" y1="4" x2="13" y2="20"/></svg></div><h2 class="widget-title section-title">Table of contents</h2><div class=widget--toc><nav id=TableOfContents><ol><li><a href=#vấn-đề>Vấn đề</a><ol><li><a href=#11-bối-cảnh--mục-tiêu>1.1 Bối cảnh & Mục tiêu</a></li><li><a href=#12-hai-use-case-cần-xử-lý>1.2 Hai use case cần xử lý</a></li></ol></li><li><a href=#giải-pháp>Giải pháp</a><ol><li><a href=#21-giải-pháp-cho-use-case-1-chiến-lược-cache-2-tầng>2.1 Giải pháp cho Use case 1: chiến lược cache 2 tầng</a><ol><li><a href=#cơ-chế-revalidation-cho-indexhtml>Cơ chế Revalidation cho <code>index.html</code></a></li><li><a href=#chiến-lược-cache-cho-static-assets>Chiến lược cache cho Static Assets</a></li><li><a href=#quy-trình-triển-khai-deployment-flow>Quy trình triển khai (Deployment Flow)</a></li><li><a href=#bảng-tóm-tắt-cấu-hình>Bảng tóm tắt cấu hình</a></li><li><a href=#hiện-thực-hoá-nginx-cdn--nginx-origin-bằng-docker>Hiện thực hoá: Nginx CDN + Nginx Origin bằng Docker</a></li></ol></li><li><a href=#22-giải-pháp-cho-use-case-2-retry-once-then-reload-phía-client>2.2 Giải pháp cho Use case 2: retry-once-then-reload phía client</a></li></ol></li><li><a href=#thực-nghiệm>Thực nghiệm</a><ol><li><a href=#31-thực-nghiệm-use-case-1-docker-nginx-cdn--nginx-origin>3.1 Thực nghiệm Use case 1: Docker (Nginx CDN + Nginx Origin)</a></li><li><a href=#32-thực-nghiệm-use-case-2-playwright--chromium-headless>3.2 Thực nghiệm Use case 2: Playwright + Chromium headless</a></li></ol></li><li><a href=#kết-luận>Kết luận</a></li></ol></nav></div></section></aside><main class="main full-width"><article class=main-article><header class=article-header><div class=article-details><header class=article-category><a href=/categories/devops/>DevOps</a></header><div class=article-title-wrapper><h2 class=article-title><a href=/posts/spa-cache-strategy-chunkloaderror-prevention/>SPA Cache Strategy & ChunkLoadError Prevention</a></h2></div><footer class=article-time><div><svg class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M11.795 21H5a2 2 0 01-2-2V7a2 2 0 012-2h12a2 2 0 012 2v4"/><circle cx="18" cy="18" r="4"/><path d="M15 3v4"/><path d="M7 3v4"/><path d="M3 11h16"/><path d="M18 16.496V18l1 1"/></svg>
+<time class=article-time--published datetime=2026-08-15T00:00:00Z>Aug 15, 2026</time></div><div><svg class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+<time class=article-time--reading>18 minute read</time></div></footer></div></header><section class=article-content><h1 id=spa-cache-strategy--chunkloaderror-prevention>SPA Cache Strategy & ChunkLoadError Prevention</h1><h2 id=vấn-đề>Vấn đề</h2><h3 id=11-bối-cảnh--mục-tiêu>1.1 Bối cảnh & Mục tiêu</h3><ul><li>Đảm bảo người dùng luôn nhận được phiên bản giao diện mới nhất ngay sau mỗi lần triển khai (deploy).</li><li>Tối ưu băng thông và giảm tải cho máy chủ/CDN thông qua cơ chế revalidation (304 Not Modified).</li><li>Tận dụng cache dài hạn cho static assets (JS/CSS/Image) mà vẫn đảm bảo tính nhất quán giữa <code>index.html</code> và các bundle được tham chiếu.</li><li>Không để lỗi tải chunk xảy ra ngay cả với những tab đã mở sẵn từ trước khi deploy — đây là use case dễ bị bỏ sót nếu chỉ nghĩ tới cache header.</li></ul><p><strong>Phạm vi áp dụng:</strong></p><ul><li>File <code>index.html</code> (entry point của SPA)</li><li>Các framework: React, Vue, Angular (và các SPA framework khác dùng cơ chế build hash tương tự)</li><li>Môi trường triển khai: Nginx, CDN (CloudFront, Cloudflare, Fastly&mldr;), Object Storage (S3, GCS&mldr;)</li></ul><p>Có <strong>hai use case cụ thể</strong> cần xử lý, và chúng đòi hỏi hai cơ chế phòng thủ hoàn toàn khác nhau — trình bày riêng dưới đây trước khi đi vào giải pháp ở Phần 2.</p><h3 id=12-hai-use-case-cần-xử-lý>1.2 Hai use case cần xử lý</h3><div class=table-wrapper><table><thead><tr><th></th><th>Use case 1 — <code>index.html</code> bị cache dài hạn</th><th>Use case 2 — Tab đã mở từ trước khi deploy</th></tr></thead><tbody><tr><td>Kịch bản</td><td>Trình duyệt/CDN cache <code>index.html</code> quá lâu; sau deploy, <code>index.html</code> cũ vẫn trỏ tới asset (JS/CSS có hash) đã bị xoá khỏi server</td><td>Tab chạy SPA liên tục qua một lần deploy (không reload), rồi mới lazy-load (<code>React.lazy</code>/<code>import()</code>) một chunk chưa từng tải trong session</td></tr><tr><td>Request phát sinh khi nào</td><td>Trình duyệt tự gửi lại mỗi lần navigate/reload</td><td>Chỉ khi user thao tác tới đúng phần code chưa tải — URL chunk đã hard-code sẵn trong bundle cũ đang chạy trong bộ nhớ</td></tr><tr><td>Có ETag để revalidate không</td><td>Có</td><td>Không — chunk không còn tồn tại, không có gì để so sánh</td></tr><tr><td>Hậu quả</td><td><code>ChunkLoadError</code>, <code>404</code>, giao diện không cập nhật</td><td><code>Failed to fetch dynamically imported module</code> / <code>ChunkLoadError</code>, màn hình trắng nếu không có error boundary</td></tr></tbody></table></div><p>Hai use case này có cơ chế lỗi khác nhau hoàn toàn — một bên là vấn đề cache ở tầng HTTP, một bên là URL cứng trong JS đang chạy — nên không thể gộp chung một cách xử lý.</p><hr><h2 id=giải-pháp>Giải pháp</h2><h3 id=21-giải-pháp-cho-use-case-1-chiến-lược-cache-2-tầng>2.1 Giải pháp cho Use case 1: chiến lược cache 2 tầng</h3><p>Áp dụng <strong>hai chiến lược cache khác nhau</strong> cho hai nhóm tài nguyên:</p><div class=table-wrapper><table><thead><tr><th>Thành phần</th><th>Cache-Control</th><th>Lý do</th></tr></thead><tbody><tr><td><code>index.html</code></td><td><code>no-cache, must-revalidate</code></td><td>Luôn kiểm tra lại với server trước khi dùng cache, đảm bảo không bao giờ dùng bản cũ mà không xác thực</td></tr><tr><td>JS/CSS có hash trong tên file</td><td><code>public, max-age=31536000, immutable</code></td><td>URL thay đổi theo hash → có thể cache &ldquo;vĩnh viễn&rdquo; mà không lo xung đột phiên bản</td></tr><tr><td>Images có hash</td><td><code>public, max-age=31536000, immutable</code></td><td>Tương tự JS/CSS</td></tr><tr><td>API response</td><td>Theo nghiệp vụ cụ thể</td><td>Không thuộc phạm vi tài liệu này</td></tr></tbody></table></div><blockquote><p><strong>Lưu ý quan trọng:</strong> <code>no-cache</code> <strong>không có nghĩa là không cache</strong>. Theo đúng ngữ nghĩa HTTP, nó có nghĩa là trình duyệt/cache vẫn được phép lưu response nhưng <strong>bắt buộc phải revalidate</strong> (gửi kèm <code>If-None-Match</code>) với server trước khi sử dụng. Phần 3.1 sẽ chỉ ra một cache thực tế (Nginx <code>proxy_cache</code>) không tuân theo đúng ngữ nghĩa này — điều đáng biết trước khi tin tưởng tuyệt đối vào lý thuyết.</p></blockquote><h4 id=cơ-chế-revalidation-cho-indexhtml>Cơ chế Revalidation cho <code>index.html</code></h4><p>Header phản hồi chuẩn:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-http data-lang=http><span class=line><span class=cl><span class=err>Cache-Control: no-cache, must-revalidate
+</span></span></span><span class=line><span class=cl><span class=err>ETag: &#34;release-20260616-001&#34;
+</span></span></span></code></pre></td></tr></table></div></div><p><strong>Bước 1 — Truy cập lần đầu:</strong></p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-http data-lang=http><span class=line><span class=cl><span class=kr>HTTP</span><span class=o>/</span><span class=m>1.1</span> <span class=m>200</span> <span class=ne>OK</span>
+</span></span><span class=line><span class=cl><span class=n>Cache-Control</span><span class=o>:</span> <span class=l>no-cache, must-revalidate</span>
+</span></span><span class=line><span class=cl><span class=n>ETag</span><span class=o>:</span> <span class=l>&#34;release-20260616-001&#34;</span>
+</span></span></code></pre></td></tr></table></div></div><p>Trình duyệt lưu <code>index.html</code> vào cache cùng với ETag.</p><p><strong>Bước 2 — Các lần truy cập tiếp theo</strong>, trình duyệt tự động gửi:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-http data-lang=http><span class=line><span class=cl><span class=nf>GET</span> <span class=nn>/index.html</span> <span class=kr>HTTP</span><span class=o>/</span><span class=m>1.1</span>
+</span></span><span class=line><span class=cl><span class=n>If-None-Match</span><span class=o>:</span> <span class=l>&#34;release-20260616-001&#34;</span>
+</span></span></code></pre></td></tr></table></div></div><p><strong>Bước 3a — Nếu nội dung chưa đổi:</strong></p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-http data-lang=http><span class=line><span class=cl><span class=kr>HTTP</span><span class=o>/</span><span class=m>1.1</span> <span class=m>304</span> <span class=ne>Not Modified</span>
+</span></span></code></pre></td></tr></table></div></div><p>→ Trình duyệt dùng lại bản cache cục bộ, <strong>không tải lại body</strong>, tiết kiệm băng thông.</p><p><strong>Bước 3b — Nếu đã có bản deploy mới:</strong></p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-http data-lang=http><span class=line><span class=cl><span class=kr>HTTP</span><span class=o>/</span><span class=m>1.1</span> <span class=m>200</span> <span class=ne>OK</span>
+</span></span><span class=line><span class=cl><span class=n>ETag</span><span class=o>:</span> <span class=l>&#34;release-20260616-002&#34;</span>
+</span></span></code></pre></td></tr></table></div></div><p>→ Trình duyệt tải <code>index.html</code> mới, và do đó luôn trỏ tới các asset đúng với bản build mới nhất.</p><h4 id=chiến-lược-cache-cho-static-assets>Chiến lược cache cho Static Assets</h4><p>Static assets bắt buộc phải được <strong>build với content-hash trong tên file</strong>:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback><span class=line><span class=cl>main.a1b2c3.js
+</span></span><span class=line><span class=cl>vendor.x7y8z9.js
+</span></span><span class=line><span class=cl>style.d4e5f6.css
+</span></span></code></pre></td></tr></table></div></div><p>Cấu hình cache:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-http data-lang=http><span class=line><span class=cl><span class=err>Cache-Control: public, max-age=31536000, immutable
+</span></span></span></code></pre></td></tr></table></div></div><p>Vì mỗi lần nội dung file thay đổi, hash trong tên file cũng thay đổi → URL mới hoàn toàn → không xảy ra xung đột giữa cache cũ và bản mới. <code>immutable</code> báo cho trình duyệt biết không cần revalidate lại trong suốt thời gian sống của cache.</p><h4 id=quy-trình-triển-khai-deployment-flow>Quy trình triển khai (Deployment Flow)</h4><p>Trong thực tế, <code>index.html</code> và assets hầu như luôn được deploy <strong>cùng một cục</strong> — một build artifact duy nhất (một Docker image, một lần <code>aws s3 sync</code> cả thư mục <code>dist/</code>, một bản build CI/CD) — chứ không tách thành các bước thủ công &ldquo;upload assets trước, đợi xong mới update index.html&rdquo;.</p><pre class=mermaid>
+  flowchart LR
+    A[&#34;Build&lt;br/&gt;npm run build&#34;] --&gt; B[&#34;dist/&lt;br/&gt;index.html + assets/*.hash.*&#34;]
+    B --&gt; C[&#34;Deploy&lt;br/&gt;1 artifact duy nhất&#34;]
+    C --&gt; D[&#34;Origin &amp; CDN&lt;br/&gt;cập nhật đồng thời&#34;]
+</pre><h4 id=bảng-tóm-tắt-cấu-hình>Bảng tóm tắt cấu hình</h4><div class=table-wrapper><table><thead><tr><th>Thành phần</th><th>Cache-Control</th><th>Ghi chú</th></tr></thead><tbody><tr><td><code>index.html</code></td><td><code>no-cache, must-revalidate</code></td><td>Kèm ETag tự động sinh theo release</td></tr><tr><td>JS/CSS có hash</td><td><code>public, max-age=31536000, immutable</code></td><td>Hash đổi → URL đổi → an toàn cache dài hạn</td></tr><tr><td>Images có hash</td><td><code>public, max-age=31536000, immutable</code></td><td>Tương tự JS/CSS</td></tr><tr><td>API response</td><td>Theo nghiệp vụ</td><td>Thường <code>no-store</code> hoặc cache ngắn tùy use case</td></tr></tbody></table></div><h4 id=hiện-thực-hoá-nginx-cdn--nginx-origin-bằng-docker>Hiện thực hoá: Nginx CDN + Nginx Origin bằng Docker</h4><p>Đây là cách hiện thực hoá chiến lược trên bằng một mô hình 2 container:</p><pre class=mermaid>
+  flowchart LR
+    Client([&#34;Client&#34;]) --&gt;|&#34;:8080&#34;| CDN[&#34;Nginx CDN&lt;br/&gt;(edge)&#34;]
+    CDN --&gt;|&#34;:80&#34;| Origin[&#34;Nginx Origin&lt;br/&gt;phục vụ React build&#34;]
+    CDN -.-&gt; Cache[(&#34;proxy_cache&lt;br/&gt;mô phỏng hành vi CDN&#34;)]
+</pre><ul><li><strong>Origin</strong>: một image Docker build React app (Vite) bằng multi-stage build, Nginx origin chịu trách nhiệm set đúng <code>Cache-Control</code>/<code>ETag</code> cho từng loại file — chính là cấu hình vừa trình bày ở trên.</li><li><strong>CDN (edge)</strong>: một Nginx khác, dùng <code>proxy_cache</code> để cache lại response từ origin — mô phỏng hành vi CDN thật (CloudFront, Cloudflare): cache theo chính sách được cấu hình, tự lưu cache ở edge, trả <code>X-Cache-Status</code> để debug.</li></ul><p><strong>Cấu trúc thư mục</strong></p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback><span class=line><span class=cl>spa-caching/
+</span></span><span class=line><span class=cl>├── docker-compose.yml
+</span></span><span class=line><span class=cl>├── origin/
+</span></span><span class=line><span class=cl>│   ├── Dockerfile
+</span></span><span class=line><span class=cl>│   └── nginx.origin.conf
+</span></span><span class=line><span class=cl>├── cdn/
+</span></span><span class=line><span class=cl>│   └── nginx.cdn.conf
+</span></span><span class=line><span class=cl>└── app/                # React app (Vite)
+</span></span><span class=line><span class=cl>    ├── src/
+</span></span><span class=line><span class=cl>    ├── package.json
+</span></span><span class=line><span class=cl>    └── ...
+</span></span></code></pre></td></tr></table></div></div><p><strong>Origin: Docker image build React + Nginx</strong></p><p><code>origin/Dockerfile</code></p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-dockerfile data-lang=dockerfile><span class=line><span class=cl><span class=c># Stage 1: build React app</span><span class=err>
+</span></span></span><span class=line><span class=cl><span class=k>FROM</span><span class=w> </span><span class=s>node:20-alpine</span><span class=w> </span><span class=k>AS</span><span class=w> </span><span class=s>build</span><span class=err>
+</span></span></span><span class=line><span class=cl><span class=k>WORKDIR</span><span class=w> </span><span class=s>/app</span><span class=err>
+</span></span></span><span class=line><span class=cl><span class=k>COPY</span> app/package*.json ./<span class=err>
+</span></span></span><span class=line><span class=cl><span class=k>RUN</span> npm install<span class=err>
+</span></span></span><span class=line><span class=cl><span class=k>COPY</span> app/ .<span class=err>
+</span></span></span><span class=line><span class=cl><span class=k>RUN</span> npm run build     <span class=c1># output ra /app/dist, cac bundle co hash: main.[hash].js...</span><span class=err>
+</span></span></span><span class=line><span class=cl><span class=err>
+</span></span></span><span class=line><span class=cl><span class=c># Stage 2: phuc vu bang Nginx</span><span class=err>
+</span></span></span><span class=line><span class=cl><span class=k>FROM</span><span class=w> </span><span class=s>nginx:1.27-alpine</span><span class=w> </span><span class=k>AS</span><span class=w> </span><span class=s>origin</span><span class=err>
+</span></span></span><span class=line><span class=cl><span class=k>COPY</span> --from<span class=o>=</span>build /app/dist /usr/share/nginx/html<span class=err>
+</span></span></span><span class=line><span class=cl><span class=k>COPY</span> origin/nginx.origin.conf /etc/nginx/conf.d/default.conf<span class=err>
+</span></span></span><span class=line><span class=cl><span class=k>EXPOSE</span><span class=w> </span><span class=s>80</span><span class=err>
+</span></span></span></code></pre></td></tr></table></div></div><blockquote><p>Dùng <code>npm install</code> thay vì <code>npm ci</code> vì repo demo chưa commit <code>package-lock.json</code>. Ở production nên commit lockfile và dùng <code>npm ci</code> để build reproducible.</p></blockquote><p><code>origin/nginx.origin.conf</code> — áp dụng đúng chính sách cache đã bàn ở trên:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-nginx data-lang=nginx><span class=line><span class=cl><span class=k>server</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=kn>listen</span> <span class=mi>80</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=kn>server_name</span> <span class=s>origin</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=kn>root</span> <span class=s>/usr/share/nginx/html</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=c1># index.html: luon phai revalidate, khong cache dai han
+</span></span></span><span class=line><span class=cl>    <span class=kn>location</span> <span class=p>=</span> <span class=s>/index.html</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=kn>add_header</span> <span class=s>Cache-Control</span> <span class=s>&#34;no-cache,</span> <span class=s>must-revalidate&#34;</span> <span class=s>always</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>        <span class=kn>etag</span> <span class=no>on</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>        <span class=kn>try_files</span> <span class=nv>$uri</span> <span class=p>=</span><span class=mi>404</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=c1># Static assets co hash trong ten: cache 1 nam, immutable
+</span></span></span><span class=line><span class=cl>    <span class=kn>location</span> <span class=p>~</span><span class=sr>*</span> <span class=s>\.(js|css|png|jpg|jpeg|svg|woff2?)</span>$ <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=kn>add_header</span> <span class=s>Cache-Control</span> <span class=s>&#34;public,</span> <span class=s>max-age=31536000,</span> <span class=s>immutable&#34;</span> <span class=s>always</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>        <span class=kn>try_files</span> <span class=nv>$uri</span> <span class=p>=</span><span class=mi>404</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=c1># Fallback cho client-side routing
+</span></span></span><span class=line><span class=cl>    <span class=kn>location</span> <span class=s>/</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=kn>try_files</span> <span class=nv>$uri</span> <span class=nv>$uri/</span> <span class=s>/index.html</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><p><strong>CDN (edge): Nginx đóng vai proxy cache</strong></p><p><code>cdn/nginx.cdn.conf</code> — đây là bản cấu hình cuối cùng, đã tách riêng <code>index.html</code> khỏi phần cache assets:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span><span class=lnt>40
+</span><span class=lnt>41
+</span><span class=lnt>42
+</span><span class=lnt>43
+</span><span class=lnt>44
+</span><span class=lnt>45
+</span><span class=lnt>46
+</span><span class=lnt>47
+</span><span class=lnt>48
+</span><span class=lnt>49
+</span><span class=lnt>50
+</span><span class=lnt>51
+</span><span class=lnt>52
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-nginx data-lang=nginx><span class=line><span class=cl><span class=k>proxy_cache_path</span> <span class=s>/var/cache/nginx-cdn</span> <span class=s>levels=1:2</span> <span class=s>keys_zone=cdn_cache:10m</span> <span class=s>max_size=200m</span> <span class=s>inactive=60m</span> <span class=s>use_temp_path=off</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=k>server</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=kn>listen</span> <span class=mi>80</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=kn>server_name</span> <span class=s>cdn-edge</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=c1># index.html luon mang Cache-Control: no-cache tu origin.
+</span></span></span><span class=line><span class=cl>    <span class=c1># QUAN TRONG: nginx proxy_cache mac dinh coi &#34;no-cache&#34; nhu &#34;khong luu&#34;
+</span></span></span><span class=line><span class=cl>    <span class=c1># (khac voi HTTP spec: no-cache nghia la &#34;luu nhung phai revalidate
+</span></span></span><span class=line><span class=cl>    <span class=c1># truoc khi dung&#34;) -&gt; phai proxy_ignore_headers de ep nginx van cache
+</span></span></span><span class=line><span class=cl>    <span class=c1># theo TTL tu chon, thay vi bo qua cache hoan toan.
+</span></span></span><span class=line><span class=cl>    <span class=c1>#
+</span></span></span><span class=line><span class=cl>    <span class=c1># Micro-cache: TTL rat ngan (5s), ngan hon nhieu so voi assets (1h),
+</span></span></span><span class=line><span class=cl>    <span class=c1># de hap thu traffic spike va giam so request don origin - doi lai
+</span></span></span><span class=line><span class=cl>    <span class=c1># index.html co the &#34;cham&#34; toi da 5s so voi ban origin moi nhat.
+</span></span></span><span class=line><span class=cl>    <span class=kn>location</span> <span class=p>=</span> <span class=s>/index.html</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=kn>proxy_pass</span> <span class=s>http://origin:80</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>        <span class=kn>proxy_set_header</span> <span class=s>Host</span> <span class=nv>$host</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>        <span class=kn>proxy_ignore_headers</span> <span class=s>Cache-Control</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>        <span class=kn>proxy_cache</span> <span class=s>cdn_cache</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>        <span class=kn>proxy_cache_key</span> <span class=nv>$scheme$request_method$host$request_uri</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>        <span class=kn>proxy_cache_valid</span> <span class=mi>200</span> <span class=s>5s</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>        <span class=kn>proxy_cache_lock</span> <span class=no>on</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>        <span class=kn>proxy_cache_use_stale</span> <span class=s>error</span> <span class=s>timeout</span> <span class=s>updating</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>        <span class=kn>proxy_cache_background_update</span> <span class=no>on</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>        <span class=kn>proxy_cache_revalidate</span> <span class=no>on</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>        <span class=kn>add_header</span> <span class=s>X-Cache-Status</span> <span class=nv>$upstream_cache_status</span> <span class=s>always</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=kn>location</span> <span class=s>/</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=kn>proxy_pass</span> <span class=s>http://origin:80</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>        <span class=kn>proxy_set_header</span> <span class=s>Host</span> <span class=nv>$host</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>        <span class=c1># Bat cache, dung chung key theo URI
+</span></span></span><span class=line><span class=cl>        <span class=kn>proxy_cache</span> <span class=s>cdn_cache</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>        <span class=kn>proxy_cache_key</span> <span class=nv>$scheme$request_method$host$request_uri</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>        <span class=c1># proxy_cache_valid la fallback khi origin khong set Cache-Control.
+</span></span></span><span class=line><span class=cl>        <span class=c1># Voi assets immutable, gia tri nay thuc te khong con y nghia vi
+</span></span></span><span class=line><span class=cl>        <span class=c1># max-age=31536000 tu origin da du dai.
+</span></span></span><span class=line><span class=cl>        <span class=kn>proxy_cache_valid</span> <span class=mi>200</span> <span class=s>1h</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>        <span class=kn>proxy_cache_use_stale</span> <span class=s>error</span> <span class=s>timeout</span> <span class=s>updating</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>        <span class=c1># Cho phep CDN tu revalidate voi origin khi ban cache o edge stale
+</span></span></span><span class=line><span class=cl>        <span class=kn>proxy_cache_revalidate</span> <span class=no>on</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>        <span class=c1># Header debug de nhin thay HIT/MISS/BYPASS
+</span></span></span><span class=line><span class=cl>        <span class=kn>add_header</span> <span class=s>X-Cache-Status</span> <span class=nv>$upstream_cache_status</span> <span class=s>always</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><p>Lý do tách riêng <code>location = /index.html</code>: đây thực ra <strong>sát với cách nhiều CDN thật cấu hình</strong> hơn là cố nhồi mọi request vào một cache behavior duy nhất — HTML/entry point thường có chính sách TTL riêng, ngắn hơn hẳn static assets. Bản thiết kế ban đầu dùng chung một <code>location /</code> cho mọi thứ, và test thật đã lộ ra vì sao cách đó không hoạt động đúng như kỳ vọng — toàn bộ quá trình phát hiện, cộng với bằng chứng cho lựa chọn micro-cache 5s ở trên, nằm ở Phần 3.1.</p><p><code>proxy_cache_lock on</code> đảm bảo khi nhiều request cùng lúc gặp <code>MISS</code>, chỉ một request được đi tới origin — các request còn lại chờ kết quả thay vì cùng dội vào origin. <code>proxy_cache_background_update on</code> giúp khi cache hết hạn (5s trôi qua), request đầu tiên vẫn được trả <strong>ngay lập tức</strong> từ bản cache cũ (đánh dấu <code>STALE</code>) trong khi Nginx âm thầm đi lấy bản mới ở background — client không phải chờ origin.</p><p><strong><code>docker-compose.yml</code> — dựng cả 2 tầng cùng lúc</strong></p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-yaml data-lang=yaml><span class=line><span class=cl><span class=nt>services</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>origin</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>build</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>context</span><span class=p>:</span><span class=w> </span><span class=l>.</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>dockerfile</span><span class=p>:</span><span class=w> </span><span class=l>origin/Dockerfile</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>container_name</span><span class=p>:</span><span class=w> </span><span class=l>origin</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>expose</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>- <span class=s2>&#34;80&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>cdn</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>image</span><span class=p>:</span><span class=w> </span><span class=l>nginx:1.27-alpine</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>container_name</span><span class=p>:</span><span class=w> </span><span class=l>cdn-edge</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>depends_on</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>- <span class=l>origin</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>ports</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>- <span class=s2>&#34;8080:80&#34;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>volumes</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span>- <span class=l>./cdn/nginx.cdn.conf:/etc/nginx/conf.d/default.conf:ro</span><span class=w>
+</span></span></span></code></pre></td></tr></table></div></div><blockquote><p>Bỏ khóa <code>version: "3.9"</code> — Docker Compose bản mới (v2+) không cần khai báo version nữa và sẽ cảnh báo deprecated nếu có.</p></blockquote><p>Chạy lên:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl>docker compose up --build -d
+</span></span></code></pre></td></tr></table></div></div><p>Client sẽ gọi vào <code>http://localhost:8080</code> (CDN), CDN gọi ngược vào origin qua network nội bộ Docker.</p><h3 id=22-giải-pháp-cho-use-case-2-retry-once-then-reload-phía-client>2.2 Giải pháp cho Use case 2: retry-once-then-reload phía client</h3><p>Áp dụng đúng pattern trong bài dev.to: bọc <code>import()</code> động bằng một wrapper tự phát hiện lỗi tải chunk, tự <code>reload()</code> <strong>đúng một lần</strong> (đánh dấu bằng <code>sessionStorage</code> để không lặp vô hạn), và một Error Boundary làm lưới an toàn cuối cùng nếu retry vẫn thất bại.</p><p><strong><code>app/src/lazyRetry.js</code></strong></p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-javascript data-lang=javascript><span class=line><span class=cl><span class=c1>// Adapted from https://dev.to/devin-rosario/fix-react-chunk-load-errors-fast-2025-guide-2j52
+</span></span></span><span class=line><span class=cl><span class=c1>// Nguyen ban kiem tra error.name === &#39;ChunkLoadError&#39; - do la ten loi cua Webpack.
+</span></span></span><span class=line><span class=cl><span class=c1>// Vite (dung trong demo nay) khong nem loi do; that bai khi dong nhap module
+</span></span></span><span class=line><span class=cl><span class=c1>// tra ve mot TypeError voi message &#34;Failed to fetch dynamically imported module: ...&#34;.
+</span></span></span><span class=line><span class=cl><span class=kr>export</span> <span class=kd>function</span> <span class=nx>lazyRetry</span><span class=p>(</span><span class=nx>componentImport</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=k>return</span> <span class=k>new</span> <span class=nb>Promise</span><span class=p>((</span><span class=nx>resolve</span><span class=p>,</span> <span class=nx>reject</span><span class=p>)</span> <span class=p>=&gt;</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=kr>const</span> <span class=nx>hasRefreshed</span> <span class=o>=</span> <span class=nx>JSON</span><span class=p>.</span><span class=nx>parse</span><span class=p>(</span>
+</span></span><span class=line><span class=cl>      <span class=nb>window</span><span class=p>.</span><span class=nx>sessionStorage</span><span class=p>.</span><span class=nx>getItem</span><span class=p>(</span><span class=s1>&#39;retry-lazy-refreshed&#39;</span><span class=p>)</span> <span class=o>||</span> <span class=s1>&#39;false&#39;</span>
+</span></span><span class=line><span class=cl>    <span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=nx>componentImport</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>      <span class=p>.</span><span class=nx>then</span><span class=p>((</span><span class=nx>component</span><span class=p>)</span> <span class=p>=&gt;</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=nb>window</span><span class=p>.</span><span class=nx>sessionStorage</span><span class=p>.</span><span class=nx>setItem</span><span class=p>(</span><span class=s1>&#39;retry-lazy-refreshed&#39;</span><span class=p>,</span> <span class=s1>&#39;false&#39;</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>        <span class=nx>resolve</span><span class=p>(</span><span class=nx>component</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>      <span class=p>})</span>
+</span></span><span class=line><span class=cl>      <span class=p>.</span><span class=k>catch</span><span class=p>((</span><span class=nx>error</span><span class=p>)</span> <span class=p>=&gt;</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=k>if</span> <span class=p>(</span><span class=o>!</span><span class=nx>hasRefreshed</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>          <span class=nb>window</span><span class=p>.</span><span class=nx>sessionStorage</span><span class=p>.</span><span class=nx>setItem</span><span class=p>(</span><span class=s1>&#39;retry-lazy-refreshed&#39;</span><span class=p>,</span> <span class=s1>&#39;true&#39;</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>          <span class=nb>window</span><span class=p>.</span><span class=nx>location</span><span class=p>.</span><span class=nx>reload</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>          <span class=k>return</span>
+</span></span><span class=line><span class=cl>        <span class=p>}</span>
+</span></span><span class=line><span class=cl>        <span class=nx>reject</span><span class=p>(</span><span class=nx>error</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>      <span class=p>})</span>
+</span></span><span class=line><span class=cl>  <span class=p>})</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><p><strong><code>app/src/ChunkErrorBoundary.jsx</code></strong></p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-jsx data-lang=jsx><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>Component</span> <span class=p>}</span> <span class=nx>from</span> <span class=s1>&#39;react&#39;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kr>const</span> <span class=nx>CHUNK_ERROR_PATTERN</span> <span class=o>=</span> <span class=sr>/Failed to fetch dynamically imported module|error loading dynamically imported module/i</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kr>export</span> <span class=k>default</span> <span class=kr>class</span> <span class=nx>ChunkErrorBoundary</span> <span class=kr>extends</span> <span class=nx>Component</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=nx>state</span> <span class=o>=</span> <span class=p>{</span> <span class=nx>hasError</span><span class=o>:</span> <span class=kc>false</span> <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=kr>static</span> <span class=nx>getDerivedStateFromError</span><span class=p>()</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=p>{</span> <span class=nx>hasError</span><span class=o>:</span> <span class=kc>true</span> <span class=p>}</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=nx>componentDidCatch</span><span class=p>(</span><span class=nx>error</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=kr>const</span> <span class=nx>isChunkError</span> <span class=o>=</span>
+</span></span><span class=line><span class=cl>      <span class=nx>error</span><span class=o>?</span><span class=p>.</span><span class=nx>name</span> <span class=o>===</span> <span class=s1>&#39;ChunkLoadError&#39;</span> <span class=o>||</span> <span class=nx>CHUNK_ERROR_PATTERN</span><span class=p>.</span><span class=nx>test</span><span class=p>(</span><span class=nx>error</span><span class=o>?</span><span class=p>.</span><span class=nx>message</span> <span class=o>||</span> <span class=s1>&#39;&#39;</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=k>if</span> <span class=p>(</span><span class=nx>isChunkError</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>      <span class=kr>const</span> <span class=nx>refreshed</span> <span class=o>=</span> <span class=nx>sessionStorage</span><span class=p>.</span><span class=nx>getItem</span><span class=p>(</span><span class=s1>&#39;chunk-error-refreshed&#39;</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>      <span class=k>if</span> <span class=p>(</span><span class=o>!</span><span class=nx>refreshed</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=nx>sessionStorage</span><span class=p>.</span><span class=nx>setItem</span><span class=p>(</span><span class=s1>&#39;chunk-error-refreshed&#39;</span><span class=p>,</span> <span class=s1>&#39;true&#39;</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>        <span class=nb>window</span><span class=p>.</span><span class=nx>location</span><span class=p>.</span><span class=nx>reload</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>      <span class=p>}</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>  <span class=nx>render</span><span class=p>()</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=k>if</span> <span class=p>(</span><span class=k>this</span><span class=p>.</span><span class=nx>state</span><span class=p>.</span><span class=nx>hasError</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>      <span class=k>return</span> <span class=p>&lt;</span><span class=nt>div</span> <span class=na>id</span><span class=o>=</span><span class=s>&#34;chunk-error&#34;</span><span class=p>&gt;</span><span class=nx>Dang</span> <span class=nx>tai</span> <span class=nx>lai</span> <span class=nx>phien</span> <span class=nx>ban</span> <span class=nx>moi</span><span class=p>...&lt;/</span><span class=nt>div</span><span class=p>&gt;</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=k>this</span><span class=p>.</span><span class=nx>props</span><span class=p>.</span><span class=nx>children</span>
+</span></span><span class=line><span class=cl>  <span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><p><strong><code>app/src/App.jsx</code></strong> — nối hai lớp phòng thủ vào chỗ dùng <code>React.lazy</code>:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-jsx data-lang=jsx><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>lazy</span><span class=p>,</span> <span class=nx>Suspense</span><span class=p>,</span> <span class=nx>useState</span> <span class=p>}</span> <span class=nx>from</span> <span class=s1>&#39;react&#39;</span>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=p>{</span> <span class=nx>lazyRetry</span> <span class=p>}</span> <span class=nx>from</span> <span class=s1>&#39;./lazyRetry.js&#39;</span>
+</span></span><span class=line><span class=cl><span class=kr>import</span> <span class=nx>ChunkErrorBoundary</span> <span class=nx>from</span> <span class=s1>&#39;./ChunkErrorBoundary.jsx&#39;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kr>const</span> <span class=nx>LazyPanel</span> <span class=o>=</span> <span class=nx>lazy</span><span class=p>(()</span> <span class=p>=&gt;</span> <span class=nx>lazyRetry</span><span class=p>(()</span> <span class=p>=&gt;</span> <span class=kr>import</span><span class=p>(</span><span class=s1>&#39;./LazyPanel.jsx&#39;</span><span class=p>)))</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=kr>export</span> <span class=k>default</span> <span class=kd>function</span> <span class=nx>App</span><span class=p>()</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>  <span class=kr>const</span> <span class=p>[</span><span class=nx>showPanel</span><span class=p>,</span> <span class=nx>setShowPanel</span><span class=p>]</span> <span class=o>=</span> <span class=nx>useState</span><span class=p>(</span><span class=kc>false</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>  <span class=k>return</span> <span class=p>(</span>
+</span></span><span class=line><span class=cl>    <span class=p>&lt;</span><span class=nt>div</span><span class=p>&gt;</span>
+</span></span><span class=line><span class=cl>      <span class=p>&lt;</span><span class=nt>button</span> <span class=na>onClick</span><span class=o>=</span><span class=p>{()</span> <span class=p>=&gt;</span> <span class=nx>setShowPanel</span><span class=p>(</span><span class=kc>true</span><span class=p>)}&gt;</span><span class=nx>Load</span> <span class=nx>Panel</span><span class=p>&lt;/</span><span class=nt>button</span><span class=p>&gt;</span>
+</span></span><span class=line><span class=cl>      <span class=p>{</span><span class=nx>showPanel</span> <span class=o>&amp;&amp;</span> <span class=p>(</span>
+</span></span><span class=line><span class=cl>        <span class=p>&lt;</span><span class=nt>ChunkErrorBoundary</span><span class=p>&gt;</span>
+</span></span><span class=line><span class=cl>          <span class=p>&lt;</span><span class=nt>Suspense</span> <span class=na>fallback</span><span class=o>=</span><span class=p>{&lt;</span><span class=nt>div</span><span class=p>&gt;</span><span class=nx>Loading</span> <span class=nx>panel</span><span class=p>...&lt;/</span><span class=nt>div</span><span class=p>&gt;}&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=p>&lt;</span><span class=nt>LazyPanel</span> <span class=p>/&gt;</span>
+</span></span><span class=line><span class=cl>          <span class=p>&lt;/</span><span class=nt>Suspense</span><span class=p>&gt;</span>
+</span></span><span class=line><span class=cl>        <span class=p>&lt;/</span><span class=nt>ChunkErrorBoundary</span><span class=p>&gt;</span>
+</span></span><span class=line><span class=cl>      <span class=p>)}</span>
+</span></span><span class=line><span class=cl>    <span class=p>&lt;/</span><span class=nt>div</span><span class=p>&gt;</span>
+</span></span><span class=line><span class=cl>  <span class=p>)</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><p>Hai lớp phối hợp theo nguyên tắc <strong>retry trong suốt trước, hiện lỗi sau</strong>:</p><ol><li><strong>Lần thất bại đầu tiên</strong> (trường hợp phổ biến nhất — chunk cũ đã bị dọn sau deploy): <code>lazyRetry</code> bắt lỗi, set cờ, gọi <code>reload()</code> ngay — promise không bao giờ resolve/reject, nên React chưa kịp thấy lỗi gì cả. Người dùng thấy trang refresh một nhịp, không thấy màn hình lỗi.</li><li><strong>Lần thất bại thứ hai</strong> (sau khi đã reload mà vẫn lỗi — nghĩa là deploy thật sự có vấn đề, không phải do race condition): <code>lazyRetry</code> reject thật, lỗi rơi vào <code>ChunkErrorBoundary</code>, boundary tự reload thêm đúng một lần nữa (cờ session riêng), rồi nếu vẫn lỗi thì dừng lại, hiện fallback UI thay vì màn hình trắng crash.</li></ol><hr><h2 id=thực-nghiệm>Thực nghiệm</h2><h3 id=31-thực-nghiệm-use-case-1-docker-nginx-cdn--nginx-origin>3.1 Thực nghiệm Use case 1: Docker (Nginx CDN + Nginx Origin)</h3><p>Mô hình ở mục 2.1 đã được dựng và test thật bằng Docker Compose. Origin xử lý conditional GET đúng chuẩn ngay từ đầu (test trực tiếp, bỏ qua CDN):</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl>$ curl -i http://origin:80/index.html -H <span class=s1>&#39;If-None-Match: &#34;6a7f5bcc-145&#34;&#39;</span>
+</span></span><span class=line><span class=cl>HTTP/1.1 <span class=m>304</span> Not Modified
+</span></span><span class=line><span class=cl>Cache-Control: no-cache, must-revalidate
+</span></span></code></pre></td></tr></table></div></div><p><strong>Phát hiện khi test qua CDN:</strong> bản thiết kế ban đầu dùng chung một <code>location /</code> cho mọi request. Với <code>index.html</code>, kết quả không giống lý thuyết &ldquo;<code>proxy_cache</code> tôn trọng <code>Cache-Control</code> của origin&rdquo;: <code>X-Cache-Status</code> luôn là <code>MISS</code> (kể cả gọi lần 2), và gửi đúng <code>If-None-Match</code> vẫn nhận <code>200</code> full body thay vì <code>304</code>.</p><p>Nguyên nhân, xác nhận bằng cách đối chiếu với origin trực tiếp:</p><ol><li>Nginx <code>proxy_cache</code> diễn giải <code>Cache-Control: no-cache</code> như <code>no-store</code> — không lưu gì vào cache zone, khác ngữ nghĩa RFC 7234 (&ldquo;lưu nhưng phải revalidate&rdquo;). <code>index.html</code> do đó không bao giờ có bản lưu ở edge.</li><li>Khi location bật <code>proxy_cache</code>, Nginx không forward <code>If-None-Match</code> của client lên origin — nó tự revalidate dựa trên bản <em>nó</em> lưu. Vì chưa từng lưu gì (điểm 1), không có gì để revalidate, nên chỉ lấy nguyên bản mới từ origin và trả <code>200</code> đầy đủ.</li></ol><p>Test một asset <strong>đã có trong cache</strong> xác nhận cơ chế &ldquo;tự trả <code>304</code> từ bản đã lưu&rdquo; vẫn đúng khi có gì đó để so sánh:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl>$ curl -i http://localhost:8080/assets/index.4nv8o8qb.js -H <span class=s1>&#39;If-None-Match: &#34;6a7f5bcc-22dcb&#34;&#39;</span>
+</span></span><span class=line><span class=cl>HTTP/1.1 <span class=m>304</span> Not Modified
+</span></span><span class=line><span class=cl>X-Cache-Status: HIT
+</span></span></code></pre></td></tr></table></div></div><p><strong>Cách sửa</strong> (đã áp dụng ở mục 2.1): tách <code>index.html</code> ra một <code>location</code> riêng và ép nó cache theo TTL ngắn (5s) bằng <code>proxy_ignore_headers Cache-Control</code>, thay vì tắt hẳn cache — mục tiêu là giảm số request dội thẳng vào origin (micro-cache) thay vì bypass hoàn toàn. Lifecycle thật, đo bằng <code>sleep</code> giữa các lần gọi:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span><span class=lnt>8
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-bash data-lang=bash><span class=line><span class=cl>$ curl -i http://localhost:8080/index.html          <span class=c1># t=0s</span>
+</span></span><span class=line><span class=cl>X-Cache-Status: MISS
+</span></span><span class=line><span class=cl>$ curl -i http://localhost:8080/index.html          <span class=c1># t=1s, t=3s</span>
+</span></span><span class=line><span class=cl>X-Cache-Status: HIT
+</span></span><span class=line><span class=cl>$ curl -i http://localhost:8080/index.html          <span class=c1># t=6s — TTL 5s đã hết hạn</span>
+</span></span><span class=line><span class=cl>X-Cache-Status: STALE      <span class=c1># trả ngay bản cũ, client không phải chờ origin</span>
+</span></span><span class=line><span class=cl>$ curl -i http://localhost:8080/index.html          <span class=c1># t=6.5s</span>
+</span></span><span class=line><span class=cl>X-Cache-Status: HIT        <span class=c1># background update đã refresh xong</span>
+</span></span></code></pre></td></tr></table></div></div><p>Đối chiếu access log của origin trong cùng khoảng thời gian: 5 request từ client nhưng origin chỉ ghi nhận 2 request thật — một <code>200</code> (fetch đầy đủ lúc <code>MISS</code>) và một <code>304</code> (revalidate rẻ nhờ <code>proxy_cache_revalidate</code>, không truyền lại body). Đúng mục tiêu giảm tải origin.</p><p><strong>Đánh đổi cần biết:</strong> khác với cách bypass hoàn toàn (luôn fresh tuyệt đối), <code>index.html</code> giờ có thể &ldquo;chậm&rdquo; tối đa ~5s so với bản mới nhất sau khi redeploy. Test thật xác nhận: redeploy ngay sau khi vừa có 1 bản cache — 0.5s sau vẫn <code>HIT</code> với ETag <strong>cũ</strong>; đợi hết TTL (~6s) mới thấy asset hash mới xuất hiện. Đây là đánh đổi có chủ đích: bounded staleness vài giây, đổi lấy origin đỡ tải hẳn dưới traffic cao.</p><p><strong>Kịch bản test còn lại</strong>, curl output thật, tất cả đúng kỳ vọng:</p><ul><li><strong>Asset có hash:</strong> <code>MISS</code> lần đầu → <code>HIT</code> từ lần sau, không chạm origin.</li><li><strong>Điểm bất ngờ với asset cũ sau redeploy:</strong> gọi trực tiếp origin cho asset của bản build cũ → <code>404</code> (Dockerfile build &ldquo;từ đầu&rdquo;, không cộng dồn file). Nhưng gọi cùng URL đó <strong>qua CDN</strong> → vẫn <code>200 HIT</code>, vì CDN đã cache nó từ trước khi origin bị thay. Đây là lưới an toàn giúp tab cũ không vỡ ngay lập tức — nhưng <strong>có thời hạn</strong>, giới hạn bởi <code>inactive=60m</code>/<code>max_size=200m</code> trong <code>proxy_cache_path</code>. Một khi cache CDN hết hạn, asset cũ 404 thật — đây cũng chính là điều kiện khiến use case 2 (mục 1.2) xảy ra trên thực tế.</li></ul><p><strong>Tổng kết:</strong></p><div class=table-wrapper><table><thead><tr><th>Lớp</th><th>Header quyết định</th><th>Kết quả test</th></tr></thead><tbody><tr><td>CDN — <code>location = /index.html</code></td><td><code>proxy_ignore_headers</code>, <code>proxy_cache_valid 5s</code>, <code>proxy_cache_lock</code>, <code>proxy_cache_background_update</code></td><td><code>MISS</code> → <code>HIT</code> trong 5s → <code>STALE</code> (refresh nền) → <code>HIT</code>; <code>304</code> từ edge khi đã cache; origin chỉ thấy fetch thật hoặc revalidate rẻ</td></tr><tr><td>CDN — <code>location /</code> (assets)</td><td><code>proxy_cache_valid</code>, <code>proxy_cache_revalidate</code></td><td><code>MISS</code> → <code>HIT</code>; <code>304</code> trả thẳng từ edge khi đã cache</td></tr><tr><td><code>index.html</code></td><td><code>no-cache, must-revalidate</code></td><td>Không bao giờ stale quá 5s ở CDN — đánh đổi có chủ đích để giảm tải origin</td></tr><tr><td><code>assets/*.hash.js/css</code></td><td><code>public, max-age=31536000, immutable</code></td><td>Sống sót qua deploy nhờ cache CDN, nhưng có giới hạn thời gian, không phải vĩnh viễn</td></tr></tbody></table></div><h3 id=32-thực-nghiệm-use-case-2-playwright--chromium-headless>3.2 Thực nghiệm Use case 2: Playwright + Chromium headless</h3><p>Toàn bộ luồng ở mục 2.2 được test bằng kịch bản: mở tab thật, <strong>không đóng tab</strong>, deploy một bản mới ở phía sau (đổi hash chunk, xoá sạch cache CDN), rồi mới thao tác trong tab cũ — đúng như tình huống thật ngoài đời.</p><p><strong>Bước 1 — dựng baseline chưa có fix, xác nhận hoạt động bình thường:</strong></p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-gdscript3 data-lang=gdscript3><span class=line><span class=cl><span class=n>TEST</span> <span class=mi>1</span><span class=p>:</span> <span class=n>baseline</span><span class=p>,</span> <span class=n>click</span> <span class=n>works</span> <span class=n>normally</span> <span class=p>(</span><span class=n>no</span> <span class=n>redeploy</span><span class=p>)</span>
+</span></span><span class=line><span class=cl><span class=n>PASS</span><span class=p>:</span> <span class=n>lazy</span> <span class=n>panel</span> <span class=n>loaded</span> <span class=o>-&gt;</span> <span class=n>Lazy</span> <span class=n>panel</span> <span class=n>loaded</span> <span class=n>OK</span>
+</span></span></code></pre></td></tr></table></div></div><p><strong>Bước 2 — mở tab, KHÔNG bấm gì, deploy bản mới ở phía sau (chunk cũ biến mất khỏi cả origin lẫn CDN), rồi mới bấm nút trong tab cũ:</strong></p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span><span class=lnt>8
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback><span class=line><span class=cl>TEST 2: stale tab, redeploy BEFORE first click, NO client-side fix
+</span></span><span class=line><span class=cl>lazy-panel present after click? false
+</span></span><span class=line><span class=cl>network responses for LazyPanel chunk:
+</span></span><span class=line><span class=cl>  &#34;404 http://localhost:8080/assets/LazyPanel.KWD-Rdy5.js&#34;
+</span></span><span class=line><span class=cl>pageerror events:
+</span></span><span class=line><span class=cl>  &#34;Failed to fetch dynamically imported module: http://localhost:8080/assets/LazyPanel.KWD-Rdy5.js&#34;
+</span></span><span class=line><span class=cl>console error events:
+</span></span><span class=line><span class=cl>  &#34;TypeError: Failed to fetch dynamically imported module: http://localhost:8080/assets/LazyPanel.KWD-Rdy5.js&#34;
+</span></span></code></pre></td></tr></table></div></div><p>Đúng như dự đoán: không có <code>lazyRetry</code>/<code>ChunkErrorBoundary</code>, lỗi rơi thẳng ra <code>pageerror</code> — trong React thật (không chỉ demo tối giản này), đây là điểm khiến cả cây component crash và màn hình trắng ra.</p><p><strong>Bước 3 — build lại với <code>lazyRetry</code> + <code>ChunkErrorBoundary</code>, lặp lại đúng kịch bản (mở tab, không bấm, deploy bản mới phía sau, rồi mới bấm):</strong></p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span><span class=lnt>8
+</span><span class=lnt>9
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-gdscript3 data-lang=gdscript3><span class=line><span class=cl><span class=n>Redeploy</span> <span class=n>done</span> <span class=p>(</span><span class=n>vD</span><span class=p>)</span><span class=o>.</span> <span class=n>Clicking</span> <span class=s2>&#34;Load Panel&#34;</span> <span class=k>for</span> <span class=n>the</span> <span class=n>FIRST</span> <span class=n>time</span> <span class=ow>in</span> <span class=n>the</span> <span class=n>stale</span> <span class=p>(</span><span class=n>vC</span><span class=p>)</span> <span class=n>tab</span><span class=o>...</span>
+</span></span><span class=line><span class=cl><span class=ne>Navigation</span> <span class=n>observed</span> <span class=n>after</span> <span class=n>click</span><span class=o>.</span> <span class=n>URLs</span><span class=p>:</span> <span class=p>[</span> <span class=s1>&#39;http://localhost:8080/&#39;</span> <span class=p>]</span>
+</span></span><span class=line><span class=cl><span class=n>sessionStorage</span> <span class=n>retry</span><span class=o>-</span><span class=n>lazy</span><span class=o>-</span><span class=n>refreshed</span> <span class=n>after</span> <span class=n>reload</span><span class=p>:</span> <span class=bp>true</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=n>Clicking</span> <span class=s2>&#34;Load Panel&#34;</span> <span class=n>again</span> <span class=n>post</span><span class=o>-</span><span class=n>reload</span> <span class=p>(</span><span class=n>state</span> <span class=n>was</span> <span class=n>reset</span> <span class=n>by</span> <span class=n>full</span> <span class=n>page</span> <span class=n>reload</span><span class=p>)</span><span class=o>...</span>
+</span></span><span class=line><span class=cl><span class=n>FINAL</span> <span class=n>PANEL</span> <span class=n>TEXT</span><span class=p>:</span> <span class=n>Lazy</span> <span class=n>panel</span> <span class=n>loaded</span> <span class=n>OK</span> <span class=p>(</span><span class=n>vD</span><span class=p>,</span> <span class=n>after</span> <span class=bp>self</span><span class=o>-</span><span class=n>heal</span><span class=p>)</span>
+</span></span><span class=line><span class=cl><span class=n>sessionStorage</span> <span class=n>retry</span><span class=o>-</span><span class=n>lazy</span><span class=o>-</span><span class=n>refreshed</span> <span class=n>after</span> <span class=n>success</span><span class=p>:</span> <span class=bp>false</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=n>Total</span> <span class=n>top</span><span class=o>-</span><span class=n>level</span> <span class=n>navigations</span> <span class=n>observed</span> <span class=n>after</span> <span class=n>the</span> <span class=n>redeploy</span> <span class=n>click</span><span class=p>:</span> <span class=mi>1</span>
+</span></span></code></pre></td></tr></table></div></div><p>Đúng một lần <code>reload()</code> — không lặp vô hạn — và sau khi reload, trang nạp đúng bản mới nhất (<code>vD</code>), thao tác lại thành công. <code>sessionStorage</code> flag tự reset về <code>false</code> ngay khi lần tải thành công, sẵn sàng cho lần lỗi tiếp theo (nếu có) ở một deploy khác trong tương lai.</p><hr><h2 id=kết-luận>Kết luận</h2><p>Chiến lược cache cho SPA thực chất chỉ xoay quanh một nguyên tắc: <strong><code>index.html</code> là nguồn sự thật duy nhất, phải luôn được revalidate; còn static assets có hash thì được tin tưởng cache dài hạn</strong>. Nhưng &ldquo;revalidate&rdquo; trên lý thuyết HTTP và &ldquo;revalidate&rdquo; trong một cache thực thi cụ thể (ở đây là Nginx <code>proxy_cache</code>) không phải lúc nào cũng khớp nhau y hệt — Phần 3.1 là ví dụ cụ thể cho thấy việc test bằng công cụ thật (Docker + curl) quan trọng hơn việc tin vào mô tả &ldquo;tôn trọng Cache-Control&rdquo; một cách chung chung.</p><p>Khi áp dụng đúng, chiến lược này mang lại lợi ích rõ ràng:</p><ul><li><strong>Luôn cập nhật đúng phiên bản:</strong> Người dùng không bao giờ bị kẹt ở bản UI cũ sau deploy.</li><li><strong>Không còn lỗi ChunkLoadError/404:</strong> Vì <code>index.html</code> luôn trỏ đúng tới asset tương ứng với chính nó.</li><li><strong>Tiết kiệm băng thông:</strong> Nhờ cơ chế <code>304 Not Modified</code> khi nội dung <code>index.html</code> không đổi.</li><li><strong>Hiệu năng tối ưu:</strong> Static assets được cache dài hạn (1 năm), giảm tải server đáng kể.</li><li><strong>Không cần xóa cache thủ công:</strong> Người dùng không phải hard-refresh (Ctrl+Shift+R) để thấy bản mới.</li></ul><p>Và dù cache header có đúng tuyệt đối, vẫn còn một khe hở mà không header nào vá được: <strong>tab đã mở từ trước khi deploy</strong> <strong>kết hợp</strong> thêm một lớp phòng thủ khác ở tầng JavaScript runtime — retry khi lazy-load thất bại — bên cạnh chiến lược cache header, chứ không thể chỉ dựa vào một trong hai. Điều kiện nhận diện lỗi retry cũng phải khớp đúng bundler đang dùng.</p></section><footer class=article-footer><section class=article-tags><a href=/tags/fe/>Fe</a>
+<a href=/tags/devops/>Devops</a></section><section class=article-copyright><svg class="icon icon-tabler icon-tabler-copyright" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><path d="M14.5 9a3.5 4 0 100 6"/></svg>
+<span>Licensed under CC BY-NC-SA 4.0</span></section></footer></article><aside class=related-content--wrapper><h2 class=section-title>Related content</h2><div class=related-content><div class="flex article-list--tile"><article><a href=/posts/poc-centralized-logging-implementation-on-kubernetes-with-fluent-bit-grafana-loki-and-grafana/><div class=article-details><h2 class=article-title>POC: Centralized Logging Implementation on Kubernetes with Fluent Bit, Grafana Loki, and Grafana</h2></div></a></article><article><a href=/posts/log-observability-with-fluent-bit-loki-and-grafana/><div class=article-details><h2 class=article-title>Log Observability with Fluent Bit, Loki and Grafana</h2></div></a></article><article><a href=/posts/hybrid-helm-chart-combining-dependency-charts-and-embedded-subcharts/><div class=article-details><h2 class=article-title>Hybrid Helm Chart: Combining Dependency Charts and Embedded Subcharts</h2></div></a></article><article><a href=/posts/umbrella-chart-in-kubernetes/><div class=article-details><h2 class=article-title>Umbrella Chart in Kubernetes</h2></div></a></article><article><a href=/posts/gitops-cd-for-self-hosted-labs-with-argocd-applicationset/><div class=article-details><h2 class=article-title>GitOps CD for Self-Hosted Labs with ArgoCD ApplicationSet</h2></div></a></article></div></div></aside><div class=disqus-container></div><style>.disqus-container{background-color:var(--card-background);border-radius:var(--card-border-radius);box-shadow:var(--shadow-l1);padding:var(--card-padding)}</style><script>window.addEventListener("onColorSchemeChange",e=>{typeof DISQUS=="object"&&DISQUS.reset({reload:!0})})</script><footer class=site-footer><section class=copyright>&copy;
+2026 phongthien</section><section class=powerby>Built with <a href=https://gohugo.io/ target=_blank rel=noopener>Hugo</a><br>Theme <b><a href=https://github.com/CaiJimmy/hugo-theme-stack target=_blank rel=noopener data-version=3.33.0>Stack</a></b> designed by <a href=https://jimmycai.com target=_blank rel=noopener>Jimmy</a></section></footer><div class=pswp tabindex=-1 role=dialog aria-hidden=true><div class=pswp__bg></div><div class=pswp__scroll-wrap><div class=pswp__container><div class=pswp__item></div><div class=pswp__item></div><div class=pswp__item></div></div><div class="pswp__ui pswp__ui--hidden"><div class=pswp__top-bar><div class=pswp__counter></div><button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+<button class="pswp__button pswp__button--share" title=Share></button>
+<button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+<button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button><div class=pswp__preloader><div class=pswp__preloader__icn><div class=pswp__preloader__cut><div class=pswp__preloader__donut></div></div></div></div></div><div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap"><div class=pswp__share-tooltip></div></div><button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+</button>
+<button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)"></button><div class=pswp__caption><div class=pswp__caption__center></div></div></div></div></div><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo=" crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU=" crossorigin=anonymous defer></script><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css crossorigin=anonymous><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css crossorigin=anonymous></main></div><script src=https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z+KMkF24hUW8WePSA9HM=" crossorigin=anonymous></script><script type=text/javascript src=/ts/main.c922af694cc257bf1ecc41c0dd7b0430f9114ec280ccf67cd2c6ad55f5316c4e.js defer></script><script>(function(){const e=document.createElement("link");e.href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap",e.type="text/css",e.rel="stylesheet",document.head.appendChild(e)})()</script></body></html>

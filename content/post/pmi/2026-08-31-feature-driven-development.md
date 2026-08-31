@@ -1,5 +1,5 @@
 ---
-title: "Feature Driven Development (FDD): Giải Pháp Cho Các Dự Án Phần Mềm Lớn Và Phức Tạp"
+title: "Feature Driven Development"
 author: phongthien99
 date: 2026-08-31 00:40:00 +0800
 categories: [PMI]

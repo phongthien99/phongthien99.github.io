@@ -12,7 +12,7 @@ math: false
 
 Chuyển framework cho một ứng dụng lớn là trường hợp micro frontend thật sự đáng dùng, vì trong nhiều tháng hai framework buộc phải chạy song song. Viết lại toàn bộ một lần thường thất bại: tính năng bị đóng băng, bản mới mãi "sắp xong". Cách an toàn hơn là strangler fig: thay dần từng phần, sản phẩm vẫn chạy và vẫn ra bản mới.
 
-Hệ thống trong bài là một ứng dụng quản trị lớn trên Angular 14 (webpack, Node 14) với hơn 20 module nghiệp vụ. Đăng nhập qua Keycloak SSO, token lưu trong localStorage; giao diện dùng Bootstrap 4, đa ngôn ngữ bằng ngx-translate. Nâng Angular lên bản mới là tốn công cho framework sắp bỏ, còn viết lại một lần thì quá rủi ro.
+Hệ thống trong bài là một ứng dụng quản trị lớn trên Angular 14 (webpack, Node 14) với hơn 20 module nghiệp vụ. Đăng nhập qua Keycloak SSO, token lưu trong localStorage; đa ngôn ngữ bằng ngx-translate. Nâng Angular lên bản mới là tốn công cho framework sắp bỏ, còn viết lại một lần thì quá rủi ro.
 
 Migration vì vậy phải thỏa năm ràng buộc:
 
@@ -52,7 +52,7 @@ Hệ thống thực tế thường kết hợp nhiều cấp. Migration này dù
 Ba kỹ thuật giải ba việc khác nhau nên thường được kết hợp:
 
 - **Module Federation: tải và chia sẻ code.** Remote `expose` module và sinh `remoteEntry.js`; host nạp file này lúc chạy rồi lấy module. Dependency trong `shared` (như React) chỉ tải một lần. Bản 2.0 có runtime độc lập, manifest và plugin cho webpack, Rspack, Vite. Rủi ro: lệch version singleton, gắn với bundler, cache `remoteEntry.js` sai.
-- **Web Components: đóng gói và cách ly.** Mỗi app thành một thẻ HTML (`customElements.define`); dữ liệu vào qua attribute/property, ra qua `CustomEvent`. Angular có sẵn `@angular/elements`. Không cần chung bundler, Shadow DOM cách ly CSS. Rủi ro: không chia sẻ dependency, Shadow DOM chặn luôn CSS global như Bootstrap, SSR hạn chế.
+- **Web Components: đóng gói và cách ly.** Mỗi app thành một thẻ HTML (`customElements.define`); dữ liệu vào qua attribute/property, ra qua `CustomEvent`. Angular có sẵn `@angular/elements`. Không cần chung bundler, Shadow DOM cách ly CSS. Rủi ro: không chia sẻ dependency, Shadow DOM chặn luôn CSS global của host, SSR hạn chế.
 - **single-spa: điều phối vòng đời theo URL.** Root config đăng ký app kèm điều kiện URL; mỗi app export `bootstrap`, `mount`, `unmount`; code tải qua import map. Hợp với nhiều app ngang hàng của nhiều team. Rủi ro: thêm một lớp phải vận hành, nhiều router cùng nghe URL, đưa app Angular có sẵn vào phải sửa bootstrap, zone.js và router.
 
 ```ts
@@ -69,7 +69,7 @@ const { mount } = await loadRemote('settings/mount');
 | Độ phức tạp thêm | Trung bình | Thấp | Cao |
 | Sửa app Angular 14 có sẵn | Ít | Ít, khi Angular là phía được nhúng | Nhiều |
 
-**Lựa chọn cho migration:** dùng Module Federation ở giai đoạn 3, với hợp đồng `mount(el, ctx)` mượn tư tưởng lifecycle của single-spa nhưng không dùng framework này. Web Components là phương án dự phòng, và dùng để nhúng màn Angular còn sót khi đảo host (tắt Shadow DOM để giữ theme Bootstrap 4). Không dùng single-spa vì chỉ có hai framework và một host rõ ràng.
+**Lựa chọn cho migration:** dùng Module Federation ở giai đoạn 3, với hợp đồng `mount(el, ctx)` mượn tư tưởng lifecycle của single-spa nhưng không dùng framework này. Web Components là phương án dự phòng, và dùng để nhúng màn Angular còn sót khi đảo host (tắt Shadow DOM để giữ theme chung). Không dùng single-spa vì chỉ có hai framework và một host rõ ràng.
 
 ### Lộ trình: mỗi giai đoạn một cấp độ
 
@@ -141,7 +141,7 @@ Angular 14 chạy trên Node 14/16 và TypeScript 4.7. Vite bản mới cần No
 
 #### 5. CSS và cache
 
-Trong giai đoạn chuyển, remote React dùng lại CSS Vuexy + Bootstrap 4 của host, không tự mang CSS global. Làm lại thiết kế để sau khi chuyển xong, tránh giao diện lệch nhau.
+Trong giai đoạn chuyển, remote React dùng lại CSS global của host, không tự mang CSS global. Làm lại thiết kế để sau khi chuyển xong, tránh giao diện lệch nhau.
 
 Về cache: `remoteEntry.js`, `mf-manifest.json`, `index.html` và `env.js` phải để `no-cache`. File có hash trong `/assets/` thì cache một năm. Làm sai chỗ này, người dùng sẽ chạy remote cũ sau khi đã deploy bản mới.
 

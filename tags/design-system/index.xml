@@ -1,0 +1,269 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Design-System on phongthien</title><link>https://phongthien99.github.io/tags/design-system/</link><description>Recent content in Design-System on phongthien</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Sun, 20 Sep 2026 00:00:00 +0700</lastBuildDate><atom:link href="https://phongthien99.github.io/tags/design-system/index.xml" rel="self" type="application/rss+xml"/><item><title>Building a Design System Component</title><link>https://phongthien99.github.io/posts/building-a-design-system-component/</link><pubDate>Sun, 20 Sep 2026 00:00:00 +0700</pubDate><guid>https://phongthien99.github.io/posts/building-a-design-system-component/</guid><description>&lt;h1 id="building-a-design-system-component"&gt;Building a Design System Component
+&lt;/h1&gt;&lt;p&gt;&lt;em&gt;Trạng thái số liệu tính đến ngày 20/09/2026.&lt;/em&gt;&lt;/p&gt;
+&lt;h2 id="tóm-tắt"&gt;Tóm tắt
+&lt;/h2&gt;&lt;p&gt;Khi nhiều dự án frontend cùng công ty dùng chung một Design System, cách phân phối phổ biến nhất là đóng gói thành một thư viện npm. Cách này đơn giản nhưng dẫn đến sự ràng buộc phiên bản giữa các sản phẩm, khó tùy biến cục bộ và khó kiểm soát thay đổi phá vỡ tương thích (breaking change). Bài viết mô tả một hướng khác, lấy cảm hứng từ shadcn/ui: component được lưu trong một registry tập trung, và mỗi sản phẩm dùng công cụ dòng lệnh (CLI) để sao chép mã nguồn vào repository của mình. Hệ thống gồm bốn thành phần: (i) kiến trúc phân tầng Token → Theme → Primitive → Component; (ii) mô hình token hai lớp; (iii) registry mô tả bằng metadata theo schema của shadcn; (iv) CLI TypeScript tự xây dựng. Bài viết kết thúc bằng các kết quả đạt được và hướng phát triển tiếp theo.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Từ khóa:&lt;/strong&gt; Design System, registry, phân phối mã nguồn, Base UI, design token, CLI, khả năng truy cập (accessibility).&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="1-đặt-vấn-đề"&gt;1. Đặt vấn đề
+&lt;/h2&gt;&lt;h3 id="11-bối-cảnh"&gt;1.1. Bối cảnh
+&lt;/h3&gt;&lt;p&gt;Trong một tổ chức có nhiều dự án frontend cùng dùng React và TypeScript, các sản phẩm đều cần một tập component nền tảng như Button, Input, Select, Dialog, Table và Form. Design System ra đời để đáp ứng nhu cầu này, và giá trị của nó thể hiện rõ nhất qua ba hệ quả khi thiếu nguồn chung, tức là khi mỗi nhóm tự xây dựng lại:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;Tốc độ phát triển thấp.&lt;/strong&gt; Không có component dựng sẵn thì mỗi biểu mẫu mới phải viết lại từ các thành phần nền tảng, có thể mất hai ngày thay vì ghép từ component có sẵn. Chi phí này lặp lại ở từng dự án.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Trải nghiệm người dùng thiếu nhất quán.&lt;/strong&gt; Cùng một thuộc tính như &lt;code&gt;border-radius&lt;/code&gt; hay màu chủ đạo nhưng mỗi dự án dùng một giá trị khác, khiến người dùng bị &amp;ldquo;giật mình&amp;rdquo; khi chuyển giữa các trang. Hành vi tương tác như tiêu điểm hay điều hướng bàn phím cũng khác nhau từ nơi này sang nơi khác.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Khó bảo trì.&lt;/strong&gt; Giá trị màu được viết cứng rải rác trong hàng trăm tệp, nên đổi nhận diện thương hiệu phải sửa ở rất nhiều chỗ thay vì chỉ một.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Ba vấn đề này tương ứng với ba lợi ích mà một Design System dùng chung cần mang lại: tăng tốc độ phát triển, giữ trải nghiệm nhất quán và dễ bảo trì. Câu hỏi còn lại là nên phân phối Design System đó đến các sản phẩm bằng cách nào.&lt;/p&gt;
+&lt;h3 id="12-phương-án-cơ-sở-gói-thư-viện-companyui"&gt;1.2. Phương án cơ sở: gói thư viện &lt;code&gt;@company/ui&lt;/code&gt;
+&lt;/h3&gt;&lt;p&gt;Phương án trực tiếp nhất là đóng gói component thành một package npm để các sản phẩm cài đặt và import. Khi số sản phẩm tăng, phương án này bộc lộ bốn hạn chế:&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Hạn chế&lt;/th&gt;
+&lt;th&gt;Biểu hiện&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Ràng buộc phiên bản&lt;/td&gt;
+&lt;td&gt;Sửa một prop của Dialog ảnh hưởng đến mọi sản phẩm nâng cấp, còn sản phẩm chưa nâng cấp bị tụt lại&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Tùy biến khó&lt;/td&gt;
+&lt;td&gt;Một biến thể nhỏ buộc phải fork hoặc ghi đè CSS bằng selector dài&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Kiểm soát breaking change kém&lt;/td&gt;
+&lt;td&gt;Hành vi thay đổi âm thầm, sản phẩm lỗi mà không rõ nguyên nhân&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Phụ thuộc vào thư viện primitive&lt;/td&gt;
+&lt;td&gt;Nếu API công khai lộ Base UI hoặc Radix, việc thay thư viện đồng nghĩa với major release cho toàn bộ sản phẩm&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;&lt;strong&gt;Câu hỏi nghiên cứu.&lt;/strong&gt; Làm thế nào duy trì một nguồn chuẩn duy nhất mà vẫn cho phép mỗi sản phẩm chủ động về tiến độ nâng cấp và mức độ tùy biến?&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="2-phương-pháp-đề-xuất"&gt;2. Phương pháp đề xuất
+&lt;/h2&gt;&lt;h3 id="21-mô-hình-registry"&gt;2.1. Mô hình Registry
+&lt;/h3&gt;&lt;p&gt;Thay vì cài đặt tại thời điểm chạy (runtime), component được lưu trong registry tập trung, và sản phẩm sao chép mã nguồn vào repository của mình bằng CLI:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-bash" data-lang="bash"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;company-ui add button
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="c1"&gt;# → components/ui/button.tsx và lib/utils.ts được ghi vào sản phẩm&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-tsx" data-lang="tsx"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="kr"&gt;import&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt; &lt;span class="nx"&gt;Button&lt;/span&gt; &lt;span class="p"&gt;}&lt;/span&gt; &lt;span class="kr"&gt;from&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;@/components/ui/button&amp;#34;&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt; &lt;span class="c1"&gt;// import từ mã nguồn cục bộ
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;&lt;strong&gt;Bảng 1.&lt;/strong&gt; So sánh hai mô hình phân phối.&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Tiêu chí&lt;/th&gt;
+&lt;th&gt;Gói runtime (&lt;code&gt;@company/ui&lt;/code&gt;)&lt;/th&gt;
+&lt;th&gt;Registry (sao chép mã nguồn)&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Vị trí mã nguồn&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;node_modules&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;Repository của sản phẩm&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Nâng cấp&lt;/td&gt;
+&lt;td&gt;Tăng version, có hiệu lực ngay&lt;/td&gt;
+&lt;td&gt;Chủ động: check → xem diff → apply&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Tùy biến&lt;/td&gt;
+&lt;td&gt;Fork hoặc ghi đè CSS&lt;/td&gt;
+&lt;td&gt;Sửa trực tiếp tệp&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Breaking change&lt;/td&gt;
+&lt;td&gt;Ảnh hưởng ngay khi nâng version&lt;/td&gt;
+&lt;td&gt;Không tự động tác động lên sản phẩm&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Chi phí vận hành&lt;/td&gt;
+&lt;td&gt;Thấp&lt;/td&gt;
+&lt;td&gt;Cần CLI và cơ chế theo dõi độ lệch&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;Đánh đổi cốt lõi là sau khi sao chép, &lt;strong&gt;sản phẩm sở hữu mã nguồn&lt;/strong&gt;. Vì vậy hệ thống phải có cơ chế xác định sản phẩm đang lệch khỏi chuẩn ở đâu.&lt;/p&gt;
+&lt;h3 id="22-kiến-trúc-phân-tầng"&gt;2.2. Kiến trúc phân tầng
+&lt;/h3&gt;&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-fallback" data-lang="fallback"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;Token → Theme → Primitive → Component → Pattern → Product
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;Nguyên tắc phụ thuộc là mỗi tầng chỉ phụ thuộc vào tầng đứng trước. &lt;code&gt;@company/tokens&lt;/code&gt; là package duy nhất bắt buộc dùng chung ở runtime.&lt;/p&gt;
+&lt;h3 id="23-token-hai-lớp"&gt;2.3. Token hai lớp
+&lt;/h3&gt;&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-fallback" data-lang="fallback"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;raw token (--ds-color-primary-600) → semantic (--color-primary) → component
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;Lớp raw có tiền tố &lt;code&gt;--ds-&lt;/code&gt; để tránh xung đột với biến của sản phẩm. Lớp semantic là lớp duy nhất component được tham chiếu. Kết quả là việc đổi thương hiệu chỉ cần thay đổi ở lớp ánh xạ, không chạm đến component nào.&lt;/p&gt;
+&lt;h3 id="24-phân-loại-component-theo-năm-cấp"&gt;2.4. Phân loại component theo năm cấp
+&lt;/h3&gt;&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Cấp&lt;/th&gt;
+&lt;th&gt;Tên&lt;/th&gt;
+&lt;th&gt;Ví dụ&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;L1&lt;/td&gt;
+&lt;td&gt;Primitive&lt;/td&gt;
+&lt;td&gt;Button&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;L2&lt;/td&gt;
+&lt;td&gt;Component&lt;/td&gt;
+&lt;td&gt;Input, Select&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;L3&lt;/td&gt;
+&lt;td&gt;Composite&lt;/td&gt;
+&lt;td&gt;FormField&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;L4&lt;/td&gt;
+&lt;td&gt;Pattern&lt;/td&gt;
+&lt;td&gt;DataTable&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;L5&lt;/td&gt;
+&lt;td&gt;Template&lt;/td&gt;
+&lt;td&gt;ListPage&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;Phân cấp này tạo ngôn ngữ chung cho BA, design, developer khi yêu cầu giao diện mới. Ràng buộc loại trừ là bất kỳ UI nào gọi API, biết route, quyền truy cập hoặc thực thể nghiệp vụ (như Order, Invoice) đều nằm ngoài phạm vi Design System.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="3-triển-khai"&gt;3. Triển khai
+&lt;/h2&gt;&lt;h3 id="31-cấu-trúc-monorepo"&gt;3.1. Cấu trúc monorepo
+&lt;/h3&gt;&lt;p&gt;Hệ thống dùng pnpm workspace kết hợp Turborepo để build song song, Changesets để quản lý phiên bản, cùng ESLint (typescript-eslint, react-hooks, jsx-a11y) và Prettier để chặn lỗi sớm.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;span class="lnt"&gt;3
+&lt;/span&gt;&lt;span class="lnt"&gt;4
+&lt;/span&gt;&lt;span class="lnt"&gt;5
+&lt;/span&gt;&lt;span class="lnt"&gt;6
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-gdscript3" data-lang="gdscript3"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="n"&gt;design&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="n"&gt;system&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;├──&lt;/span&gt; &lt;span class="n"&gt;apps&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;storybook&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;├──&lt;/span&gt; &lt;span class="n"&gt;packages&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="n"&gt;tokens&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;theme&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;primitives&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;patterns&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;icons&lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;├──&lt;/span&gt; &lt;span class="n"&gt;registry&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="n"&gt;company&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;ui&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;stories&lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;├──&lt;/span&gt; &lt;span class="n"&gt;tooling&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;company&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="n"&gt;ui&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt; &lt;span class="c1"&gt;# CLI&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;└──&lt;/span&gt; &lt;span class="n"&gt;registry&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;json&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;h3 id="32-từ-token-đến-tailwind"&gt;3.2. Từ token đến Tailwind
+&lt;/h3&gt;&lt;p&gt;&lt;code&gt;@company/theme&lt;/code&gt; ánh xạ token raw sang tên semantic, đồng thời xuất cùng bộ biến qua Tailwind preset để sản phẩm dùng utility class mà vẫn tuân theo token:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;span class="lnt"&gt;3
+&lt;/span&gt;&lt;span class="lnt"&gt;4
+&lt;/span&gt;&lt;span class="lnt"&gt;5
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-css" data-lang="css"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="nd"&gt;root&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="nv"&gt;--color-primary&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="nf"&gt;var&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="o"&gt;--&lt;/span&gt;&lt;span class="n"&gt;ds&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="kc"&gt;color&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="n"&gt;primary&lt;/span&gt;&lt;span class="mi"&gt;-600&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="nv"&gt;--color-ring&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="nf"&gt;var&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="o"&gt;--&lt;/span&gt;&lt;span class="n"&gt;ds&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="kc"&gt;color&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="n"&gt;primary&lt;/span&gt;&lt;span class="mi"&gt;-500&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="nv"&gt;--radius-md&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="nf"&gt;var&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="o"&gt;--&lt;/span&gt;&lt;span class="n"&gt;ds&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="n"&gt;radius&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="n"&gt;md&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;Cần lưu ý rằng các component hiện tại &lt;strong&gt;không&lt;/strong&gt; dùng utility class của Tailwind. Style nằm trong CSS thường theo quy ước &lt;code&gt;ds-*&lt;/code&gt; và chỉ tham chiếu biến semantic. Tailwind preset tồn tại để sản phẩm dùng token trong mã của riêng họ.&lt;/p&gt;
+&lt;h3 id="33-ví-dụ-minh-họa-component-button"&gt;3.3. Ví dụ minh họa: component Button
+&lt;/h3&gt;&lt;p&gt;&lt;strong&gt;Bảng 2.&lt;/strong&gt; Các quyết định thiết kế trong &lt;code&gt;Button&lt;/code&gt; và lý do.&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Quyết định&lt;/th&gt;
+&lt;th&gt;Lý do&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;type=&amp;quot;button&amp;quot;&lt;/code&gt; làm mặc định&lt;/td&gt;
+&lt;td&gt;HTML mặc định là &lt;code&gt;submit&lt;/code&gt;, nên nút trong &lt;code&gt;&amp;lt;form&amp;gt;&lt;/code&gt; sẽ gửi biểu mẫu ngoài ý muốn&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;disabled={disabled || isLoading}&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;Vô hiệu hóa thực sự khi đang tải, chặn click đúp và gửi trùng&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;ComponentPropsWithoutRef&amp;lt;typeof ButtonPrimitive&amp;gt;&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;Kế thừa toàn bộ prop của Base UI nhưng API vẫn thuộc công ty&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;forwardRef&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;Cho phép kết hợp với trigger của Tooltip, Popover, Dialog&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Spinner có &lt;code&gt;aria-hidden&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;Phần tử thuần trang trí&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h3 id="34-metadata-registry"&gt;3.4. Metadata registry
+&lt;/h3&gt;&lt;p&gt;Mỗi item được khai báo bằng JSON theo schema của shadcn:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;span class="lnt"&gt;3
+&lt;/span&gt;&lt;span class="lnt"&gt;4
+&lt;/span&gt;&lt;span class="lnt"&gt;5
+&lt;/span&gt;&lt;span class="lnt"&gt;6
+&lt;/span&gt;&lt;span class="lnt"&gt;7
+&lt;/span&gt;&lt;span class="lnt"&gt;8
+&lt;/span&gt;&lt;span class="lnt"&gt;9
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-json" data-lang="json"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="p"&gt;{&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="nt"&gt;&amp;#34;name&amp;#34;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;dialog&amp;#34;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="nt"&gt;&amp;#34;type&amp;#34;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;registry:ui&amp;#34;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="nt"&gt;&amp;#34;dependencies&amp;#34;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s2"&gt;&amp;#34;@base-ui/react&amp;#34;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;@company/theme&amp;#34;&lt;/span&gt;&lt;span class="p"&gt;],&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="nt"&gt;&amp;#34;registryDependencies&amp;#34;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s2"&gt;&amp;#34;button&amp;#34;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;utils&amp;#34;&lt;/span&gt;&lt;span class="p"&gt;],&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="nt"&gt;&amp;#34;files&amp;#34;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="p"&gt;[&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="p"&gt;{&lt;/span&gt; &lt;span class="nt"&gt;&amp;#34;path&amp;#34;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;components/dialog/dialog.tsx&amp;#34;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nt"&gt;&amp;#34;type&amp;#34;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;registry:ui&amp;#34;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nt"&gt;&amp;#34;target&amp;#34;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;@ui/dialog.tsx&amp;#34;&lt;/span&gt; &lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="p"&gt;]&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;dependencies&lt;/code&gt; là các package npm cần cài.&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;registryDependencies&lt;/code&gt; là các item khác trong registry mà item này phụ thuộc.&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;target&lt;/code&gt; dùng placeholder như &lt;code&gt;@ui/dialog.tsx&lt;/code&gt;, không phải đường dẫn cố định. CLI đọc &lt;code&gt;components.json&lt;/code&gt; của sản phẩm để xác định &lt;code&gt;@ui&lt;/code&gt; tương ứng &lt;code&gt;src/components/ui&lt;/code&gt; hay &lt;code&gt;components/ui&lt;/code&gt;.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id="4-kết-luận"&gt;4. Kết luận
+&lt;/h2&gt;&lt;p&gt;Bài viết đã trình bày một cách tiếp cận cho bài toán dùng chung Design System giữa nhiều dự án frontend: thay vì phân phối component dưới dạng gói thư viện, hệ thống phân phối chính mã nguồn qua một registry tập trung theo hướng &lt;em&gt;code distribution&lt;/em&gt; và &lt;em&gt;open code&lt;/em&gt;. Sự khác biệt cốt lõi nằm ở quyền sở hữu. Registry giữ vai trò nguồn chuẩn, còn mỗi sản phẩm sở hữu bản sao của mình nên tự quyết định thời điểm nâng cấp và mức độ tùy biến, và breaking change không tự động tác động lên sản phẩm. Đổi lại, sản phẩm phải chịu trách nhiệm về mã đã sao chép, và tổ chức phải có công cụ để nhìn ra sự lệch chuẩn.&lt;/p&gt;</description></item></channel></rss>

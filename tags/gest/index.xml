@@ -1,0 +1,281 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Gest on phongthien</title><link>https://phongthien99.github.io/tags/gest/</link><description>Recent content in Gest on phongthien</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Fri, 12 Dec 2025 00:40:00 +0800</lastBuildDate><atom:link href="https://phongthien99.github.io/tags/gest/index.xml" rel="self" type="application/rss+xml"/><item><title>Database-Centric Architecture</title><link>https://phongthien99.github.io/posts/database-centric-architecture/</link><pubDate>Fri, 12 Dec 2025 00:40:00 +0800</pubDate><guid>https://phongthien99.github.io/posts/database-centric-architecture/</guid><description>&lt;h1 id="database-centric-architecture"&gt;&lt;strong&gt;Database-Centric Architecture&lt;/strong&gt;
+&lt;/h1&gt;&lt;h2 id="1-giới-thiệu"&gt;&lt;strong&gt;1. Giới thiệu&lt;/strong&gt;
+&lt;/h2&gt;&lt;p&gt;&lt;strong&gt;Database-Centric Architecture&lt;/strong&gt; là kiểu kiến trúc phần mềm mà &lt;strong&gt;cơ sở dữ liệu đóng vai trò trung tâm của hệ thống&lt;/strong&gt;.&lt;/p&gt;
+&lt;p&gt;Thay vì xử lý logic nghiệp vụ ở tầng ứng dụng, phần lớn logic được đưa vào database thông qua:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Stored Procedures&lt;/li&gt;
+&lt;li&gt;Triggers&lt;/li&gt;
+&lt;li&gt;Views / Materialized Views&lt;/li&gt;
+&lt;li&gt;Constraints&lt;/li&gt;
+&lt;li&gt;RLS / CLS&lt;/li&gt;
+&lt;li&gt;Transaction logic&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Ứng dụng đóng vai trò chủ yếu là &lt;strong&gt;giao diện tương tác&lt;/strong&gt; (presentation + API gateway) hơn là nơi xử lý logic.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="2-lợi-ích"&gt;&lt;strong&gt;2. Lợi ích&lt;/strong&gt;
+&lt;/h2&gt;&lt;h3 id="21-dữ-liệu-nhất-quán-và-integrity-cao"&gt;&lt;strong&gt;2.1. Dữ liệu nhất quán và integrity cao&lt;/strong&gt;
+&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;DB đảm nhiệm toàn bộ constraint, validation và loại bỏ logic trùng lặp.&lt;/li&gt;
+&lt;li&gt;Nhiều clients truy cập vẫn đảm bảo ACID, hạn chế lỗi race-condition hoặc mismatch logic.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="22-business-logic-tập-trung"&gt;&lt;strong&gt;2.2. Business logic tập trung&lt;/strong&gt;
+&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;Quy tắc nghiệp vụ tập trung tại một nơi duy nhất.&lt;/li&gt;
+&lt;li&gt;Dễ kiểm soát, audit và giảm sai lệch giữa các service hoặc ứng dụng client khác nhau.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="23-bảo-mật-mạnh-và-chặt-chẽ"&gt;&lt;strong&gt;2.3. Bảo mật mạnh và chặt chẽ&lt;/strong&gt;
+&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;Dùng RLS, CLS, roles giúp kiểm soát truy cập theo từng dòng dữ liệu hoặc từng cột.&lt;/li&gt;
+&lt;li&gt;Không phụ thuộc ứng dụng để enforce security — tăng tính an toàn.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="24-phù-hợp-cho-hệ-thống-giao-dịch"&gt;&lt;strong&gt;2.4. Phù hợp cho hệ thống giao dịch&lt;/strong&gt;
+&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;Banking, ERP, CRM, healthcare,… nơi consistency cực kỳ quan trọng.&lt;/li&gt;
+&lt;li&gt;Các stored procedure chạy nội bộ giúp giảm round-trip và tăng tốc xử lý giao dịch.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id="3-nhược-điểm"&gt;&lt;strong&gt;3. Nhược điểm&lt;/strong&gt;
+&lt;/h2&gt;&lt;h3 id="31-vấn-đề-về-scale"&gt;&lt;strong&gt;3.1. Vấn đề về Scale&lt;/strong&gt;
+&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Database trở thành bottleneck&lt;/strong&gt;: CPU, RAM, IO đều dồn vào DB.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Khó scale ngang&lt;/strong&gt;: sharding, replication phức tạp khi logic nằm trong DB.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Tăng latency&lt;/strong&gt; khi nhiều trigger/procedure nặng.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Read replicas&lt;/strong&gt; không thực hiện được logic write, gây lệ thuộc master.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="32-vấn-đề-về-maintainability"&gt;&lt;strong&gt;3.2. Vấn đề về Maintainability&lt;/strong&gt;
+&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Ở đâu cũng có logic&lt;/strong&gt;: triggers, procedure, view → khó debug, khó trace.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Khó version control&lt;/strong&gt;: không đồng bộ với Git/CI/CD tốt như code application.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Schema thay đổi phức tạp&lt;/strong&gt;: dễ gây lỗi dây chuyền trong trigger/procedure.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Đòi hỏi skill đặc thù&lt;/strong&gt; như SQL nâng cao, locking, query planning.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Coupling cao&lt;/strong&gt;: đổi DB hoặc chuyển sang microservices rất tốn kém.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id="4-case-study--khi-nào-nên-dùng-database-centric-architecture"&gt;&lt;strong&gt;4. Case Study — Khi nào nên dùng Database-Centric Architecture&lt;/strong&gt;
+&lt;/h2&gt;&lt;h3 id="41-ngành-tài-chính--ngân-hàng"&gt;&lt;strong&gt;4.1. Ngành tài chính – ngân hàng&lt;/strong&gt;
+&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;Cần ACID tuyệt đối.&lt;/li&gt;
+&lt;li&gt;Giao dịch tiền tệ: chuyển khoản, thanh toán, kiểm tra số dư.&lt;/li&gt;
+&lt;li&gt;Stored procedure đảm bảo logic nhất quán, rollback an toàn.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Triển khai điển hình:&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;SP xử lý giao dịch (debit/credit).&lt;/li&gt;
+&lt;li&gt;Trigger tạo lịch sử giao dịch.&lt;/li&gt;
+&lt;li&gt;Constraint ngăn mất cân bằng tài khoản.&lt;/li&gt;
+&lt;li&gt;RLS đảm bảo user chỉ thấy tài khoản của họ.&lt;/li&gt;
+&lt;li&gt;Materialized view dành cho báo cáo tổng hợp.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="42-erp--crm--accounting"&gt;&lt;strong&gt;4.2. ERP / CRM / Accounting&lt;/strong&gt;
+&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;Dữ liệu phức tạp nhưng consistency quan trọng hơn performance.&lt;/li&gt;
+&lt;li&gt;Quy trình nghiệp vụ ổn định, ít thay đổi.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="5-kết-luận"&gt;&lt;strong&gt;5. Kết luận&lt;/strong&gt;
+&lt;/h2&gt;&lt;p&gt;Database-Centric Architecture phù hợp cho các hệ thống:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Dữ liệu là trung tâm&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Tính toàn vẹn (integrity) và nhất quán là ưu tiên hàng đầu&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Nghiệp vụ ổn định, ít thay đổi&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Số lượng giao dịch lớn nhưng user không quá đông&lt;/strong&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Tuy nhiên, không phù hợp cho:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Hệ thống cần &lt;strong&gt;scale-out lớn&lt;/strong&gt;, traffic cao (social network, ecommerce lớn)&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Microservices architecture&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;Hệ thống cần release nhanh, thay đổi thường xuyên&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Tóm lại:&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Database-Centric Architecture phát huy tối đa trong môi trường yêu cầu &lt;strong&gt;độ chính xác cao&lt;/strong&gt;, &lt;strong&gt;tính nhất quán mạnh&lt;/strong&gt;, và &lt;strong&gt;quy tắc nghiệp vụ ổn định&lt;/strong&gt;. Nhưng nó phải đánh đổi bằng khả năng mở rộng và chi phí bảo trì lâu dài.&lt;/p&gt;</description></item><item><title>Standardizing Adapter Lifecycle in Frameworks with the Template Method Pattern</title><link>https://phongthien99.github.io/posts/standardizing-adapter-lifecycle-in-frameworks-with-the-template-method-pattern/</link><pubDate>Sat, 01 Nov 2025 00:40:00 +0800</pubDate><guid>https://phongthien99.github.io/posts/standardizing-adapter-lifecycle-in-frameworks-with-the-template-method-pattern/</guid><description>&lt;h1 id="standardizing-adapter-lifecycle-in-frameworks-with-the-template-method-pattern"&gt;Standardizing Adapter Lifecycle in Frameworks with the Template Method Pattern
+&lt;/h1&gt;&lt;h2 id="1-đặt-vấn-đề"&gt;1. Đặt vấn đề
+&lt;/h2&gt;&lt;p&gt;Trong một framework nền tảng, ta thường cần hỗ trợ nhiều loại &lt;strong&gt;adapter&lt;/strong&gt; khác nhau — chẳng hạn HTTP, gRPC, Kafka, hay Cron.&lt;/p&gt;
+&lt;p&gt;Dù mục đích của chúng khác nhau (xử lý request, tiêu thụ message, lên lịch job…), nhưng tất cả đều có &lt;strong&gt;chu trình vòng đời tương tự&lt;/strong&gt;:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-fallback" data-lang="fallback"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;Start → ... → Stop
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;Cụ thể:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Mỗi adapter cần &lt;strong&gt;khởi động (OnStart)&lt;/strong&gt; khi ứng dụng chạy.&lt;/li&gt;
+&lt;li&gt;Và &lt;strong&gt;dừng lại (OnStop)&lt;/strong&gt; khi ứng dụng shutdown.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Uber Fx cung cấp cơ chế &lt;code&gt;fx.Lifecycle&lt;/code&gt; giúp đăng ký các hook này:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;span class="lnt"&gt;3
+&lt;/span&gt;&lt;span class="lnt"&gt;4
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-go" data-lang="go"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nx"&gt;lc&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nf"&gt;Append&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;fx&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Hook&lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;OnStart&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kd"&gt;func&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;ctx&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;context&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Context&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kt"&gt;error&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;...&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;},&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;OnStop&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kd"&gt;func&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;ctx&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;context&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Context&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kt"&gt;error&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;...&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;},&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="p"&gt;})&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;Tuy nhiên, khi framework mở rộng để hỗ trợ nhiều adapter, ta bắt đầu nhận thấy một vấn đề kiến trúc phổ biến:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Các adapter là những thành phần khác nhau, nhưng lại có nhiều điểm tương đồng đáng kể&lt;/p&gt;
+&lt;p&gt;mà &lt;strong&gt;không có cơ chế chứng minh hoặc tận dụng được khả năng tái sử dụng giao diện hay xử lý chung&lt;/strong&gt;.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Kết quả là:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;❌ Mỗi adapter tự viết lại lifecycle giống nhau.&lt;/li&gt;
+&lt;li&gt;❌ Code lặp lại 60–70% (boilerplate Fx hook).&lt;/li&gt;
+&lt;li&gt;❌ Framework không có khung chuẩn để điều phối adapter.&lt;/li&gt;
+&lt;li&gt;❌ Nếu muốn thay đổi logic chung (ví dụ thêm logging, metrics&amp;hellip;), phải sửa ở tất cả adapter.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Nói cách khác, &lt;strong&gt;các adapter có chung cấu trúc hoạt động, nhưng framework chưa nắm quyền điều phối vòng đời&lt;/strong&gt;,&lt;/p&gt;
+&lt;p&gt;và điều đó khiến việc mở rộng hoặc bảo trì tốn rất nhiều effort.&lt;/p&gt;
+&lt;p&gt;Tình huống này cũng phổ biến trong các hệ thống &lt;strong&gt;nhiều adapter&lt;/strong&gt; — nơi từng nhóm phát triển có thể tự định nghĩa lifecycle riêng,&lt;/p&gt;
+&lt;p&gt;khiến framework trở nên rời rạc, thiếu tính thống nhất, và khó chứng minh khả năng tái sử dụng.&lt;/p&gt;
+&lt;h2 id="2-giải-pháp-template-method-pattern"&gt;2. Giải pháp: Template Method Pattern
+&lt;/h2&gt;&lt;p&gt;&lt;strong&gt;Template Method Pattern&lt;/strong&gt; là mẫu thiết kế cho phép:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Xác định &lt;strong&gt;bộ khung (template)&lt;/strong&gt; của một quy trình trong lớp cha.&lt;/li&gt;
+&lt;li&gt;Cho phép lớp con &lt;strong&gt;ghi đè các bước cụ thể&lt;/strong&gt; mà không thay đổi khung tổng thể.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Nói cách khác: lớp cha quyết định “quy trình diễn ra thế nào”,&lt;/p&gt;
+&lt;p&gt;còn lớp con chỉ cần mô tả &lt;em&gt;“chi tiết từng bước”&lt;/em&gt;.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Áp dụng vào bài toán adapter:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Lớp cha (template)&lt;/strong&gt; quy định vòng đời chuẩn gồm &lt;code&gt;OnStart&lt;/code&gt; và &lt;code&gt;OnStop&lt;/code&gt;.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Các adapter con (HTTP, gRPC, Kafka, …)&lt;/strong&gt; chỉ cần triển khai logic riêng trong hai bước đó.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Uber Fx&lt;/strong&gt; (hoặc thư viện tương tự) chỉ đóng vai trò &lt;em&gt;điều phối&lt;/em&gt; lifecycle, chứ không can thiệp vào cấu trúc template.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="3-thực-hiện"&gt;3. Thực hiện
+&lt;/h2&gt;&lt;h3 id="a-định-nghĩa-interface-lifecycle"&gt;a. Định nghĩa interface lifecycle
+&lt;/h3&gt;&lt;p&gt;Trước hết, ta mô hình hóa giao diện vòng đời chung cho mọi adapter:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;span class="lnt"&gt;3
+&lt;/span&gt;&lt;span class="lnt"&gt;4
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-go" data-lang="go"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="kd"&gt;type&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;AdapterLifecycle&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kd"&gt;interface&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nf"&gt;OnStart&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;ctx&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;context&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Context&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kt"&gt;error&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nf"&gt;OnStop&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;ctx&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;context&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Context&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kt"&gt;error&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;Tất cả adapter (HTTP, gRPC, Kafka, &amp;hellip;) đều tuân theo giao diện này.&lt;/p&gt;
+&lt;h3 id="b-xây-dựng-lớp-template-baseadapter"&gt;b. Xây dựng lớp template &lt;code&gt;BaseAdapter&lt;/code&gt;
+&lt;/h3&gt;&lt;p&gt;Lớp này chịu trách nhiệm &lt;strong&gt;định nghĩa khung lifecycle chung&lt;/strong&gt;,&lt;/p&gt;
+&lt;p&gt;và tự động đăng ký vào hệ thống (ví dụ Uber Fx):&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt; 1
+&lt;/span&gt;&lt;span class="lnt"&gt; 2
+&lt;/span&gt;&lt;span class="lnt"&gt; 3
+&lt;/span&gt;&lt;span class="lnt"&gt; 4
+&lt;/span&gt;&lt;span class="lnt"&gt; 5
+&lt;/span&gt;&lt;span class="lnt"&gt; 6
+&lt;/span&gt;&lt;span class="lnt"&gt; 7
+&lt;/span&gt;&lt;span class="lnt"&gt; 8
+&lt;/span&gt;&lt;span class="lnt"&gt; 9
+&lt;/span&gt;&lt;span class="lnt"&gt;10
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-go" data-lang="go"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="kd"&gt;type&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;BaseAdapter&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="nx"&gt;T&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kt"&gt;any&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kd"&gt;struct&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;Config&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;T&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="kd"&gt;func&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;b&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="nx"&gt;BaseAdapter&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="nx"&gt;T&lt;/span&gt;&lt;span class="p"&gt;])&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nf"&gt;RegisterLifecycle&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;lc&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;fx&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Lifecycle&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;impl&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;AdapterLifecycle&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;lc&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nf"&gt;Append&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;fx&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Hook&lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;OnStart&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;impl&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;OnStart&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;OnStop&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;impl&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;OnStop&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;})&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;Ở đây:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;RegisterLifecycle()&lt;/code&gt; là &lt;strong&gt;template method&lt;/strong&gt; – quy định quy trình cố định cho mọi adapter.&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;OnStart&lt;/code&gt; / &lt;code&gt;OnStop&lt;/code&gt; là các bước mở rộng mà lớp con có thể tùy biến.&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;fx.Lifecycle&lt;/code&gt; chỉ là cơ chế điều phối, không ảnh hưởng đến cấu trúc template.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="c-cụ-thể-hóa-adapter--sub-class"&gt;c. Cụ thể hóa adapter – Sub Class
+&lt;/h3&gt;&lt;p&gt;Mỗi adapter chỉ cần kế thừa &lt;code&gt;BaseAdapter&lt;/code&gt; và định nghĩa logic riêng của mình:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt; 1
+&lt;/span&gt;&lt;span class="lnt"&gt; 2
+&lt;/span&gt;&lt;span class="lnt"&gt; 3
+&lt;/span&gt;&lt;span class="lnt"&gt; 4
+&lt;/span&gt;&lt;span class="lnt"&gt; 5
+&lt;/span&gt;&lt;span class="lnt"&gt; 6
+&lt;/span&gt;&lt;span class="lnt"&gt; 7
+&lt;/span&gt;&lt;span class="lnt"&gt; 8
+&lt;/span&gt;&lt;span class="lnt"&gt; 9
+&lt;/span&gt;&lt;span class="lnt"&gt;10
+&lt;/span&gt;&lt;span class="lnt"&gt;11
+&lt;/span&gt;&lt;span class="lnt"&gt;12
+&lt;/span&gt;&lt;span class="lnt"&gt;13
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-go" data-lang="go"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="kd"&gt;type&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;HTTPAdapter&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kd"&gt;struct&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;BaseAdapter&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="nx"&gt;Config&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="kd"&gt;func&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;a&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="nx"&gt;HTTPAdapter&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nf"&gt;OnStart&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;ctx&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;context&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Context&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kt"&gt;error&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;fmt&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nf"&gt;Println&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;#34;Starting HTTP server...&amp;#34;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;return&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kc"&gt;nil&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="kd"&gt;func&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;a&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="nx"&gt;HTTPAdapter&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nf"&gt;OnStop&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;ctx&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;context&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Context&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kt"&gt;error&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;fmt&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nf"&gt;Println&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;#34;Stopping HTTP server...&amp;#34;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;return&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kc"&gt;nil&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;Và đăng ký adapter thông qua template:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;span class="lnt"&gt;3
+&lt;/span&gt;&lt;span class="lnt"&gt;4
+&lt;/span&gt;&lt;span class="lnt"&gt;5
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-go" data-lang="go"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="kd"&gt;func&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nf"&gt;ForRoot&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;cfg&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;Config&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;fx&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Option&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;return&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;fx&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nf"&gt;Invoke&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="kd"&gt;func&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;lc&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;fx&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Lifecycle&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;adapter&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="nx"&gt;HTTPAdapter&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;adapter&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nf"&gt;RegisterLifecycle&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;lc&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;adapter&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;})&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;Kết quả:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Toàn bộ adapter tuân theo &lt;strong&gt;vòng đời chuẩn&lt;/strong&gt;.&lt;/li&gt;
+&lt;li&gt;Chỉ cần định nghĩa phần riêng (OnStart/OnStop).&lt;/li&gt;
+&lt;li&gt;Không còn phải copy-paste code lifecycle.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="4-kết-luận"&gt;4. Kết luận
+&lt;/h2&gt;&lt;p&gt;Việc sử dụng Template Method Pattern giúp framework duy trì :&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Framework layer&lt;/strong&gt; nắm quyền điều phối vòng đời (template).&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Adapter layer&lt;/strong&gt; chỉ định nghĩa phần thực thi đặc thù.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Logic chung&lt;/strong&gt; (logging, metrics, tracing) có thể thêm một lần, áp dụng cho toàn hệ thống.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Điều này biến lifecycle trở thành một phần &lt;strong&gt;có thể kiểm soát, mở rộng và bảo trì tập trung&lt;/strong&gt;,&lt;/p&gt;
+&lt;p&gt;thay vì nằm rải rác trong từng adapter cụ thể.&lt;/p&gt;
+&lt;p&gt;Khi framework mở rộng với nhiều adapter khác nhau, việc mỗi adapter tự triển khai vòng đời riêng sẽ nhanh chóng dẫn đến &lt;strong&gt;trùng lặp, khó mở rộng và tốn effort bảo trì&lt;/strong&gt;.&lt;/p&gt;
+&lt;p&gt;Bằng cách áp dụng &lt;strong&gt;Template Method Pattern&lt;/strong&gt;, ta chuẩn hóa được quy trình &lt;code&gt;Start → Stop&lt;/code&gt;,&lt;/p&gt;
+&lt;p&gt;tách biệt phần cố định (template lifecycle) khỏi phần tùy biến (logic adapter),&lt;/p&gt;
+&lt;p&gt;giúp framework:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Dễ mở rộng thêm adapter mới.&lt;/li&gt;
+&lt;li&gt;Giảm 60–70% code lặp.&lt;/li&gt;
+&lt;li&gt;Quản lý lifecycle thống nhất.&lt;/li&gt;
+&lt;li&gt;Giữ cấu trúc sạch, tuân theo Clean Architecture.&lt;/li&gt;
+&lt;/ul&gt;</description></item></channel></rss>

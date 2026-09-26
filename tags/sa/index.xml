@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>SA on phongthien</title><link>https://phongthien99.github.io/tags/sa/</link><description>Recent content in SA on phongthien</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Sat, 04 Oct 2025 00:40:00 +0800</lastBuildDate><atom:link href="https://phongthien99.github.io/tags/sa/index.xml" rel="self" type="application/rss+xml"/><item><title>Evolutionary Architecture: Integrating C4 Model, ADR, and Version Control</title><link>https://phongthien99.github.io/posts/evolutionary-architecture-integrating-c4-model-adr-and-version-control/</link><pubDate>Sat, 04 Oct 2025 00:40:00 +0800</pubDate><guid>https://phongthien99.github.io/posts/evolutionary-architecture-integrating-c4-model-adr-and-version-control/</guid><description>&lt;h1 id="evolutionary-architecture-integrating-c4-model-adr-and-version-control"&gt;Evolutionary Architecture: Integrating C4 Model, ADR, and Version Control
+&lt;/h1&gt;&lt;hr&gt;
+&lt;h2 id="-1-đặt-vấn-đề"&gt;🧩 1. Đặt vấn đề
+&lt;/h2&gt;&lt;p&gt;Trong vòng đời phát triển phần mềm, kiến trúc &lt;strong&gt;luôn thay đổi&lt;/strong&gt;.&lt;/p&gt;
+&lt;p&gt;Một hệ thống có thể:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Bắt đầu từ monolith,&lt;/li&gt;
+&lt;li&gt;Chuyển sang microservices,&lt;/li&gt;
+&lt;li&gt;Rồi tiến hóa thành cloud-native với hạ tầng tự động (IaC).&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Mỗi thay đổi đó đều là &lt;strong&gt;một quyết định kiến trúc&lt;/strong&gt;.&lt;/p&gt;
+&lt;p&gt;Nếu không được ghi lại và quản lý có hệ thống, đội ngũ sẽ gặp các vấn đề sau:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;Không rõ hệ thống hiện tại khác gì so với trước đây.&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Không biết vì sao các quyết định kiến trúc được đưa ra.&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Không thể kiểm tra, khôi phục hay audit lịch sử kiến trúc.&lt;/strong&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Điều này dẫn đến hiện tượng “&lt;strong&gt;architecture drift&lt;/strong&gt;” — kiến trúc ban đầu dần bị sai lệch so với định hướng thiết kế.&lt;/p&gt;
+&lt;p&gt;Để tránh tình trạng đó, giải pháp là kết hợp:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;C4 Model&lt;/strong&gt; – mô tả kiến trúc trực quan,&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;ADR (Architecture Decision Record)&lt;/strong&gt; – ghi lại lý do thay đổi,&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Version Control (Git)&lt;/strong&gt; – quản lý lịch sử tiến hóa kiến trúc.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id="-2-giải-pháp-hệ-thống-quản-lý-kiến-trúc-có-phiên-bản"&gt;⚙️ 2. Giải pháp: Hệ thống quản lý kiến trúc có phiên bản
+&lt;/h2&gt;&lt;h3 id="-21-c4-model--trực-quan-hóa-kiến-trúc-ở-4-cấp-độ"&gt;🔹 2.1. C4 Model – Trực quan hóa kiến trúc ở 4 cấp độ
+&lt;/h3&gt;&lt;p&gt;&lt;strong&gt;C4 Model&lt;/strong&gt;, được giới thiệu bởi &lt;strong&gt;Simon Brown&lt;/strong&gt;, là một cách tiếp cận mô hình hóa kiến trúc giúp mọi người trong nhóm — từ kỹ sư đến quản lý — đều có thể &lt;strong&gt;hiểu được hệ thống ở đúng mức độ chi tiết cần thiết&lt;/strong&gt;.&lt;/p&gt;
+&lt;p&gt;Tên gọi &lt;strong&gt;C4&lt;/strong&gt; xuất phát từ bốn cấp độ mô tả kiến trúc:&lt;/p&gt;
+&lt;h3 id="1-system-context-ngữ-cảnh-hệ-thống"&gt;&lt;strong&gt;1. System Context (Ngữ cảnh hệ thống)&lt;/strong&gt;
+&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;Mục tiêu: Mô tả hệ thống đang nói đến là gì và nó tương tác với ai hoặc hệ thống nào khác.&lt;/li&gt;
+&lt;li&gt;Người đọc: Quản lý dự án, Product Owner, Business Analyst, hoặc bất kỳ ai cần hiểu tổng thể.&lt;/li&gt;
+&lt;li&gt;Trả lời câu hỏi: &lt;em&gt;Hệ thống của chúng ta phục vụ ai và giao tiếp với hệ thống nào?&lt;/em&gt;&lt;/li&gt;
+&lt;li&gt;Thể hiện: Các tác nhân bên ngoài (người dùng, hệ thống khác) và mối quan hệ giữa chúng với hệ thống chính.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="2-container-các-khối-triển-khai-chính"&gt;&lt;strong&gt;2. Container (Các khối triển khai chính)&lt;/strong&gt;
+&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;Mục tiêu: Mô tả hệ thống được chia thành những phần lớn nào — chẳng hạn như web app, API service, database, queue, hoặc worker.&lt;/li&gt;
+&lt;li&gt;Người đọc: Kiến trúc sư, kỹ sư DevOps, tech lead.&lt;/li&gt;
+&lt;li&gt;Trả lời câu hỏi: &lt;em&gt;Hệ thống gồm những ứng dụng hay dịch vụ nào và chúng giao tiếp ra sao?&lt;/em&gt;&lt;/li&gt;
+&lt;li&gt;Thể hiện: Các container phần mềm chính, công nghệ sử dụng, và mối quan hệ giữa chúng.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="3-component-các-thành-phần-bên-trong-container"&gt;&lt;strong&gt;3. Component (Các thành phần bên trong container)&lt;/strong&gt;
+&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;Mục tiêu: Cho biết cấu trúc bên trong của từng container, ví dụ một API có những module nào (controller, service, repository, client&amp;hellip;).&lt;/li&gt;
+&lt;li&gt;Người đọc: Nhà phát triển và kiến trúc sư hệ thống.&lt;/li&gt;
+&lt;li&gt;Trả lời câu hỏi: &lt;em&gt;Bên trong một service hoặc ứng dụng gồm những phần nào và chúng đảm nhiệm trách nhiệm gì?&lt;/em&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="4-code-chi-tiết-ở-mức-lớp-hoặc-hàm"&gt;&lt;strong&gt;4. Code (Chi tiết ở mức lớp hoặc hàm)&lt;/strong&gt;
+&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;Mục tiêu: Mô tả cấu trúc chi tiết của code — cách các class, function hoặc package tương tác.&lt;/li&gt;
+&lt;li&gt;Người đọc: Nhà phát triển trực tiếp làm việc với codebase.&lt;/li&gt;
+&lt;li&gt;Trả lời câu hỏi: &lt;em&gt;Cấu trúc code thực tế phản ánh kiến trúc ở mức nào?&lt;/em&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Cấp độ&lt;/th&gt;
+&lt;th&gt;Mục tiêu&lt;/th&gt;
+&lt;th&gt;Người đọc chính&lt;/th&gt;
+&lt;th&gt;Trả lời câu hỏi&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;System Context&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;Toàn cảnh hệ thống và mối quan hệ bên ngoài&lt;/td&gt;
+&lt;td&gt;PO, BA, Business&lt;/td&gt;
+&lt;td&gt;Hệ thống phục vụ ai, tương tác với ai&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;Container&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;Phân rã hệ thống thành các dịch vụ chính&lt;/td&gt;
+&lt;td&gt;Architect, DevOps&lt;/td&gt;
+&lt;td&gt;Có những ứng dụng và công nghệ nào&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;Component&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;Cấu trúc bên trong một container&lt;/td&gt;
+&lt;td&gt;Developer, Architect&lt;/td&gt;
+&lt;td&gt;Có những module nào và vai trò ra sao&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;Code&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;Cấu trúc chi tiết của code&lt;/td&gt;
+&lt;td&gt;Developer&lt;/td&gt;
+&lt;td&gt;Class, hàm, thư viện tương tác thế nào&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;💡 Khi mô hình được viết dưới dạng &lt;strong&gt;diagram as code&lt;/strong&gt; (như Mermaid hoặc Structurizr DSL), các file này có thể được version hóa trong Git, giúp theo dõi và so sánh dễ dàng giữa các phiên bản kiến trúc.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h3 id="-22-adr--ghi-lại-lý-do-của-mỗi-quyết-định-kiến-trúc"&gt;🔹 2.2. ADR – Ghi lại lý do của mỗi quyết định kiến trúc
+&lt;/h3&gt;&lt;p&gt;&lt;strong&gt;ADR (Architecture Decision Record)&lt;/strong&gt; là cách ghi nhận &lt;em&gt;vì sao&lt;/em&gt; một quyết định kỹ thuật được đưa ra tại một thời điểm cụ thể.&lt;/p&gt;
+&lt;p&gt;Mỗi ADR nên trả lời được ba câu hỏi:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;Bối cảnh:&lt;/strong&gt; Tại sao cần thay đổi?&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Quyết định:&lt;/strong&gt; Giải pháp được chọn là gì?&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Hệ quả:&lt;/strong&gt; Tác động của quyết định này (tích cực hoặc tiêu cực) là gì?&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Ví dụ:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt; 1
+&lt;/span&gt;&lt;span class="lnt"&gt; 2
+&lt;/span&gt;&lt;span class="lnt"&gt; 3
+&lt;/span&gt;&lt;span class="lnt"&gt; 4
+&lt;/span&gt;&lt;span class="lnt"&gt; 5
+&lt;/span&gt;&lt;span class="lnt"&gt; 6
+&lt;/span&gt;&lt;span class="lnt"&gt; 7
+&lt;/span&gt;&lt;span class="lnt"&gt; 8
+&lt;/span&gt;&lt;span class="lnt"&gt; 9
+&lt;/span&gt;&lt;span class="lnt"&gt;10
+&lt;/span&gt;&lt;span class="lnt"&gt;11
+&lt;/span&gt;&lt;span class="lnt"&gt;12
+&lt;/span&gt;&lt;span class="lnt"&gt;13
+&lt;/span&gt;&lt;span class="lnt"&gt;14
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-fallback" data-lang="fallback"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;# 003 - Chuyển từ REST sang Event-driven Architecture
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;Ngày: 2025-07-01
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;Trạng thái: Superseded by ADR-005
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;Người đề xuất: Giang
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;Bối cảnh:
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;REST API không đáp ứng khối lượng giao dịch cao trong giờ cao điểm.
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;Quyết định:
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;Chuyển sang mô hình Event-driven sử dụng SNS + SQS.
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;Hệ quả:
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;+ Tăng throughput, giảm độ trễ.
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;- Tăng độ phức tạp trong kiểm thử và giám sát.
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;Khi một quyết định mới thay thế quyết định cũ, bạn chỉ cần cập nhật trạng thái:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-fallback" data-lang="fallback"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;Status: Superseded by ADR-005
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;Toàn bộ lịch sử thay đổi được lưu giữ rõ ràng và có thể tra cứu bất kỳ lúc nào.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h3 id="-23-version-control--theo-dõi-tiến-hóa-kiến-trúc"&gt;🔹 2.3. Version Control – Theo dõi tiến hóa kiến trúc
+&lt;/h3&gt;&lt;p&gt;Lưu &lt;strong&gt;C4 Model&lt;/strong&gt; và &lt;strong&gt;ADR&lt;/strong&gt; trong Git giúp quản lý kiến trúc như code:&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Hành động&lt;/th&gt;
+&lt;th&gt;Cách thực hiện&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Xem lại kiến trúc cũ&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;git log docs/c4/container.mmd&lt;/code&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;So sánh giữa hai phiên bản&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;git diff v1.2 v1.3 docs/adr/&lt;/code&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Quay lại kiến trúc cũ&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;git checkout &amp;lt;commit-id&amp;gt; docs/c4/&lt;/code&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Gắn liên kết giữa code và quyết định&lt;/td&gt;
+&lt;td&gt;Commit message: &lt;code&gt;feat(payment): implement SNS flow (ADR-003)&lt;/code&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;Một cấu trúc dự án có thể như sau:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt; 1
+&lt;/span&gt;&lt;span class="lnt"&gt; 2
+&lt;/span&gt;&lt;span class="lnt"&gt; 3
+&lt;/span&gt;&lt;span class="lnt"&gt; 4
+&lt;/span&gt;&lt;span class="lnt"&gt; 5
+&lt;/span&gt;&lt;span class="lnt"&gt; 6
+&lt;/span&gt;&lt;span class="lnt"&gt; 7
+&lt;/span&gt;&lt;span class="lnt"&gt; 8
+&lt;/span&gt;&lt;span class="lnt"&gt; 9
+&lt;/span&gt;&lt;span class="lnt"&gt;10
+&lt;/span&gt;&lt;span class="lnt"&gt;11
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-fallback" data-lang="fallback"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;main
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;├── docs/
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;│ ├── c4/
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;│ │ ├── system-context.mmd
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;│ │ ├── container.mmd
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;│ │ └── component.mmd
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;│ └── adr/
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;│ ├── 001-use-rest-api.md
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;│ ├── 002-use-postgresql.md
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;│ └── 003-move-to-event-driven.md
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;└── src/
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;Mỗi commit nên bao gồm thay đổi &lt;strong&gt;code + ADR + diagram&lt;/strong&gt;, đảm bảo rằng kiến trúc, quyết định và hiện thực luôn đồng bộ.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="-3-thực-hành-quy-trình-đề-xuất"&gt;🧪 3. Thực hành: Quy trình đề xuất
+&lt;/h2&gt;&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Khi có thay đổi lớn:&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Viết ADR mô tả lý do, cập nhật C4 diagram tương ứng.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Commit chuẩn:&lt;/strong&gt;&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-bash" data-lang="bash"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;git add docs/adr/004-use-step-functions.md docs/c4/container.mmd src/
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;git commit -m &lt;span class="s2"&gt;&amp;#34;ADR-004: Replace Lambda chain with Step Functions&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Gắn tag kiến trúc:&lt;/strong&gt;&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-bash" data-lang="bash"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;git tag arch-v1.0
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Tích hợp CI/CD:&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Tự động render biểu đồ, xuất ADR sang wiki hoặc documentation portal, và triển khai tài liệu kiến trúc mới nhất.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;hr&gt;
+&lt;h2 id="-4-kết-luận"&gt;🧭 4. Kết luận
+&lt;/h2&gt;&lt;p&gt;Khi kết hợp &lt;strong&gt;C4 Model&lt;/strong&gt;, &lt;strong&gt;ADR&lt;/strong&gt;, và &lt;strong&gt;Version Control&lt;/strong&gt;, bạn tạo ra một &lt;strong&gt;kiến trúc có thể sống (living architecture)&lt;/strong&gt; – nơi mà:&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Thành phần&lt;/th&gt;
+&lt;th&gt;Vai trò&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;🧩 &lt;strong&gt;C4 Model&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;Giúp hiểu kiến trúc hiện tại&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;🧾 &lt;strong&gt;ADR&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;Ghi lại lý do và bối cảnh quyết định&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;🕓 &lt;strong&gt;Version Control (Git)&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;Theo dõi và khôi phục lịch sử thay đổi&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;blockquote&gt;
+&lt;p&gt;🔁 Code thay đổi → Kiến trúc thay đổi → Quyết định được ghi lại → Lịch sử được bảo tồn.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Nhờ đó, đội ngũ có thể:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Dễ dàng audit và review kiến trúc,&lt;/li&gt;
+&lt;li&gt;Giúp người mới nhanh chóng hiểu lịch sử kỹ thuật,&lt;/li&gt;
+&lt;li&gt;Và đảm bảo kiến trúc tiến hóa có kiểm soát, thay vì trôi dạt theo thời gian.&lt;/li&gt;
+&lt;/ul&gt;</description></item></channel></rss>

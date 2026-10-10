@@ -1,0 +1,80 @@
+{{- $title := .Get "title" | default "Architecture" -}}
+{{- $view := .Get "view" | default "" -}}
+{{- $mode := .Get "mode" | default "both" -}}
+{{- $showPreview := or (eq $mode "preview") (eq $mode "both") -}}
+{{- $showCode := or (eq $mode "code") (eq $mode "both") -}}
+
+<section
+  class="archcode-embed archcode-embed-{{ $mode }}"
+  {{ if $showPreview }}data-archcode-viewer data-view="{{ $view }}" data-show-source="{{ if $showCode }}true{{ else }}false{{ end }}"{{ end }}>
+  <style>
+    .archcode-embed {
+      display: grid;
+      gap: 0.75rem;
+      margin: 1.25rem 0;
+    }
+
+    .archcode-embed-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .archcode-embed-title {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .archcode-embed-full {
+      font-size: 0.875rem;
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .archcode-embed .archcode-output,
+    .archcode-embed-code {
+      border: 1px solid var(--card-separator-color, #d0d7de);
+      border-radius: 8px;
+    }
+
+    .archcode-embed-code {
+      overflow: auto;
+      margin: 0;
+      padding: 0.85rem;
+      background: var(--code-background-color, rgba(127, 127, 127, 0.08));
+    }
+  </style>
+
+  <div class="archcode-embed-header">
+    <p class="archcode-embed-title">{{ $title }}</p>
+    <a class="archcode-embed-full" href="/archcode/" target="_blank" rel="noopener">Open editor</a>
+  </div>
+
+  {{ if $showPreview }}
+    <div class="archcode-output" aria-live="polite"></div>
+    <div class="archcode-diagnostics" aria-live="polite"></div>
+  {{ end }}
+
+  {{ if $showPreview }}
+    <pre class="archcode-source archcode-embed-code"><code>{{ .Inner | htmlEscape | safeHTML }}</code></pre>
+  {{ else if $showCode }}
+    <pre class="archcode-embed-code"><code>{{ .Inner | htmlEscape | safeHTML }}</code></pre>
+  {{ end }}
+</section>
+
+{{ if $showPreview }}
+  <script>
+    window.__archcodeViewerScript =
+      window.__archcodeViewerScript ||
+      (function () {
+        var script = document.createElement('script');
+        script.src = '/js/archcode-viewer.js';
+        script.defer = true;
+        document.head.appendChild(script);
+        return script;
+      })();
+  </script>
+{{ end }}

@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Nexus on phongthien</title><link>https://phongthien99.github.io/tags/nexus/</link><description>Recent content in Nexus on phongthien</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Thu, 25 Sep 2025 00:21:26 +0000</lastBuildDate><atom:link href="https://phongthien99.github.io/tags/nexus/index.xml" rel="self" type="application/rss+xml"/><item><title>Security and Artifact Management with Nexus Repository</title><link>https://phongthien99.github.io/posts/security-and-artifact-management-with-nexus-repository/</link><pubDate>Thu, 25 Sep 2025 00:21:26 +0000</pubDate><guid>https://phongthien99.github.io/posts/security-and-artifact-management-with-nexus-repository/</guid><description>&lt;h1 id="security-and-artifact-management-with-nexus-repository"&gt;Security and Artifact Management with Nexus Repository
+&lt;/h1&gt;&lt;h2 id="1-đặt-vấn-đề"&gt;1. Đặt vấn đề
+&lt;/h2&gt;&lt;p&gt;Trong phát triển phần mềm hiện đại, hầu hết dự án đều phụ thuộc vào rất nhiều &lt;strong&gt;thư viện bên thứ ba&lt;/strong&gt;. Điều này kéo theo nhiều rủi ro:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Bảo mật&lt;/strong&gt;
+&lt;ul&gt;
+&lt;li&gt;Lấy dependency trực tiếp từ internet (Maven Central, npmjs.org, PyPI, …) dễ gặp package chứa mã độc.&lt;/li&gt;
+&lt;li&gt;Không có kiểm soát: bất kỳ ai cũng có thể thêm/sử dụng artifact mà không bị giám sát.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Quản lý artifact&lt;/strong&gt;
+&lt;ul&gt;
+&lt;li&gt;Các gói nội bộ (internal library, SDK) cần một nơi tập trung để chia sẻ trong team.&lt;/li&gt;
+&lt;li&gt;Artifact version nhiều, dễ trùng lặp hoặc thất lạc.&lt;/li&gt;
+&lt;li&gt;CI/CD cần nguồn tin cậy để lấy/gửi artifact, tránh “mất gói” hoặc “dùng nhầm version”.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;👉 Vì vậy cần một &lt;strong&gt;trung tâm artifact tập trung, an toàn, dễ quản lý&lt;/strong&gt;.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="2-giải-pháp-nexus-repository"&gt;2. Giải pháp: Nexus Repository
+&lt;/h2&gt;&lt;p&gt;&lt;strong&gt;Nexus Repository Manager (Nexus 3)&lt;/strong&gt; là giải pháp phổ biến:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Bảo mật&lt;/strong&gt;
+&lt;ul&gt;
+&lt;li&gt;Hỗ trợ xác thực người dùng, phân quyền chi tiết.&lt;/li&gt;
+&lt;li&gt;Proxy external repository (Maven Central, npmjs.org, Docker Hub, …) và cache lại → ngăn gói độc hại, giảm phụ thuộc internet.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Quản lý artifact tập trung&lt;/strong&gt;
+&lt;ul&gt;
+&lt;li&gt;Lưu trữ artifact nội bộ (hosted).&lt;/li&gt;
+&lt;li&gt;Proxy repo bên ngoài (proxy).&lt;/li&gt;
+&lt;li&gt;Gom nhiều repo thành một entry duy nhất cho developer dùng (group).&lt;/li&gt;
+&lt;li&gt;Chính sách cleanup tự động xoá version cũ.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Tích hợp CI/CD&lt;/strong&gt;
+&lt;ul&gt;
+&lt;li&gt;Dễ push/pull artifact trong Jenkins, GitLab CI, GitHub Actions.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id="3-triển-khai-nexus-bằng-docker"&gt;3. Triển khai Nexus bằng Docker
+&lt;/h2&gt;&lt;h3 id="31-cấu-hình-docker-composeyml"&gt;3.1. Cấu hình &lt;code&gt;docker-compose.yml&lt;/code&gt;
+&lt;/h3&gt;&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt; 1
+&lt;/span&gt;&lt;span class="lnt"&gt; 2
+&lt;/span&gt;&lt;span class="lnt"&gt; 3
+&lt;/span&gt;&lt;span class="lnt"&gt; 4
+&lt;/span&gt;&lt;span class="lnt"&gt; 5
+&lt;/span&gt;&lt;span class="lnt"&gt; 6
+&lt;/span&gt;&lt;span class="lnt"&gt; 7
+&lt;/span&gt;&lt;span class="lnt"&gt; 8
+&lt;/span&gt;&lt;span class="lnt"&gt; 9
+&lt;/span&gt;&lt;span class="lnt"&gt;10
+&lt;/span&gt;&lt;span class="lnt"&gt;11
+&lt;/span&gt;&lt;span class="lnt"&gt;12
+&lt;/span&gt;&lt;span class="lnt"&gt;13
+&lt;/span&gt;&lt;span class="lnt"&gt;14
+&lt;/span&gt;&lt;span class="lnt"&gt;15
+&lt;/span&gt;&lt;span class="lnt"&gt;16
+&lt;/span&gt;&lt;span class="lnt"&gt;17
+&lt;/span&gt;&lt;span class="lnt"&gt;18
+&lt;/span&gt;&lt;span class="lnt"&gt;19
+&lt;/span&gt;&lt;span class="lnt"&gt;20
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-yaml" data-lang="yaml"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nt"&gt;services&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;nexus&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;image&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;sonatype/nexus3&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;container_name&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;nexus&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;restart&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;always&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;volumes&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;- &lt;span class="s2"&gt;&amp;#34;nexus-data:/sonatype-work&amp;#34;&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;networks&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;default&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;aliases&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;- &lt;span class="l"&gt;nexus-8081.remote&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;- &lt;span class="l"&gt;nexus-8085.remote&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nt"&gt;volumes&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;nexus-data&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;{}&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nt"&gt;networks&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;default&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;external&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;name&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;traefik-ingress&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;👉 Giải thích:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Volumes&lt;/strong&gt; &lt;code&gt;nexus-data&lt;/code&gt; lưu toàn bộ cấu hình, artifact.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Network alias&lt;/strong&gt; giúp client gọi được Nexus qua &lt;code&gt;nexus-8081.remote&lt;/code&gt;.&lt;/li&gt;
+&lt;li&gt;Nếu dùng Traefik, có thể expose qua domain &lt;code&gt;https://nexus.company.com&lt;/code&gt;.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Chạy dịch vụ:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-bash" data-lang="bash"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;docker compose up -d
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;Đăng nhập lần đầu: &lt;code&gt;cat nexus-data/admin.password&lt;/code&gt;.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="4-kết-nối-maven-với-nexus-qua-proxy"&gt;4. Kết nối Maven với Nexus (qua Proxy)
+&lt;/h2&gt;&lt;p&gt;Để mọi dependency đều đi qua Nexus thay vì internet, cần chỉnh file &lt;code&gt;~/.m2/settings.xml&lt;/code&gt;.&lt;/p&gt;
+&lt;h3 id="41-file-cấu-hình-rút-gọn"&gt;4.1. File cấu hình rút gọn
+&lt;/h3&gt;&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;span class="lnt"&gt;3
+&lt;/span&gt;&lt;span class="lnt"&gt;4
+&lt;/span&gt;&lt;span class="lnt"&gt;5
+&lt;/span&gt;&lt;span class="lnt"&gt;6
+&lt;/span&gt;&lt;span class="lnt"&gt;7
+&lt;/span&gt;&lt;span class="lnt"&gt;8
+&lt;/span&gt;&lt;span class="lnt"&gt;9
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-xml" data-lang="xml"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nt"&gt;&amp;lt;settings&amp;gt;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="nt"&gt;&amp;lt;mirrors&amp;gt;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="nt"&gt;&amp;lt;mirror&amp;gt;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="nt"&gt;&amp;lt;id&amp;gt;&lt;/span&gt;nexus&lt;span class="nt"&gt;&amp;lt;/id&amp;gt;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="nt"&gt;&amp;lt;mirrorOf&amp;gt;&lt;/span&gt;*&lt;span class="nt"&gt;&amp;lt;/mirrorOf&amp;gt;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="nt"&gt;&amp;lt;url&amp;gt;&lt;/span&gt;http://nexus-8081.remote:8080/repository/maven-public/&lt;span class="nt"&gt;&amp;lt;/url&amp;gt;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="nt"&gt;&amp;lt;/mirror&amp;gt;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="nt"&gt;&amp;lt;/mirrors&amp;gt;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nt"&gt;&amp;lt;/settings&amp;gt;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;👉 Ý nghĩa:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;mirrorOf=&amp;quot;*&amp;quot;&lt;/code&gt;: tất cả repository đều được redirect qua Nexus.&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;maven-public&lt;/code&gt;: là &lt;strong&gt;Group repo&lt;/strong&gt; trong Nexus (gom Maven Central + repo nội bộ).&lt;/li&gt;
+&lt;li&gt;Developer chỉ cần 1 URL duy nhất, không quan tâm repo ngoài.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h3 id="42-example-thử-nghiệm-pull-artifact"&gt;4.2. Example thử nghiệm pull artifact
+&lt;/h3&gt;&lt;p&gt;Tạo một project Maven mới từ archetype:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;span class="lnt"&gt;3
+&lt;/span&gt;&lt;span class="lnt"&gt;4
+&lt;/span&gt;&lt;span class="lnt"&gt;5
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-bash" data-lang="bash"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;mvn archetype:generate &lt;span class="se"&gt;\
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; -DgroupId&lt;span class="o"&gt;=&lt;/span&gt;com.demo &lt;span class="se"&gt;\
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; -DartifactId&lt;span class="o"&gt;=&lt;/span&gt;nexus-test &lt;span class="se"&gt;\
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; -DarchetypeArtifactId&lt;span class="o"&gt;=&lt;/span&gt;maven-archetype-quickstart &lt;span class="se"&gt;\
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; -DinteractiveMode&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="nb"&gt;false&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;👉 Maven sẽ:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Gửi request dependency đến &lt;code&gt;http://nexus-8081.remote:8080/repository/maven-public/&lt;/code&gt;.&lt;/li&gt;
+&lt;li&gt;Nexus kiểm tra cache:
+&lt;ul&gt;
+&lt;li&gt;Nếu có sẵn → trả về ngay.&lt;/li&gt;
+&lt;li&gt;Nếu chưa có → proxy ra Maven Central, tải artifact, cache lại, rồi trả về.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Lần sau build lại, artifact sẽ lấy trực tiếp từ cache trong Nexus, không ra internet nữa.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="5-kết-luận"&gt;5. Kết luận
+&lt;/h2&gt;&lt;ul&gt;
+&lt;li&gt;Việc &lt;strong&gt;bảo mật và quản lý artifact&lt;/strong&gt; là cực kỳ quan trọng khi hệ thống phụ thuộc nhiều package bên ngoài.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Nexus Repository&lt;/strong&gt; cung cấp giải pháp tập trung:
+&lt;ul&gt;
+&lt;li&gt;Proxy &amp;amp; cache external repo → an toàn, nhanh hơn.&lt;/li&gt;
+&lt;li&gt;Lưu trữ artifact nội bộ, dễ quản lý version.&lt;/li&gt;
+&lt;li&gt;Hỗ trợ phân quyền &amp;amp; tích hợp tốt với CI/CD.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;👉 Với cấu hình &lt;code&gt;settings.xml&lt;/code&gt; rút gọn, team có thể ngay lập tức chuyển toàn bộ Maven build sang dùng Nexus mà không cần thay đổi nhiều.&lt;/p&gt;</description></item></channel></rss>

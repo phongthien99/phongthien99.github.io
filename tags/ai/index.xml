@@ -1,0 +1,641 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Ai on phongthien</title><link>https://phongthien99.github.io/tags/ai/</link><description>Recent content in Ai on phongthien</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Sat, 24 Oct 2026 00:00:00 +0700</lastBuildDate><atom:link href="https://phongthien99.github.io/tags/ai/index.xml" rel="self" type="application/rss+xml"/><item><title>Hybrid AI Agent Architecture: Server quyết định, Local thực thi</title><link>https://phongthien99.github.io/posts/hybrid-ai-agent-architecture-server-quy%E1%BA%BFt-%C4%91%E1%BB%8Bnh-local-th%E1%BB%B1c-thi/</link><pubDate>Sat, 24 Oct 2026 00:00:00 +0700</pubDate><guid>https://phongthien99.github.io/posts/hybrid-ai-agent-architecture-server-quy%E1%BA%BFt-%C4%91%E1%BB%8Bnh-local-th%E1%BB%B1c-thi/</guid><description>&lt;h1 id="hybrid-ai-agent-architecture-server-quyết-định-local-thực-thi"&gt;Hybrid AI Agent Architecture: Server quyết định, Local thực thi
+&lt;/h1&gt;&lt;p&gt;Làm thế nào để AI Agent trên Server sử dụng được công cụ và dữ liệu trên máy người dùng, trong khi vẫn kiểm soát được quyền truy cập, hành động và các rủi ro bảo mật?&lt;/p&gt;
+&lt;h2 id="1-đặt-vấn-đề"&gt;1. Đặt vấn đề
+&lt;/h2&gt;&lt;p&gt;AI Agent đang chuyển từ vai trò trả lời câu hỏi sang trực tiếp thực hiện công việc. Agent có thể phân tích yêu cầu, lập kế hoạch, sử dụng công cụ và đánh giá kết quả để hoàn thành mục tiêu.&lt;/p&gt;
+&lt;p&gt;Tuy nhiên, khi triển khai AI Agent vào ứng dụng thực tế, tri thức và khả năng thực thi không phải lúc nào cũng nằm trong cùng một môi trường.&lt;/p&gt;
+&lt;h3 id="11-hai-môi-trường-với-những-năng-lực-khác-nhau"&gt;1.1. Hai môi trường với những năng lực khác nhau
+&lt;/h3&gt;&lt;p&gt;&lt;strong&gt;Server&lt;/strong&gt; tập trung AI Model, tri thức doanh nghiệp, dữ liệu dùng chung và các dịch vụ backend. Đây là môi trường có thể quản lý tập trung, giám sát và áp dụng chính sách bảo mật.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Local&lt;/strong&gt; là môi trường làm việc trực tiếp của người dùng. Nó có quyền truy cập vào tài liệu đang mở, mã nguồn, filesystem, IDE và các ứng dụng trên thiết bị.&lt;/p&gt;
+&lt;p&gt;Ví dụ, lập trình viên yêu cầu:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Test &lt;code&gt;test_checkout_discount&lt;/code&gt; trong project của tôi đang bị lỗi. Hãy tìm nguyên nhân, đối chiếu với quy chuẩn code của công ty và sửa giúp tôi.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Để xử lý yêu cầu này, Agent cần kết hợp hai nguồn năng lực:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Server:&lt;/strong&gt; Quy chuẩn code, tài liệu kiến trúc, lịch sử sự cố và khả năng phân tích.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Local:&lt;/strong&gt; Mã nguồn, môi trường chạy test, Git và các công cụ phát triển.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Nếu chỉ hoạt động trên Server, Agent không thể trực tiếp kiểm tra môi trường phát triển. Nếu chỉ hoạt động trên Local, Agent có thể thiếu tri thức doanh nghiệp và khả năng quản trị tập trung.&lt;/p&gt;
+&lt;h3 id="12-vấn-đề-khi-server-và-local-cùng-ra-quyết-định"&gt;1.2. Vấn đề khi Server và Local cùng ra quyết định
+&lt;/h3&gt;&lt;p&gt;Một cách tiếp cận là triển khai hai Agent độc lập: một Agent trên Server và một Agent trên máy người dùng. Hai Agent trao đổi thông tin và phối hợp thực hiện nhiệm vụ.&lt;/p&gt;
+&lt;p&gt;Tuy nhiên, mô hình này làm tăng độ phức tạp trong kiểm soát hành động. Máy người dùng có thể chứa nội dung không đáng tin cậy, chẳng hạn tài liệu bên thứ ba, mã nguồn hoặc trang web. Những nội dung này có thể chứa chỉ thị độc hại nhằm điều khiển Agent thông qua &lt;em&gt;prompt injection&lt;/em&gt;.&lt;/p&gt;
+&lt;p&gt;Nếu Local Agent có quyền tự lập kế hoạch và thực thi, hệ thống phải giải quyết những câu hỏi:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Agent nào chịu trách nhiệm về quyết định cuối cùng?&lt;/li&gt;
+&lt;li&gt;Làm thế nào để hai Agent không thực hiện những hành động mâu thuẫn?&lt;/li&gt;
+&lt;li&gt;Chính sách bảo mật được áp dụng thống nhất như thế nào?&lt;/li&gt;
+&lt;li&gt;Làm thế nào để kiểm toán toàn bộ chuỗi quyết định?&lt;/li&gt;
+&lt;li&gt;Điều gì xảy ra khi hai Agent mất kết nối?&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Simon Willison mô tả rủi ro &lt;em&gt;lethal trifecta&lt;/em&gt;: một Agent đồng thời tiếp cận dữ liệu riêng tư, nội dung không tin cậy và công cụ có khả năng gửi dữ liệu ra ngoài. Khi ba điều kiện này cùng tồn tại, prompt injection có thể dẫn đến rò rỉ dữ liệu.&lt;/p&gt;
+&lt;p&gt;Bài toán kiến trúc cần giải quyết là &lt;strong&gt;kết hợp năng lực của Server và Local mà không phân tán quyền quyết định một cách không cần thiết&lt;/strong&gt;.&lt;/p&gt;
+&lt;h2 id="2-giải-pháp-server-quyết-định-local-thực-thi"&gt;2. Giải pháp: Server quyết định, Local thực thi
+&lt;/h2&gt;&lt;h3 id="21-nguyên-tắc-kiến-trúc"&gt;2.1. Nguyên tắc kiến trúc
+&lt;/h3&gt;&lt;p&gt;Mô hình đề xuất phân chia trách nhiệm thành hai thành phần:&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Server Agent — suy luận và điều phối:&lt;/strong&gt; Phân tích yêu cầu, lập kế hoạch, truy xuất tri thức, lựa chọn công cụ, quyết định hành động tiếp theo và đánh giá kết quả.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Local Runtime — tiếp nhận yêu cầu và thực thi:&lt;/strong&gt; Cung cấp giao diện tương tác với người dùng, chuyển yêu cầu lên Server Agent, công bố công cụ trên thiết bị, kiểm tra quyền, thực thi lệnh được phép và trả kết quả. Local Runtime không tự lập kế hoạch hoặc khởi xướng hành động ngoài yêu cầu đã được cấp quyền.&lt;/p&gt;
+&lt;p&gt;Trong phạm vi kiến trúc này, Server Agent là thành phần duy nhất chịu trách nhiệm lập kế hoạch và ra quyết định nghiệp vụ. Local Runtime vẫn có quyền từ chối một hành động, kể cả khi Server đã cho phép.&lt;/p&gt;
+&lt;h3 id="22-mô-hình-tổng-thể"&gt;2.2. Mô hình tổng thể
+&lt;/h3&gt;&lt;p&gt;&lt;strong&gt;Luồng giao tiếp chính: Người dùng → Local Runtime → Server Agent.&lt;/strong&gt; Người dùng không gọi trực tiếp Server Agent. Local Runtime đóng vai trò điểm tiếp nhận yêu cầu và cầu nối thực thi công cụ.&lt;/p&gt;
+&lt;section
+class="archcode-embed archcode-embed-preview"
+data-archcode-viewer data-view="overview" data-show-source="false" data-layout-src="https://phongthien99.github.io/diagrams/hybrid-ai-agent.layout.yaml"&gt;
+&lt;style&gt;
+.archcode-embed {
+display: grid;
+gap: 0.75rem;
+margin: 1.25rem 0;
+}
+.archcode-embed-header {
+display: flex;
+align-items: center;
+justify-content: space-between;
+gap: 0.75rem;
+flex-wrap: wrap;
+}
+.archcode-embed-title {
+margin: 0;
+font-size: 1rem;
+font-weight: 700;
+}
+.archcode-embed-full {
+font-size: 0.875rem;
+font-weight: 600;
+text-decoration: none;
+}
+.archcode-embed .archcode-output,
+.archcode-embed-code {
+border: 1px solid var(--card-separator-color, #d0d7de);
+border-radius: 8px;
+}
+.archcode-embed-code {
+overflow: auto;
+margin: 0;
+padding: 0.85rem;
+background: var(--code-background-color, rgba(127, 127, 127, 0.08));
+}
+&lt;/style&gt;
+&lt;div class="archcode-embed-header"&gt;
+&lt;p class="archcode-embed-title"&gt;Hybrid AI Agent - Kiến trúc tổng thể&lt;/p&gt;
+&lt;a class="archcode-embed-full" href="https://phongthien99.github.io/archcode/" target="_blank" rel="noopener"&gt;Open editor&lt;/a&gt;
+&lt;/div&gt;
+&lt;div class="archcode-output" aria-live="polite"&gt;&lt;/div&gt;
+&lt;div class="archcode-diagnostics" aria-live="polite"&gt;&lt;/div&gt;
+&lt;pre class="archcode-source archcode-embed-code"&gt;&lt;code&gt;
+version: 1
+system:
+id: hybrid-ai-agent
+name: Hybrid AI Agent
+groups:
+- id: local
+name: Local Environment — thiết bị người dùng
+type: trust-zone
+- id: server
+name: Server Environment — quản trị tập trung
+type: trust-zone
+components:
+- id: user
+name: Người dùng
+type: person
+- id: local-runtime
+name: Local Runtime
+type: frontend
+group: local
+description: UI · Session · Tool Gateway
+- id: local-policy
+name: Local Policy
+type: gateway
+group: local
+description: Allowlist · Scope · Approval
+- id: local-tools
+name: Local Tools
+type: service
+group: local
+description: File · IDE · Application
+- id: server-agent
+name: Server Agent
+type: service
+group: server
+- id: ai-model
+name: AI Model &amp;amp; Reasoning
+type: service
+group: server
+- id: enterprise-knowledge
+name: Enterprise Knowledge
+type: database
+group: server
+- id: server-tools
+name: Server Tools
+type: service
+group: server
+- id: policy-engine
+name: Policy Engine
+type: gateway
+group: server
+- id: audit-log
+name: State &amp;amp; Audit Log
+type: database
+group: server
+relationships:
+- from: user
+to: local-runtime
+label: Yêu cầu · Kết quả · Phê duyệt
+- from: local-runtime
+to: local-policy
+label: Tool Call
+- from: local-policy
+to: local-tools
+label: Thực thi
+- from: local
+to: server
+type: http
+label: Request · Tool Call · Result
+- from: server-agent
+to: ai-model
+- from: server-agent
+to: enterprise-knowledge
+- from: server-agent
+to: server-tools
+- from: server-agent
+to: policy-engine
+- from: server-agent
+to: audit-log
+label: State · Audit
+views:
+- id: overview
+name: Overview
+include: [&amp;#39;*&amp;#39;]
+direction: TB
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/section&gt;
+&lt;script&gt;
+window.__archcodeViewerScript =
+window.__archcodeViewerScript ||
+(function () {
+var script = document.createElement('script');
+script.src = '/js/archcode-viewer.js';
+script.defer = true;
+document.head.appendChild(script);
+return script;
+})();
+&lt;/script&gt;
+&lt;p&gt;Mỗi lệnh gọi công cụ từ Server phải đi qua hai lớp kiểm soát:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Policy Engine trên Server:&lt;/strong&gt; Xác định Agent được phép gọi công cụ nào, với tham số nào và trong ngữ cảnh nào.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Local Policy trên thiết bị:&lt;/strong&gt; Kiểm tra lại công cụ, phạm vi truy cập và yêu cầu phê duyệt. Lệnh hợp lệ trên Server không mặc nhiên được thực thi tại Local.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="23-các-cơ-chế-chính"&gt;2.3. Các cơ chế chính
+&lt;/h3&gt;&lt;h4 id="cơ-chế-1-tool-contract"&gt;Cơ chế 1. Tool Contract
+&lt;/h4&gt;&lt;p&gt;Local Runtime công bố các công cụ thông qua hợp đồng rõ ràng. Mỗi công cụ xác định tên, tham số đầu vào, cấu trúc kết quả và mức độ rủi ro.&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Công cụ&lt;/th&gt;
+&lt;th&gt;Chức năng&lt;/th&gt;
+&lt;th&gt;Mức rủi ro&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;read_file&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;Đọc nội dung tệp&lt;/td&gt;
+&lt;td&gt;Chỉ đọc&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;run_tests&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;Chạy bộ kiểm thử&lt;/td&gt;
+&lt;td&gt;Có thể có tác dụng phụ&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;apply_patch&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;Thay đổi mã nguồn&lt;/td&gt;
+&lt;td&gt;Ghi dữ liệu&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;execute_command&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;Chạy lệnh hệ thống&lt;/td&gt;
+&lt;td&gt;Nhạy cảm&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;Server Agent chỉ được gọi công cụ đã được công bố và cho phép. Có thể sử dụng &lt;strong&gt;Model Context Protocol (MCP)&lt;/strong&gt; để mô tả và kết nối các công cụ. Tuy nhiên, MCP không tự bảo đảm chính sách truy cập. Hệ thống triển khai vẫn phải kiểm tra quyền ở cả Server và Local.&lt;/p&gt;
+&lt;h4 id="cơ-chế-2-composite-tools"&gt;Cơ chế 2. Composite Tools
+&lt;/h4&gt;&lt;p&gt;Một hạn chế của kiến trúc Hybrid Agent là độ trễ khi Server liên tục gọi công cụ trên Local. Thay vì thực hiện nhiều lệnh nhỏ, Local Runtime có thể cung cấp &lt;strong&gt;Composite Tools&lt;/strong&gt;: những công cụ kết hợp nhiều thao tác xác định trong một lần gọi.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;extract_sections(doc, keywords)&lt;/code&gt;: Trích xuất các đoạn tài liệu phù hợp.&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;get_document_outline(doc)&lt;/code&gt;: Đọc cấu trúc tài liệu.&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;apply_patch(doc, changes)&lt;/code&gt;: Áp dụng một tập thay đổi.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Composite Tools giảm số lượt trao đổi giữa Server và Local. Các công cụ này thực hiện quy trình đã định nghĩa, không sử dụng AI Model để tự quyết định mục tiêu hoặc lựa chọn hành động mới.&lt;/p&gt;
+&lt;h4 id="cơ-chế-3-kiểm-soát-dữ-liệu-không-tin-cậy"&gt;Cơ chế 3. Kiểm soát dữ liệu không tin cậy
+&lt;/h4&gt;&lt;p&gt;Dữ liệu do Local Runtime trả về có thể chứa nội dung độc hại. Ví dụ, tệp mã nguồn có thể chứa chỉ thị yêu cầu AI tải và chạy script bên ngoài.&lt;/p&gt;
+&lt;p&gt;Server Agent phải phân biệt giữa dữ liệu cần phân tích và chỉ thị được phép thực hiện. Để giảm rủi ro prompt injection, hệ thống cần kết hợp:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Xác định nguồn và mức độ tin cậy của dữ liệu.&lt;/li&gt;
+&lt;li&gt;Giới hạn công cụ Agent có thể sử dụng.&lt;/li&gt;
+&lt;li&gt;Kiểm tra quyền trước mỗi hành động.&lt;/li&gt;
+&lt;li&gt;Yêu cầu phê duyệt đối với hành động nhạy cảm.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Việc yêu cầu model bỏ qua chỉ thị độc hại không đủ để bảo đảm an toàn. Các ràng buộc phải được thực thi bằng cơ chế độc lập với model.&lt;/p&gt;
+&lt;h4 id="cơ-chế-4-tối-thiểu-hóa-dữ-liệu"&gt;Cơ chế 4. Tối thiểu hóa dữ liệu
+&lt;/h4&gt;&lt;p&gt;Trong mô hình suy luận tập trung, Server cần nhận dữ liệu từ Local để xử lý yêu cầu. Điều này tạo ra rủi ro về quyền riêng tư và bảo mật dữ liệu.&lt;/p&gt;
+&lt;p&gt;Hệ thống nên giới hạn dữ liệu truyền lên Server theo nhu cầu từng bước. Local Runtime có thể lọc hoặc che thông tin nhạy cảm trước khi trả kết quả. Người dùng cần có khả năng kiểm tra phạm vi dữ liệu được chia sẻ.&lt;/p&gt;
+&lt;h4 id="cơ-chế-5-quản-lý-trạng-thái-và-idempotency"&gt;Cơ chế 5. Quản lý trạng thái và Idempotency
+&lt;/h4&gt;&lt;p&gt;Server lưu trạng thái nhiệm vụ và lịch sử quyết định, đóng vai trò nguồn trạng thái điều phối chính.&lt;/p&gt;
+&lt;p&gt;Mỗi hành động có tác dụng phụ cần gắn &lt;code&gt;action_id&lt;/code&gt; duy nhất. Local Runtime ghi nhận kết quả để tránh thực thi trùng lặp khi Server gửi lại yêu cầu.&lt;/p&gt;
+&lt;p&gt;Khi mất kết nối, Local Runtime không tự khởi tạo bước xử lý tiếp theo. Khi kết nối khôi phục, Server đối chiếu trạng thái trước khi tiếp tục. Đối với thao tác đang thực hiện dở, hệ thống phải xác định kết quả thực tế trước khi thử lại.&lt;/p&gt;
+&lt;h4 id="cơ-chế-6-bảo-mật-nhiều-lớp"&gt;Cơ chế 6. Bảo mật nhiều lớp
+&lt;/h4&gt;&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Lớp kiểm soát&lt;/th&gt;
+&lt;th&gt;Trách nhiệm&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Server Policy Engine&lt;/td&gt;
+&lt;td&gt;Kiểm tra quyền gọi công cụ và ngữ cảnh thực thi&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Local Policy&lt;/td&gt;
+&lt;td&gt;Giới hạn công cụ, tài nguyên và phạm vi truy cập&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;User Approval&lt;/td&gt;
+&lt;td&gt;Phê duyệt thao tác nhạy cảm&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Audit Log&lt;/td&gt;
+&lt;td&gt;Ghi nhận quyết định, hành động và kết quả&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;Các lớp kiểm soát phải hoạt động độc lập. Nếu Server Agent đưa ra lệnh không an toàn, Local Policy vẫn có thể từ chối.&lt;/p&gt;
+&lt;h2 id="3-thực-hiện-ví-dụ-sửa-lỗi-trong-môi-trường-phát-triển"&gt;3. Thực hiện: Ví dụ sửa lỗi trong môi trường phát triển
+&lt;/h2&gt;&lt;h3 id="31-luồng-xử-lý"&gt;3.1. Luồng xử lý
+&lt;/h3&gt;&lt;p&gt;Lập trình viên yêu cầu:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Test &lt;code&gt;test_checkout_discount&lt;/code&gt; đang fail. Hãy tìm nguyên nhân, đối chiếu với quy chuẩn code của công ty và sửa giúp tôi.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;pre class="mermaid"&gt;
+sequenceDiagram
+autonumber
+actor U as Developer
+participant L as Local Runtime
+participant S as Server Agent
+participant K as Knowledge System
+participant T as Local Tools
+U-&amp;gt;&amp;gt;L: Yêu cầu sửa test đang fail
+L-&amp;gt;&amp;gt;S: Chuyển yêu cầu và ngữ cảnh được phép
+S-&amp;gt;&amp;gt;S: Phân tích mục tiêu, lập kế hoạch
+S-&amp;gt;&amp;gt;L: run_tests(filter)
+L-&amp;gt;&amp;gt;L: Kiểm tra Local Policy
+L-&amp;gt;&amp;gt;T: Chạy test
+T--&amp;gt;&amp;gt;L: AssertionError + stack trace
+L--&amp;gt;&amp;gt;S: Kết quả test
+S-&amp;gt;&amp;gt;L: read_symbols(...)
+L-&amp;gt;&amp;gt;T: Đọc mã nguồn trong phạm vi cho phép
+T--&amp;gt;&amp;gt;L: Mã nguồn và vị trí
+L--&amp;gt;&amp;gt;S: Dữ liệu mã nguồn
+S-&amp;gt;&amp;gt;K: Tra quy chuẩn code và sự cố tương tự
+K--&amp;gt;&amp;gt;S: Quy chuẩn liên quan
+S-&amp;gt;&amp;gt;S: Phân tích nguyên nhân và tạo diff
+S--&amp;gt;&amp;gt;L: Đề xuất diff và giải thích
+L--&amp;gt;&amp;gt;U: Hiển thị đề xuất
+U-&amp;gt;&amp;gt;L: Chấp thuận đề xuất
+L-&amp;gt;&amp;gt;S: Xác nhận chấp thuận
+S-&amp;gt;&amp;gt;L: apply_patch(diff, action_id)
+L-&amp;gt;&amp;gt;L: Kiểm tra Local Policy
+L-&amp;gt;&amp;gt;U: Phê duyệt ghi file tại thiết bị
+U--&amp;gt;&amp;gt;L: Phê duyệt
+L-&amp;gt;&amp;gt;T: Áp dụng bản sửa
+T--&amp;gt;&amp;gt;L: Kết quả ghi file
+L--&amp;gt;&amp;gt;S: action_id + kết quả
+S-&amp;gt;&amp;gt;L: run_tests(filter)
+L-&amp;gt;&amp;gt;T: Chạy lại test
+T--&amp;gt;&amp;gt;L: Pass
+L--&amp;gt;&amp;gt;S: Kết quả kiểm thử
+S-&amp;gt;&amp;gt;S: Cập nhật State &amp;amp; Audit Log
+S--&amp;gt;&amp;gt;L: Kết quả hoàn tất
+L--&amp;gt;&amp;gt;U: Hiển thị kết quả
+&lt;/pre&gt;
+&lt;p&gt;Quy trình gồm sáu bước:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;Tiếp nhận yêu cầu:&lt;/strong&gt; Local Runtime nhận yêu cầu từ người dùng và chuyển đến Server Agent.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Thu thập thông tin:&lt;/strong&gt; Server gọi &lt;code&gt;run_tests&lt;/code&gt; và công cụ đọc mã nguồn thông qua Local Runtime.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Phân tích:&lt;/strong&gt; Server kết hợp kết quả kiểm thử, mã nguồn và quy chuẩn doanh nghiệp để xác định nguyên nhân.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Đề xuất thay đổi:&lt;/strong&gt; Server tạo diff, giải thích và yêu cầu người dùng chấp thuận.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Thực thi có kiểm soát:&lt;/strong&gt; Server gọi &lt;code&gt;apply_patch&lt;/code&gt;; Local Policy kiểm tra phạm vi và yêu cầu phê duyệt tại thiết bị trước khi ghi.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Kiểm tra và hoàn tất:&lt;/strong&gt; Server yêu cầu chạy lại test, đánh giá kết quả và cập nhật trạng thái.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Toàn bộ suy luận diễn ra trên Server. Local Runtime tiếp nhận yêu cầu, kiểm soát công cụ và trả kết quả. Nếu mã nguồn chứa prompt injection, nội dung đó vẫn phải được xử lý như dữ liệu chưa tin cậy.&lt;/p&gt;
+&lt;h3 id="32-phạm-vi-thực-thi-tại-local"&gt;3.2. Phạm vi thực thi tại Local
+&lt;/h3&gt;&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Mức độ&lt;/th&gt;
+&lt;th&gt;Cách hoạt động&lt;/th&gt;
+&lt;th&gt;Định hướng&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Tool Execution&lt;/td&gt;
+&lt;td&gt;Server gọi công cụ riêng lẻ&lt;/td&gt;
+&lt;td&gt;Sử dụng mặc định&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Composite Tools&lt;/td&gt;
+&lt;td&gt;Local thực hiện chuỗi thao tác xác định&lt;/td&gt;
+&lt;td&gt;Tối ưu hiệu năng&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Local Delegation&lt;/td&gt;
+&lt;td&gt;Local dùng model riêng để lập kế hoạch con&lt;/td&gt;
+&lt;td&gt;Ngoài phạm vi thiết kế hiện tại&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;Local Delegation có thể được nghiên cứu khi có yêu cầu xử lý dữ liệu hoàn toàn trên thiết bị. Tuy nhiên, cách tiếp cận này làm thay đổi ranh giới trách nhiệm và cần mô hình bảo mật riêng.&lt;/p&gt;
+&lt;h3 id="33-đánh-đổi-kiến-trúc"&gt;3.3. Đánh đổi kiến trúc
+&lt;/h3&gt;&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Lợi ích&lt;/th&gt;
+&lt;th&gt;Đánh đổi&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Một nơi điều phối và ra quyết định&lt;/td&gt;
+&lt;td&gt;Tăng độ trễ khi gọi công cụ&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Chính sách và model được quản lý tập trung&lt;/td&gt;
+&lt;td&gt;Phụ thuộc kết nối mạng&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Có thể kiểm toán chuỗi hành động&lt;/td&gt;
+&lt;td&gt;Cần thiết kế quản lý trạng thái&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Local Runtime đơn giản hơn Agent độc lập&lt;/td&gt;
+&lt;td&gt;Cần đầu tư thiết kế Tool Contract&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Kiểm soát quyền tại cả Server và Local&lt;/td&gt;
+&lt;td&gt;Dữ liệu có thể phải truyền lên Server&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;Hai vấn đề cần ưu tiên là độ trễ và bảo mật dữ liệu. Composite Tools giảm số lượt trao đổi. Cơ chế tối thiểu hóa dữ liệu giảm lượng thông tin truyền lên Server. Cả hai giải pháp cần được đánh giá bằng số liệu thực tế.&lt;/p&gt;
+&lt;h3 id="34-hướng-triển-khai"&gt;3.4. Hướng triển khai
+&lt;/h3&gt;&lt;ol&gt;
+&lt;li&gt;Xây dựng Local Runtime với giao diện tiếp nhận yêu cầu, các công cụ chỉ đọc và Local Policy cơ bản.&lt;/li&gt;
+&lt;li&gt;Tích hợp Server Agent, Policy Engine và Audit Log.&lt;/li&gt;
+&lt;li&gt;Bổ sung công cụ ghi dữ liệu, cơ chế phê duyệt và &lt;code&gt;action_id&lt;/code&gt;.&lt;/li&gt;
+&lt;li&gt;Tối ưu các chuỗi thao tác phổ biến bằng Composite Tools.&lt;/li&gt;
+&lt;li&gt;Mở rộng hỗ trợ nhiều thiết bị và nhiều nhóm công cụ.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Trong giai đoạn đầu, ưu tiên kiểm chứng luồng điều phối, giới hạn quyền và khả năng phục hồi sau mất kết nối trước khi mở rộng số lượng công cụ.&lt;/p&gt;
+&lt;h2 id="4-kết-luận"&gt;4. Kết luận
+&lt;/h2&gt;&lt;p&gt;Kiến trúc Hybrid AI Agent cho phép kết hợp khả năng suy luận tập trung với năng lực thực thi trên thiết bị người dùng.&lt;/p&gt;
+&lt;p&gt;Trong mô hình đề xuất, &lt;strong&gt;người dùng tương tác qua Local Runtime&lt;/strong&gt;. Local Runtime chuyển yêu cầu đến Server Agent, cung cấp công cụ, kiểm tra quyền và thực thi hành động được phép. Server Agent chịu trách nhiệm phân tích, lập kế hoạch và điều phối. Người dùng giữ quyền phê duyệt những thao tác nhạy cảm.&lt;/p&gt;
+&lt;p&gt;Cách phân chia này giúp xác định rõ trách nhiệm của từng thành phần, kiểm toán hành động và áp dụng chính sách bảo mật nhất quán.&lt;/p&gt;
+&lt;p&gt;Kiến trúc vẫn phải giải quyết độ trễ mạng, bảo mật dữ liệu và quản lý trạng thái khi kết nối gián đoạn. Những vấn đề này cần được kiểm chứng trong quá trình triển khai.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Giá trị cốt lõi của mô hình nằm ở việc tận dụng năng lực của cả Server và Local, trong khi duy trì ranh giới rõ ràng giữa quyết định và thực thi.&lt;/strong&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="tài-liệu-tham-khảo"&gt;Tài liệu tham khảo
+&lt;/h2&gt;&lt;p&gt;Các nguồn giữ theo tài liệu gốc&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Simon Willison — &lt;em&gt;The lethal trifecta for AI agents&lt;/em&gt; (2025).&lt;/li&gt;
+&lt;li&gt;Walden Yan, Cognition — &lt;em&gt;Don&amp;rsquo;t Build Multi-Agents&lt;/em&gt; (2025).&lt;/li&gt;
+&lt;li&gt;Walden Yan, Cognition — &lt;em&gt;Multi-Agents: What&amp;rsquo;s Actually Working&lt;/em&gt;.&lt;/li&gt;
+&lt;li&gt;&lt;a class="link" href="https://modelcontextprotocol.io/specification" target="_blank" rel="noopener"
+&gt;Model Context Protocol Specification&lt;/a&gt;.&lt;/li&gt;
+&lt;li&gt;Anthropic — &lt;em&gt;Writing effective tools for agents — with agents&lt;/em&gt; (2025).&lt;/li&gt;
+&lt;li&gt;Simon Willison — &lt;em&gt;The Dual LLM pattern&lt;/em&gt; (2023).&lt;/li&gt;
+&lt;li&gt;Simon Willison — &lt;em&gt;CaMeL offers a promising new direction for mitigating prompt injection&lt;/em&gt; (2025).&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;Design Patterns for Securing LLM Agents against Prompt Injections&lt;/em&gt; (2025).&lt;/li&gt;
+&lt;li&gt;&lt;a class="link" href="https://genai.owasp.org/llmrisk/llm01-prompt-injection/" target="_blank" rel="noopener"
+&gt;OWASP LLM01:2025 — Prompt Injection&lt;/a&gt;.&lt;/li&gt;
+&lt;/ol&gt;</description></item><item><title>Context Engineering – A Method for Designing Efficient AI Agent Systems with SpecKit</title><link>https://phongthien99.github.io/posts/context-engineering-a-method-for-designing-efficient-ai-agent-systems-with-speckit/</link><pubDate>Sat, 18 Oct 2025 00:00:00 +0800</pubDate><guid>https://phongthien99.github.io/posts/context-engineering-a-method-for-designing-efficient-ai-agent-systems-with-speckit/</guid><description>&lt;h1 id="context-engineering--a-method-for-designing-efficient-ai-agent-systems-with-speckit"&gt;Context Engineering – A Method for Designing Efficient AI Agent Systems with SpecKit
+&lt;/h1&gt;&lt;h2 id="1-bối-cảnh-vì-sao-phát-triển-phần-mềm-với-ai-agent-lại-khó-đến-vậy"&gt;1. Bối cảnh: Vì sao phát triển phần mềm với AI Agent lại khó đến vậy?
+&lt;/h2&gt;&lt;p&gt;AI Agents như Claude Code, GitHub Copilot, hay các LLM-based assistant đang dần trở thành đồng đội trong lập trình. Tuy nhiên, nếu bạn từng làm việc với chúng trong dự án thật, có lẽ bạn đã gặp những vấđề quen thuộc:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Mất ngữ cảnh (Context Loss)&lt;/strong&gt;: AI quên kiến trúc, quy tắc coding, hoặc quyết định kỹ thuật đã thống nhất.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Hallucination &amp;amp; sai lệch&lt;/strong&gt;: AI gợi ý sai công nghệ (ví dụ: đề xuất Redux dù project đang dùng React Query).&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Thiếu truy vết (Traceability)&lt;/strong&gt;: Không rõ vì sao một quyết định kỹ thuật được đưa ra.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Tốn token (Token Inefficiency)&lt;/strong&gt;: Mỗi lần làm việc lại phải &amp;ldquo;nạp&amp;rdquo; toàn bộ context — tốn kém và chậm.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Trong dự án &lt;code&gt;next-solid&lt;/code&gt;, nhóm triển khai 5 features. Nhưng khi đến feature thứ 3, AI Agent lại quên rằng project dùng &lt;code&gt;@tanstack/react-query&lt;/code&gt; — và đề xuất Redux. Lỗi nhỏ, nhưng hậu quả lớn: mất thời gian, sai hướng, và giảm niềm tin vào AI.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Nguyên nhân?&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;👉 Không có hệ thống quản lý ngữ cảnh có cấu trúc, truy vết và tự kiểm chứng.&lt;/p&gt;
+&lt;h2 id="2-giải-pháp-context-engineering"&gt;2. Giải pháp: Context Engineering
+&lt;/h2&gt;&lt;p&gt;&lt;strong&gt;Context Engineering&lt;/strong&gt; là một phương pháp để thiết kế, quản lý, và duy trì ngữ cảnh (context) cho AI Agents một cách có hệ thống.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Công thức nền tảng:&lt;/strong&gt;&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-fallback" data-lang="fallback"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;Context Engineering = Prompt Engineering + Knowledge Design + Memory Management + Reasoning Alignment
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;h3 id="bốn-trụ-cột-của-context-engineering"&gt;Bốn trụ cột của Context Engineering
+&lt;/h3&gt;&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Prompt Engineering&lt;/strong&gt; – thiết kế prompts có cấu trúc, reusable và có validation gates.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Knowledge Design&lt;/strong&gt; – tổ chức kiến thức dự án thành artifacts có schema rõ ràng.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Memory Management&lt;/strong&gt; – lưu trữ và truy xuất context hiệu quả, tránh lãng phí token.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Reasoning Alignment&lt;/strong&gt; – đảm bảo AI suy luận đúng hướng với triết lý dự án.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2 id="3-speckit--framework-hiện-thực-hóa-context-engineering"&gt;3. SpecKit – Framework hiện thực hóa Context Engineering
+&lt;/h2&gt;&lt;p&gt;Để áp dụng Context Engineering vào thực tế, chúng tôi xây dựng &lt;strong&gt;SpecKit&lt;/strong&gt; – một framework gồm các slash commands giúp AI làm việc có tổ chức và tự kiểm soát hơn.&lt;/p&gt;
+&lt;h3 id="cấu-trúc-thư-mục-chính"&gt;Cấu trúc thư mục chính:
+&lt;/h3&gt;&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;span class="lnt"&gt;3
+&lt;/span&gt;&lt;span class="lnt"&gt;4
+&lt;/span&gt;&lt;span class="lnt"&gt;5
+&lt;/span&gt;&lt;span class="lnt"&gt;6
+&lt;/span&gt;&lt;span class="lnt"&gt;7
+&lt;/span&gt;&lt;span class="lnt"&gt;8
+&lt;/span&gt;&lt;span class="lnt"&gt;9
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-gdscript3" data-lang="gdscript3"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;claude&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;&lt;span class="n"&gt;commands&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;├──&lt;/span&gt; &lt;span class="n"&gt;speckit&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;specify&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;md&lt;/span&gt; &lt;span class="c1"&gt;# Tạo spec từ mô tả tự nhiên&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;├──&lt;/span&gt; &lt;span class="n"&gt;speckit&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;clarify&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;md&lt;/span&gt; &lt;span class="c1"&gt;# Làm rõ yêu cầu mơ hồ&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;├──&lt;/span&gt; &lt;span class="n"&gt;speckit&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;plan&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;md&lt;/span&gt; &lt;span class="c1"&gt;# Lập kế hoạch và technical design&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;├──&lt;/span&gt; &lt;span class="n"&gt;speckit&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;tasks&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;md&lt;/span&gt; &lt;span class="c1"&gt;# Sinh tasks theo thứ tự phụ thuộc&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;├──&lt;/span&gt; &lt;span class="n"&gt;speckit&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;implement&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;md&lt;/span&gt; &lt;span class="c1"&gt;# Triển khai có checkpoint&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;├──&lt;/span&gt; &lt;span class="n"&gt;speckit&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;analyze&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;md&lt;/span&gt; &lt;span class="c1"&gt;# Kiểm tra consistency giữa artifacts&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;├──&lt;/span&gt; &lt;span class="n"&gt;speckit&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;checklist&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;md&lt;/span&gt; &lt;span class="c1"&gt;# Sinh checklist kiểm thử&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;└──&lt;/span&gt; &lt;span class="n"&gt;speckit&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;constitution&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;md&lt;/span&gt; &lt;span class="c1"&gt;# Bộ nguyên tắc dự án (memory layer)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;h3 id="workflow-tổng-quát"&gt;Workflow tổng quát
+&lt;/h3&gt;&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt; 1
+&lt;/span&gt;&lt;span class="lnt"&gt; 2
+&lt;/span&gt;&lt;span class="lnt"&gt; 3
+&lt;/span&gt;&lt;span class="lnt"&gt; 4
+&lt;/span&gt;&lt;span class="lnt"&gt; 5
+&lt;/span&gt;&lt;span class="lnt"&gt; 6
+&lt;/span&gt;&lt;span class="lnt"&gt; 7
+&lt;/span&gt;&lt;span class="lnt"&gt; 8
+&lt;/span&gt;&lt;span class="lnt"&gt; 9
+&lt;/span&gt;&lt;span class="lnt"&gt;10
+&lt;/span&gt;&lt;span class="lnt"&gt;11
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-fallback" data-lang="fallback"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;User mô tả → /specify → spec.md (+ checklist)
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; ↓
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; /clarify → resolved spec.md
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; ↓
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; /plan → plan.md + research.md + contracts/
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; ↓
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; /tasks → tasks.md (theo dependencies)
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; ↓
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; /analyze → báo cáo consistency
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; ↓
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; /implement → triển khai + validation checkpoints
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;h2 id="4-bên-trong-context-engineering--cách-speckit-hiện-thực-4-trụ-cột"&gt;4. Bên trong Context Engineering – Cách SpecKit hiện thực 4 trụ cột
+&lt;/h2&gt;&lt;h3 id="1-prompt-engineering--prompts-có-cấu-trúc-có-kiểm-chứng"&gt;1️⃣ Prompt Engineering – Prompts có cấu trúc, có kiểm chứng
+&lt;/h3&gt;&lt;p&gt;Mỗi slash command chỉ làm một nhiệm vụ duy nhất.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Ví dụ &lt;code&gt;/specify&lt;/code&gt; chỉ tạo spec, &lt;code&gt;/plan&lt;/code&gt; chỉ lập kế hoạch.&lt;/li&gt;
+&lt;li&gt;Điều này giúp phân tách trách nhiệm rõ ràng và dễ kiểm soát chất lượng.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;SpecKit còn dùng kỹ thuật &lt;strong&gt;Progressive Disclosure&lt;/strong&gt; – chỉ nạp đúng context cần cho mỗi giai đoạn.&lt;/p&gt;
+&lt;p&gt;→ Giảm &lt;strong&gt;60–70%&lt;/strong&gt; lượng token tiêu thụ mỗi vòng.&lt;/p&gt;
+&lt;p&gt;Cuối mỗi phase có &lt;strong&gt;Validation Gates&lt;/strong&gt;: checklist tự động kiểm tra chất lượng spec, completeness, readiness trước khi qua bước tiếp theo.&lt;/p&gt;
+&lt;h3 id="2-knowledge-design--kiến-thức-có-cấu-trúc-có-schema"&gt;2️⃣ Knowledge Design – Kiến thức có cấu trúc, có schema
+&lt;/h3&gt;&lt;p&gt;SpecKit chia artifacts thành 3 tầng:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Tier 1 – Project Memory&lt;/strong&gt;: &lt;code&gt;CLAUDE.md&lt;/code&gt; (AI context hiện tại) + &lt;code&gt;constitution.md&lt;/code&gt; (nguyên tắc dự án).&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Tier 2 – Feature Artifacts&lt;/strong&gt;: mỗi feature có &lt;code&gt;spec.md&lt;/code&gt;, &lt;code&gt;plan.md&lt;/code&gt;, &lt;code&gt;tasks.md&lt;/code&gt;, &lt;code&gt;research.md&lt;/code&gt;, &lt;code&gt;contracts/&lt;/code&gt;, &lt;code&gt;data-model.md&lt;/code&gt;.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Tier 3 – Templates&lt;/strong&gt;: lưu schema chuẩn cho mọi loại artifact.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Mọi file đều tuân theo schema định nghĩa trước, giúp AI hiểu và truy xuất chính xác thay vì phải &amp;ldquo;đoán&amp;rdquo;.&lt;/p&gt;
+&lt;h3 id="3-memory-management--lưu-trữ-và-truy-xuất-hiệu-quả"&gt;3️⃣ Memory Management – Lưu trữ và truy xuất hiệu quả
+&lt;/h3&gt;&lt;p&gt;SpecKit thiết kế memory theo 4 cấp độ:&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Level&lt;/th&gt;
+&lt;th&gt;Loại bộ nhớ&lt;/th&gt;
+&lt;th&gt;Vai trò&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;td&gt;Session Memory&lt;/td&gt;
+&lt;td&gt;Tạm thời, phục vụ conversation hiện tại&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;2&lt;/td&gt;
+&lt;td&gt;Feature Memory&lt;/td&gt;
+&lt;td&gt;Lưu từng feature, có version control&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;3&lt;/td&gt;
+&lt;td&gt;Project Memory&lt;/td&gt;
+&lt;td&gt;Ghi nhận state toàn dự án&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;4&lt;/td&gt;
+&lt;td&gt;Template Memory&lt;/td&gt;
+&lt;td&gt;Đảm bảo consistency và reuse&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;Nhờ đó, AI chỉ cần đọc những phần liên quan, không phải &amp;ldquo;nuốt&amp;rdquo; toàn bộ 5000 tokens của project mỗi lần.&lt;/p&gt;
+&lt;h3 id="4-reasoning-alignment--căn-chỉnh-suy-luận-bằng-constitution"&gt;4️⃣ Reasoning Alignment – Căn chỉnh suy luận bằng &amp;ldquo;Constitution&amp;rdquo;
+&lt;/h3&gt;&lt;p&gt;SpecKit định nghĩa bộ nguyên tắc trong file &lt;code&gt;constitution.md&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;Ví dụ:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;span class="lnt"&gt;3
+&lt;/span&gt;&lt;span class="lnt"&gt;4
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-markdown" data-lang="markdown"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="gu"&gt;## Principle VI: Clean Architecture with SOLID
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="k"&gt;-&lt;/span&gt; 4 layers: Presentation, Application, Domain, Infrastructure
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="k"&gt;-&lt;/span&gt; Repository pattern bắt buộc
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="k"&gt;-&lt;/span&gt; Hooks chỉ phụ thuộc interface, không phụ thuộc implementation
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;Mỗi lần AI lên plan, SpecKit chạy &lt;strong&gt;Constitution Check&lt;/strong&gt; – nếu có vi phạm, quy trình dừng lại ngay.&lt;/p&gt;
+&lt;p&gt;Ví dụ: feature 003 ban đầu dùng Redux → bị chặn vì &amp;ldquo;Redux không nằm trong approved dependencies&amp;rdquo;.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Kết quả&lt;/strong&gt;: dùng lại React Query, đảm bảo consistency.&lt;/p&gt;
+&lt;h2 id="5-kết-quả-khi-ai-làm-việc-như-một-kỹ-sư-thật"&gt;5. Kết quả: Khi AI làm việc như một kỹ sư thật
+&lt;/h2&gt;&lt;p&gt;Sau khi áp dụng Context Engineering với SpecKit:&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Lợi ích&lt;/th&gt;
+&lt;th&gt;Mô tả&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;Consistency&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;5 features cùng tuân theo Clean Architecture, không sai lệch.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;Traceability&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;Mọi quyết định đều có rationale rõ ràng trong &lt;code&gt;research.md&lt;/code&gt;.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;Quality&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;3 tầng validation – từ nội dung đến tiêu chí chấp nhận.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;Efficiency&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;Giảm token usage mỗi iteration.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;Scalability&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;Dễ mở rộng dự án, dễ cập nhật principles và templates.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h2 id="6-kết-luận"&gt;6. Kết luận
+&lt;/h2&gt;&lt;p&gt;AI Agents không chỉ cần &amp;ldquo;prompt hay&amp;rdquo; – mà cần &lt;strong&gt;context tốt&lt;/strong&gt;.&lt;/p&gt;
+&lt;p&gt;Và để có context tốt, chúng ta phải &lt;strong&gt;kỹ sư hóa&lt;/strong&gt; cách AI hiểu và ghi nhớ.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Context Engineering&lt;/strong&gt; chính là bước tiến đó.&lt;/p&gt;
+&lt;p&gt;Còn &lt;strong&gt;SpecKit&lt;/strong&gt; là công cụ để biến lý thuyết ấy thành hành động — giúp AI phát triển phần mềm một cách có cấu trúc, có kỷ luật, và có trí nhớ.&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&lt;strong&gt;✳️ Tóm lại&lt;/strong&gt;: Prompt Engineering giúp AI hiểu, nhưng Context Engineering giúp AI hành động nhất quán.&lt;/p&gt;</description></item></channel></rss>

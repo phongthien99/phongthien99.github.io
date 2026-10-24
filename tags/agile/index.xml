@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Agile on phongthien</title><link>https://phongthien99.github.io/tags/agile/</link><description>Recent content in Agile on phongthien</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Mon, 31 Aug 2026 00:40:00 +0800</lastBuildDate><atom:link href="https://phongthien99.github.io/tags/agile/index.xml" rel="self" type="application/rss+xml"/><item><title>Feature Driven Development</title><link>https://phongthien99.github.io/posts/feature-driven-development/</link><pubDate>Mon, 31 Aug 2026 00:40:00 +0800</pubDate><guid>https://phongthien99.github.io/posts/feature-driven-development/</guid><description>&lt;h1 id="feature-driven-development-fdd"&gt;Feature Driven Development (FDD)
+&lt;/h1&gt;&lt;h2 id="1-đặt-vấn-đề"&gt;1. Đặt Vấn Đề
+&lt;/h2&gt;&lt;p&gt;Hãy tưởng tượng bạn đang dẫn dắt một đội ngũ 50 người để xây dựng một hệ thống phần mềm quy mô lớn — không phải một ứng dụng nhỏ vài người làm trong vài tuần, mà là một dự án phức tạp với hàng trăm yêu cầu nghiệp vụ khác nhau.&lt;/p&gt;
+&lt;p&gt;Với các mô hình Agile phổ biến như Scrum, mọi thứ vận hành khá &amp;ldquo;ad hoc&amp;rdquo; — linh hoạt, phụ thuộc nhiều vào từng thành viên, từng nhóm nhỏ tự quyết định cách làm. Điều này rất hiệu quả với đội ngũ nhỏ, nhưng khi quy mô đội ngũ tăng lên hàng chục người, vấn đề bắt đầu xuất hiện:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Mỗi nhóm nhỏ có cách làm riêng, dẫn đến thiếu nhất quán trong toàn hệ thống.&lt;/li&gt;
+&lt;li&gt;Việc phối hợp giữa nhiều nhóm trở nên hỗn loạn, dễ xảy ra mâu thuẫn (&amp;ldquo;head butting&amp;rdquo;) về cách tiếp cận.&lt;/li&gt;
+&lt;li&gt;Khó có được một bức tranh tổng thể về tiến độ và giá trị thực sự được giao cho khách hàng.&lt;/li&gt;
+&lt;li&gt;Khi dự án đòi hỏi tính dự đoán cao (predictability) và kỷ luật thiết kế nghiêm ngặt, sự linh hoạt quá mức của Scrum lại trở thành điểm yếu thay vì điểm mạnh.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Câu hỏi đặt ra: &lt;strong&gt;Làm sao để vừa giữ được tinh thần Agile — giao sản phẩm nhanh, lặp lại liên tục — vừa có đủ cấu trúc và kỷ luật để quản lý một đội ngũ lớn và một dự án phức tạp?&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Đây chính là bài toán mà &lt;strong&gt;Feature Driven Development (FDD)&lt;/strong&gt; ra đời để giải quyết.&lt;/p&gt;
+&lt;h2 id="2-giải-pháp"&gt;2. Giải Pháp
+&lt;/h2&gt;&lt;p&gt;FDD là một phương pháp luận &lt;strong&gt;agile, hướng mô hình (model-driven)&lt;/strong&gt;, kết hợp cả tính &lt;strong&gt;lặp lại (iterative)&lt;/strong&gt; và &lt;strong&gt;tăng trưởng dần (incremental)&lt;/strong&gt;, đồng thời đặt khách hàng làm trung tâm.&lt;/p&gt;
+&lt;p&gt;Điểm khác biệt cốt lõi của FDD so với Scrum nằm ở đơn vị làm việc: thay vì &amp;ldquo;user story&amp;rdquo; phân chia ngẫu nhiên theo từng nhóm, FDD tổ chức toàn bộ công việc xoay quanh khái niệm &lt;strong&gt;feature (tính năng)&lt;/strong&gt; — một kết quả nhỏ, cụ thể, mang lại giá trị rõ ràng cho khách hàng. Ví dụ:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Tính tổng giá trị một hóa đơn.&lt;/li&gt;
+&lt;li&gt;Tạo một đơn đặt hàng (purchase order).&lt;/li&gt;
+&lt;li&gt;Gửi biên nhận bán hàng.&lt;/li&gt;
+&lt;li&gt;Nhập một khách hàng tiềm năng (lead) vào hệ thống.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Từ những tính năng nhỏ như vậy, đội dự án xây dựng nên một &lt;strong&gt;danh sách tính năng (feature list)&lt;/strong&gt; đầy đủ, và toàn bộ quá trình phát triển được thiết kế xoay quanh việc lên kế hoạch, thiết kế và xây dựng từng tính năng một cách có hệ thống.&lt;/p&gt;
+&lt;p&gt;Giải pháp này đặc biệt phù hợp khi:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Dự án lớn, phức tạp, cần được phân rã (decompose) hoàn chỉnh để hiểu rõ giá trị thực sự cần giao.&lt;/li&gt;
+&lt;li&gt;Đội ngũ cần cấu trúc và một mô hình được xây dựng sẵn bởi chuyên gia, thay vì tự mày mò.&lt;/li&gt;
+&lt;li&gt;Dự án đòi hỏi tính dự đoán cao và kỷ luật thiết kế nghiêm ngặt.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Ngược lại, FDD &lt;strong&gt;không phù hợp&lt;/strong&gt; với đội ngũ nhỏ hoặc các sản phẩm ở giai đoạn MVP (Minimum Viable Product) — những trường hợp cần thử nghiệm nhanh, thay đổi liên tục và chưa có mô hình chuẩn để đi theo.&lt;/p&gt;
+&lt;h2 id="3-thực-hiện"&gt;3. Thực Hiện
+&lt;/h2&gt;&lt;p&gt;FDD được vận hành thông qua &lt;strong&gt;5 quy trình chính&lt;/strong&gt;, mỗi quy trình xây dựng dựa trên kết quả của quy trình trước — vừa có cấu trúc chặt chẽ, vừa vẫn giữ bản chất agile.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Bước 1 — Phát triển mô hình tổng thể (Develop an Overall Model)&lt;/strong&gt;
+Đội ngũ tìm hiểu domain (lĩnh vực nghiệp vụ) đang xây dựng — ví dụ nếu làm một trang thương mại điện tử, cần tổ chức workshop với các chuyên gia e-commerce. Đây là bước nền tảng, định hình toàn bộ cách tiếp cận cho các bước sau.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Bước 2 — Xây dựng danh sách tính năng (Build a Feature List)&lt;/strong&gt;
+Xác định cụ thể sản phẩm cần gì: Có giỏ hàng hay chỉ checkout thẳng? Có cho phép chọn số lượng không? Có tính thuế không, và tính cho những quốc gia nào? Từ đó, mô hình được phân rã thành một danh sách tính năng theo cấu trúc phân cấp (hierarchical), nhóm theo từng khu vực chủ đề (subject area), với tiêu chí rõ ràng là mỗi tính năng phải mang lại giá trị thực cho khách hàng.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Bước 3 — Lên kế hoạch theo tính năng (Plan by Feature)&lt;/strong&gt;
+Xây dựng lịch trình triển khai cho danh sách tính năng, đồng thời phân công quyền sở hữu (ownership) từng tính năng và từng class cho các thành viên cụ thể, giúp việc theo dõi tiến độ trở nên rõ ràng.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Bước 4 — Thiết kế theo tính năng (Design by Feature)&lt;/strong&gt;
+Các nhóm nhỏ xây dựng chi tiết thiết kế — xác định trình tự lập trình. Ở bước này có các vai trò chuyên biệt như &lt;em&gt;chief programmer&lt;/em&gt; và &lt;em&gt;class owner&lt;/em&gt; để quản lý quá trình lập trình.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Bước 5 — Xây dựng theo tính năng (Build by Feature)&lt;/strong&gt;
+Đây là bước lập trình thực tế: viết code, kiểm thử (unit test), và tích hợp (integrate) tính năng vào hệ thống. Các tính năng được xây dựng theo các chu kỳ ngắn — thường khoảng &lt;strong&gt;2 tuần&lt;/strong&gt; — và được giao (deliver) cho khách hàng sau mỗi chu kỳ.&lt;/p&gt;
+&lt;h2 id="4-kết-quả"&gt;4. Kết Quả
+&lt;/h2&gt;&lt;p&gt;Khi áp dụng đúng bối cảnh, FDD mang lại những kết quả rõ rệt:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Một mô hình thiết kế thống nhất, do chuyên gia xây dựng&lt;/strong&gt;, giúp cả đội ngũ lớn đi theo cùng một hướng, giảm thiểu xung đột cách làm giữa các nhóm nhỏ — điều mà Scrum thường gặp khó khăn khi áp dụng cho đội ngũ quy mô lớn.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Tính dự đoán cao hơn&lt;/strong&gt;: nhờ có kế hoạch theo tính năng và phân công rõ ràng, tiến độ dự án dễ theo dõi và kiểm soát hơn.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Giao sản phẩm liên tục theo chu kỳ ngắn&lt;/strong&gt; (khoảng 2 tuần/lần), vẫn giữ được nhịp độ agile dù có thêm cấu trúc.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Phù hợp với thực tế đã được kiểm chứng&lt;/strong&gt;: mô hình này từng được áp dụng thành công cho một đội ngũ khoảng 50 người — một quy mô dự án phần mềm lớn.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Tuy nhiên, kết quả cũng cho thấy giới hạn của phương pháp: với các đội nhỏ hoặc sản phẩm ở giai đoạn MVP — nơi cần thử nghiệm nhanh, thay đổi liên tục và chưa có mô hình chuẩn — cấu trúc chặt chẽ của FDD lại trở thành rào cản thay vì lợi thế.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Kết luận:&lt;/strong&gt; FDD là minh chứng cho việc Agile không nhất thiết phải đồng nghĩa với &amp;ldquo;không cấu trúc&amp;rdquo;. Bằng cách kết hợp kỷ luật kỹ thuật với tư duy lặp lại và hướng đến giá trị khách hàng, FDD mở ra một lựa chọn hiệu quả cho các tổ chức cần quản lý những dự án phần mềm lớn, phức tạp, mà vẫn muốn giữ tinh thần agile.&lt;/p&gt;</description></item></channel></rss>

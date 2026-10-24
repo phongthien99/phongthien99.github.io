@@ -1,0 +1,693 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Mcp on phongthien</title><link>https://phongthien99.github.io/tags/mcp/</link><description>Recent content in Mcp on phongthien</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Sat, 24 Oct 2026 00:00:00 +0700</lastBuildDate><atom:link href="https://phongthien99.github.io/tags/mcp/index.xml" rel="self" type="application/rss+xml"/><item><title>Hybrid AI Agent Architecture: Server quyết định, Local thực thi</title><link>https://phongthien99.github.io/posts/hybrid-ai-agent-architecture-server-quy%E1%BA%BFt-%C4%91%E1%BB%8Bnh-local-th%E1%BB%B1c-thi/</link><pubDate>Sat, 24 Oct 2026 00:00:00 +0700</pubDate><guid>https://phongthien99.github.io/posts/hybrid-ai-agent-architecture-server-quy%E1%BA%BFt-%C4%91%E1%BB%8Bnh-local-th%E1%BB%B1c-thi/</guid><description>&lt;h1 id="hybrid-ai-agent-architecture-server-quyết-định-local-thực-thi"&gt;Hybrid AI Agent Architecture: Server quyết định, Local thực thi
+&lt;/h1&gt;&lt;p&gt;Làm thế nào để AI Agent trên Server sử dụng được công cụ và dữ liệu trên máy người dùng, trong khi vẫn kiểm soát được quyền truy cập, hành động và các rủi ro bảo mật?&lt;/p&gt;
+&lt;h2 id="1-đặt-vấn-đề"&gt;1. Đặt vấn đề
+&lt;/h2&gt;&lt;p&gt;AI Agent đang chuyển từ vai trò trả lời câu hỏi sang trực tiếp thực hiện công việc. Agent có thể phân tích yêu cầu, lập kế hoạch, sử dụng công cụ và đánh giá kết quả để hoàn thành mục tiêu.&lt;/p&gt;
+&lt;p&gt;Tuy nhiên, khi triển khai AI Agent vào ứng dụng thực tế, tri thức và khả năng thực thi không phải lúc nào cũng nằm trong cùng một môi trường.&lt;/p&gt;
+&lt;h3 id="11-hai-môi-trường-với-những-năng-lực-khác-nhau"&gt;1.1. Hai môi trường với những năng lực khác nhau
+&lt;/h3&gt;&lt;p&gt;&lt;strong&gt;Server&lt;/strong&gt; tập trung AI Model, tri thức doanh nghiệp, dữ liệu dùng chung và các dịch vụ backend. Đây là môi trường có thể quản lý tập trung, giám sát và áp dụng chính sách bảo mật.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Local&lt;/strong&gt; là môi trường làm việc trực tiếp của người dùng. Nó có quyền truy cập vào tài liệu đang mở, mã nguồn, filesystem, IDE và các ứng dụng trên thiết bị.&lt;/p&gt;
+&lt;p&gt;Ví dụ, lập trình viên yêu cầu:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Test &lt;code&gt;test_checkout_discount&lt;/code&gt; trong project của tôi đang bị lỗi. Hãy tìm nguyên nhân, đối chiếu với quy chuẩn code của công ty và sửa giúp tôi.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Để xử lý yêu cầu này, Agent cần kết hợp hai nguồn năng lực:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Server:&lt;/strong&gt; Quy chuẩn code, tài liệu kiến trúc, lịch sử sự cố và khả năng phân tích.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Local:&lt;/strong&gt; Mã nguồn, môi trường chạy test, Git và các công cụ phát triển.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Nếu chỉ hoạt động trên Server, Agent không thể trực tiếp kiểm tra môi trường phát triển. Nếu chỉ hoạt động trên Local, Agent có thể thiếu tri thức doanh nghiệp và khả năng quản trị tập trung.&lt;/p&gt;
+&lt;h3 id="12-vấn-đề-khi-server-và-local-cùng-ra-quyết-định"&gt;1.2. Vấn đề khi Server và Local cùng ra quyết định
+&lt;/h3&gt;&lt;p&gt;Một cách tiếp cận là triển khai hai Agent độc lập: một Agent trên Server và một Agent trên máy người dùng. Hai Agent trao đổi thông tin và phối hợp thực hiện nhiệm vụ.&lt;/p&gt;
+&lt;p&gt;Tuy nhiên, mô hình này làm tăng độ phức tạp trong kiểm soát hành động. Máy người dùng có thể chứa nội dung không đáng tin cậy, chẳng hạn tài liệu bên thứ ba, mã nguồn hoặc trang web. Những nội dung này có thể chứa chỉ thị độc hại nhằm điều khiển Agent thông qua &lt;em&gt;prompt injection&lt;/em&gt;.&lt;/p&gt;
+&lt;p&gt;Nếu Local Agent có quyền tự lập kế hoạch và thực thi, hệ thống phải giải quyết những câu hỏi:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Agent nào chịu trách nhiệm về quyết định cuối cùng?&lt;/li&gt;
+&lt;li&gt;Làm thế nào để hai Agent không thực hiện những hành động mâu thuẫn?&lt;/li&gt;
+&lt;li&gt;Chính sách bảo mật được áp dụng thống nhất như thế nào?&lt;/li&gt;
+&lt;li&gt;Làm thế nào để kiểm toán toàn bộ chuỗi quyết định?&lt;/li&gt;
+&lt;li&gt;Điều gì xảy ra khi hai Agent mất kết nối?&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Simon Willison mô tả rủi ro &lt;em&gt;lethal trifecta&lt;/em&gt;: một Agent đồng thời tiếp cận dữ liệu riêng tư, nội dung không tin cậy và công cụ có khả năng gửi dữ liệu ra ngoài. Khi ba điều kiện này cùng tồn tại, prompt injection có thể dẫn đến rò rỉ dữ liệu.&lt;/p&gt;
+&lt;p&gt;Bài toán kiến trúc cần giải quyết là &lt;strong&gt;kết hợp năng lực của Server và Local mà không phân tán quyền quyết định một cách không cần thiết&lt;/strong&gt;.&lt;/p&gt;
+&lt;h2 id="2-giải-pháp-server-quyết-định-local-thực-thi"&gt;2. Giải pháp: Server quyết định, Local thực thi
+&lt;/h2&gt;&lt;h3 id="21-nguyên-tắc-kiến-trúc"&gt;2.1. Nguyên tắc kiến trúc
+&lt;/h3&gt;&lt;p&gt;Mô hình đề xuất phân chia trách nhiệm thành hai thành phần:&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Server Agent — suy luận và điều phối:&lt;/strong&gt; Phân tích yêu cầu, lập kế hoạch, truy xuất tri thức, lựa chọn công cụ, quyết định hành động tiếp theo và đánh giá kết quả.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Local Runtime — tiếp nhận yêu cầu và thực thi:&lt;/strong&gt; Cung cấp giao diện tương tác với người dùng, chuyển yêu cầu lên Server Agent, công bố công cụ trên thiết bị, kiểm tra quyền, thực thi lệnh được phép và trả kết quả. Local Runtime không tự lập kế hoạch hoặc khởi xướng hành động ngoài yêu cầu đã được cấp quyền.&lt;/p&gt;
+&lt;p&gt;Trong phạm vi kiến trúc này, Server Agent là thành phần duy nhất chịu trách nhiệm lập kế hoạch và ra quyết định nghiệp vụ. Local Runtime vẫn có quyền từ chối một hành động, kể cả khi Server đã cho phép.&lt;/p&gt;
+&lt;h3 id="22-mô-hình-tổng-thể"&gt;2.2. Mô hình tổng thể
+&lt;/h3&gt;&lt;p&gt;&lt;strong&gt;Luồng giao tiếp chính: Người dùng → Local Runtime → Server Agent.&lt;/strong&gt; Người dùng không gọi trực tiếp Server Agent. Local Runtime đóng vai trò điểm tiếp nhận yêu cầu và cầu nối thực thi công cụ.&lt;/p&gt;
+&lt;section
+class="archcode-embed archcode-embed-preview"
+data-archcode-viewer data-view="overview" data-show-source="false" data-layout-src="https://phongthien99.github.io/diagrams/hybrid-ai-agent.layout.yaml"&gt;
+&lt;style&gt;
+.archcode-embed {
+display: grid;
+gap: 0.75rem;
+margin: 1.25rem 0;
+}
+.archcode-embed-header {
+display: flex;
+align-items: center;
+justify-content: space-between;
+gap: 0.75rem;
+flex-wrap: wrap;
+}
+.archcode-embed-title {
+margin: 0;
+font-size: 1rem;
+font-weight: 700;
+}
+.archcode-embed-full {
+font-size: 0.875rem;
+font-weight: 600;
+text-decoration: none;
+}
+.archcode-embed .archcode-output,
+.archcode-embed-code {
+border: 1px solid var(--card-separator-color, #d0d7de);
+border-radius: 8px;
+}
+.archcode-embed-code {
+overflow: auto;
+margin: 0;
+padding: 0.85rem;
+background: var(--code-background-color, rgba(127, 127, 127, 0.08));
+}
+&lt;/style&gt;
+&lt;div class="archcode-embed-header"&gt;
+&lt;p class="archcode-embed-title"&gt;Hybrid AI Agent - Kiến trúc tổng thể&lt;/p&gt;
+&lt;a class="archcode-embed-full" href="https://phongthien99.github.io/archcode/" target="_blank" rel="noopener"&gt;Open editor&lt;/a&gt;
+&lt;/div&gt;
+&lt;div class="archcode-output" aria-live="polite"&gt;&lt;/div&gt;
+&lt;div class="archcode-diagnostics" aria-live="polite"&gt;&lt;/div&gt;
+&lt;pre class="archcode-source archcode-embed-code"&gt;&lt;code&gt;
+version: 1
+system:
+id: hybrid-ai-agent
+name: Hybrid AI Agent
+groups:
+- id: local
+name: Local Environment — thiết bị người dùng
+type: trust-zone
+- id: server
+name: Server Environment — quản trị tập trung
+type: trust-zone
+components:
+- id: user
+name: Người dùng
+type: person
+- id: local-runtime
+name: Local Runtime
+type: frontend
+group: local
+description: UI · Session · Tool Gateway
+- id: local-policy
+name: Local Policy
+type: gateway
+group: local
+description: Allowlist · Scope · Approval
+- id: local-tools
+name: Local Tools
+type: service
+group: local
+description: File · IDE · Application
+- id: server-agent
+name: Server Agent
+type: service
+group: server
+- id: ai-model
+name: AI Model &amp;amp; Reasoning
+type: service
+group: server
+- id: enterprise-knowledge
+name: Enterprise Knowledge
+type: database
+group: server
+- id: server-tools
+name: Server Tools
+type: service
+group: server
+- id: policy-engine
+name: Policy Engine
+type: gateway
+group: server
+- id: audit-log
+name: State &amp;amp; Audit Log
+type: database
+group: server
+relationships:
+- from: user
+to: local-runtime
+label: Yêu cầu · Kết quả · Phê duyệt
+- from: local-runtime
+to: local-policy
+label: Tool Call
+- from: local-policy
+to: local-tools
+label: Thực thi
+- from: local
+to: server
+type: http
+label: Request · Tool Call · Result
+- from: server-agent
+to: ai-model
+- from: server-agent
+to: enterprise-knowledge
+- from: server-agent
+to: server-tools
+- from: server-agent
+to: policy-engine
+- from: server-agent
+to: audit-log
+label: State · Audit
+views:
+- id: overview
+name: Overview
+include: [&amp;#39;*&amp;#39;]
+direction: TB
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/section&gt;
+&lt;script&gt;
+window.__archcodeViewerScript =
+window.__archcodeViewerScript ||
+(function () {
+var script = document.createElement('script');
+script.src = '/js/archcode-viewer.js';
+script.defer = true;
+document.head.appendChild(script);
+return script;
+})();
+&lt;/script&gt;
+&lt;p&gt;Mỗi lệnh gọi công cụ từ Server phải đi qua hai lớp kiểm soát:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Policy Engine trên Server:&lt;/strong&gt; Xác định Agent được phép gọi công cụ nào, với tham số nào và trong ngữ cảnh nào.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Local Policy trên thiết bị:&lt;/strong&gt; Kiểm tra lại công cụ, phạm vi truy cập và yêu cầu phê duyệt. Lệnh hợp lệ trên Server không mặc nhiên được thực thi tại Local.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="23-các-cơ-chế-chính"&gt;2.3. Các cơ chế chính
+&lt;/h3&gt;&lt;h4 id="cơ-chế-1-tool-contract"&gt;Cơ chế 1. Tool Contract
+&lt;/h4&gt;&lt;p&gt;Local Runtime công bố các công cụ thông qua hợp đồng rõ ràng. Mỗi công cụ xác định tên, tham số đầu vào, cấu trúc kết quả và mức độ rủi ro.&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Công cụ&lt;/th&gt;
+&lt;th&gt;Chức năng&lt;/th&gt;
+&lt;th&gt;Mức rủi ro&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;read_file&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;Đọc nội dung tệp&lt;/td&gt;
+&lt;td&gt;Chỉ đọc&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;run_tests&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;Chạy bộ kiểm thử&lt;/td&gt;
+&lt;td&gt;Có thể có tác dụng phụ&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;apply_patch&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;Thay đổi mã nguồn&lt;/td&gt;
+&lt;td&gt;Ghi dữ liệu&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;execute_command&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;Chạy lệnh hệ thống&lt;/td&gt;
+&lt;td&gt;Nhạy cảm&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;Server Agent chỉ được gọi công cụ đã được công bố và cho phép. Có thể sử dụng &lt;strong&gt;Model Context Protocol (MCP)&lt;/strong&gt; để mô tả và kết nối các công cụ. Tuy nhiên, MCP không tự bảo đảm chính sách truy cập. Hệ thống triển khai vẫn phải kiểm tra quyền ở cả Server và Local.&lt;/p&gt;
+&lt;h4 id="cơ-chế-2-composite-tools"&gt;Cơ chế 2. Composite Tools
+&lt;/h4&gt;&lt;p&gt;Một hạn chế của kiến trúc Hybrid Agent là độ trễ khi Server liên tục gọi công cụ trên Local. Thay vì thực hiện nhiều lệnh nhỏ, Local Runtime có thể cung cấp &lt;strong&gt;Composite Tools&lt;/strong&gt;: những công cụ kết hợp nhiều thao tác xác định trong một lần gọi.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;extract_sections(doc, keywords)&lt;/code&gt;: Trích xuất các đoạn tài liệu phù hợp.&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;get_document_outline(doc)&lt;/code&gt;: Đọc cấu trúc tài liệu.&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;apply_patch(doc, changes)&lt;/code&gt;: Áp dụng một tập thay đổi.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Composite Tools giảm số lượt trao đổi giữa Server và Local. Các công cụ này thực hiện quy trình đã định nghĩa, không sử dụng AI Model để tự quyết định mục tiêu hoặc lựa chọn hành động mới.&lt;/p&gt;
+&lt;h4 id="cơ-chế-3-kiểm-soát-dữ-liệu-không-tin-cậy"&gt;Cơ chế 3. Kiểm soát dữ liệu không tin cậy
+&lt;/h4&gt;&lt;p&gt;Dữ liệu do Local Runtime trả về có thể chứa nội dung độc hại. Ví dụ, tệp mã nguồn có thể chứa chỉ thị yêu cầu AI tải và chạy script bên ngoài.&lt;/p&gt;
+&lt;p&gt;Server Agent phải phân biệt giữa dữ liệu cần phân tích và chỉ thị được phép thực hiện. Để giảm rủi ro prompt injection, hệ thống cần kết hợp:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Xác định nguồn và mức độ tin cậy của dữ liệu.&lt;/li&gt;
+&lt;li&gt;Giới hạn công cụ Agent có thể sử dụng.&lt;/li&gt;
+&lt;li&gt;Kiểm tra quyền trước mỗi hành động.&lt;/li&gt;
+&lt;li&gt;Yêu cầu phê duyệt đối với hành động nhạy cảm.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Việc yêu cầu model bỏ qua chỉ thị độc hại không đủ để bảo đảm an toàn. Các ràng buộc phải được thực thi bằng cơ chế độc lập với model.&lt;/p&gt;
+&lt;h4 id="cơ-chế-4-tối-thiểu-hóa-dữ-liệu"&gt;Cơ chế 4. Tối thiểu hóa dữ liệu
+&lt;/h4&gt;&lt;p&gt;Trong mô hình suy luận tập trung, Server cần nhận dữ liệu từ Local để xử lý yêu cầu. Điều này tạo ra rủi ro về quyền riêng tư và bảo mật dữ liệu.&lt;/p&gt;
+&lt;p&gt;Hệ thống nên giới hạn dữ liệu truyền lên Server theo nhu cầu từng bước. Local Runtime có thể lọc hoặc che thông tin nhạy cảm trước khi trả kết quả. Người dùng cần có khả năng kiểm tra phạm vi dữ liệu được chia sẻ.&lt;/p&gt;
+&lt;h4 id="cơ-chế-5-quản-lý-trạng-thái-và-idempotency"&gt;Cơ chế 5. Quản lý trạng thái và Idempotency
+&lt;/h4&gt;&lt;p&gt;Server lưu trạng thái nhiệm vụ và lịch sử quyết định, đóng vai trò nguồn trạng thái điều phối chính.&lt;/p&gt;
+&lt;p&gt;Mỗi hành động có tác dụng phụ cần gắn &lt;code&gt;action_id&lt;/code&gt; duy nhất. Local Runtime ghi nhận kết quả để tránh thực thi trùng lặp khi Server gửi lại yêu cầu.&lt;/p&gt;
+&lt;p&gt;Khi mất kết nối, Local Runtime không tự khởi tạo bước xử lý tiếp theo. Khi kết nối khôi phục, Server đối chiếu trạng thái trước khi tiếp tục. Đối với thao tác đang thực hiện dở, hệ thống phải xác định kết quả thực tế trước khi thử lại.&lt;/p&gt;
+&lt;h4 id="cơ-chế-6-bảo-mật-nhiều-lớp"&gt;Cơ chế 6. Bảo mật nhiều lớp
+&lt;/h4&gt;&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Lớp kiểm soát&lt;/th&gt;
+&lt;th&gt;Trách nhiệm&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Server Policy Engine&lt;/td&gt;
+&lt;td&gt;Kiểm tra quyền gọi công cụ và ngữ cảnh thực thi&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Local Policy&lt;/td&gt;
+&lt;td&gt;Giới hạn công cụ, tài nguyên và phạm vi truy cập&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;User Approval&lt;/td&gt;
+&lt;td&gt;Phê duyệt thao tác nhạy cảm&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Audit Log&lt;/td&gt;
+&lt;td&gt;Ghi nhận quyết định, hành động và kết quả&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;Các lớp kiểm soát phải hoạt động độc lập. Nếu Server Agent đưa ra lệnh không an toàn, Local Policy vẫn có thể từ chối.&lt;/p&gt;
+&lt;h2 id="3-thực-hiện-ví-dụ-sửa-lỗi-trong-môi-trường-phát-triển"&gt;3. Thực hiện: Ví dụ sửa lỗi trong môi trường phát triển
+&lt;/h2&gt;&lt;h3 id="31-luồng-xử-lý"&gt;3.1. Luồng xử lý
+&lt;/h3&gt;&lt;p&gt;Lập trình viên yêu cầu:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Test &lt;code&gt;test_checkout_discount&lt;/code&gt; đang fail. Hãy tìm nguyên nhân, đối chiếu với quy chuẩn code của công ty và sửa giúp tôi.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;pre class="mermaid"&gt;
+sequenceDiagram
+autonumber
+actor U as Developer
+participant L as Local Runtime
+participant S as Server Agent
+participant K as Knowledge System
+participant T as Local Tools
+U-&amp;gt;&amp;gt;L: Yêu cầu sửa test đang fail
+L-&amp;gt;&amp;gt;S: Chuyển yêu cầu và ngữ cảnh được phép
+S-&amp;gt;&amp;gt;S: Phân tích mục tiêu, lập kế hoạch
+S-&amp;gt;&amp;gt;L: run_tests(filter)
+L-&amp;gt;&amp;gt;L: Kiểm tra Local Policy
+L-&amp;gt;&amp;gt;T: Chạy test
+T--&amp;gt;&amp;gt;L: AssertionError + stack trace
+L--&amp;gt;&amp;gt;S: Kết quả test
+S-&amp;gt;&amp;gt;L: read_symbols(...)
+L-&amp;gt;&amp;gt;T: Đọc mã nguồn trong phạm vi cho phép
+T--&amp;gt;&amp;gt;L: Mã nguồn và vị trí
+L--&amp;gt;&amp;gt;S: Dữ liệu mã nguồn
+S-&amp;gt;&amp;gt;K: Tra quy chuẩn code và sự cố tương tự
+K--&amp;gt;&amp;gt;S: Quy chuẩn liên quan
+S-&amp;gt;&amp;gt;S: Phân tích nguyên nhân và tạo diff
+S--&amp;gt;&amp;gt;L: Đề xuất diff và giải thích
+L--&amp;gt;&amp;gt;U: Hiển thị đề xuất
+U-&amp;gt;&amp;gt;L: Chấp thuận đề xuất
+L-&amp;gt;&amp;gt;S: Xác nhận chấp thuận
+S-&amp;gt;&amp;gt;L: apply_patch(diff, action_id)
+L-&amp;gt;&amp;gt;L: Kiểm tra Local Policy
+L-&amp;gt;&amp;gt;U: Phê duyệt ghi file tại thiết bị
+U--&amp;gt;&amp;gt;L: Phê duyệt
+L-&amp;gt;&amp;gt;T: Áp dụng bản sửa
+T--&amp;gt;&amp;gt;L: Kết quả ghi file
+L--&amp;gt;&amp;gt;S: action_id + kết quả
+S-&amp;gt;&amp;gt;L: run_tests(filter)
+L-&amp;gt;&amp;gt;T: Chạy lại test
+T--&amp;gt;&amp;gt;L: Pass
+L--&amp;gt;&amp;gt;S: Kết quả kiểm thử
+S-&amp;gt;&amp;gt;S: Cập nhật State &amp;amp; Audit Log
+S--&amp;gt;&amp;gt;L: Kết quả hoàn tất
+L--&amp;gt;&amp;gt;U: Hiển thị kết quả
+&lt;/pre&gt;
+&lt;p&gt;Quy trình gồm sáu bước:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;Tiếp nhận yêu cầu:&lt;/strong&gt; Local Runtime nhận yêu cầu từ người dùng và chuyển đến Server Agent.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Thu thập thông tin:&lt;/strong&gt; Server gọi &lt;code&gt;run_tests&lt;/code&gt; và công cụ đọc mã nguồn thông qua Local Runtime.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Phân tích:&lt;/strong&gt; Server kết hợp kết quả kiểm thử, mã nguồn và quy chuẩn doanh nghiệp để xác định nguyên nhân.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Đề xuất thay đổi:&lt;/strong&gt; Server tạo diff, giải thích và yêu cầu người dùng chấp thuận.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Thực thi có kiểm soát:&lt;/strong&gt; Server gọi &lt;code&gt;apply_patch&lt;/code&gt;; Local Policy kiểm tra phạm vi và yêu cầu phê duyệt tại thiết bị trước khi ghi.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Kiểm tra và hoàn tất:&lt;/strong&gt; Server yêu cầu chạy lại test, đánh giá kết quả và cập nhật trạng thái.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Toàn bộ suy luận diễn ra trên Server. Local Runtime tiếp nhận yêu cầu, kiểm soát công cụ và trả kết quả. Nếu mã nguồn chứa prompt injection, nội dung đó vẫn phải được xử lý như dữ liệu chưa tin cậy.&lt;/p&gt;
+&lt;h3 id="32-phạm-vi-thực-thi-tại-local"&gt;3.2. Phạm vi thực thi tại Local
+&lt;/h3&gt;&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Mức độ&lt;/th&gt;
+&lt;th&gt;Cách hoạt động&lt;/th&gt;
+&lt;th&gt;Định hướng&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Tool Execution&lt;/td&gt;
+&lt;td&gt;Server gọi công cụ riêng lẻ&lt;/td&gt;
+&lt;td&gt;Sử dụng mặc định&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Composite Tools&lt;/td&gt;
+&lt;td&gt;Local thực hiện chuỗi thao tác xác định&lt;/td&gt;
+&lt;td&gt;Tối ưu hiệu năng&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Local Delegation&lt;/td&gt;
+&lt;td&gt;Local dùng model riêng để lập kế hoạch con&lt;/td&gt;
+&lt;td&gt;Ngoài phạm vi thiết kế hiện tại&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;Local Delegation có thể được nghiên cứu khi có yêu cầu xử lý dữ liệu hoàn toàn trên thiết bị. Tuy nhiên, cách tiếp cận này làm thay đổi ranh giới trách nhiệm và cần mô hình bảo mật riêng.&lt;/p&gt;
+&lt;h3 id="33-đánh-đổi-kiến-trúc"&gt;3.3. Đánh đổi kiến trúc
+&lt;/h3&gt;&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Lợi ích&lt;/th&gt;
+&lt;th&gt;Đánh đổi&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Một nơi điều phối và ra quyết định&lt;/td&gt;
+&lt;td&gt;Tăng độ trễ khi gọi công cụ&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Chính sách và model được quản lý tập trung&lt;/td&gt;
+&lt;td&gt;Phụ thuộc kết nối mạng&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Có thể kiểm toán chuỗi hành động&lt;/td&gt;
+&lt;td&gt;Cần thiết kế quản lý trạng thái&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Local Runtime đơn giản hơn Agent độc lập&lt;/td&gt;
+&lt;td&gt;Cần đầu tư thiết kế Tool Contract&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Kiểm soát quyền tại cả Server và Local&lt;/td&gt;
+&lt;td&gt;Dữ liệu có thể phải truyền lên Server&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;Hai vấn đề cần ưu tiên là độ trễ và bảo mật dữ liệu. Composite Tools giảm số lượt trao đổi. Cơ chế tối thiểu hóa dữ liệu giảm lượng thông tin truyền lên Server. Cả hai giải pháp cần được đánh giá bằng số liệu thực tế.&lt;/p&gt;
+&lt;h3 id="34-hướng-triển-khai"&gt;3.4. Hướng triển khai
+&lt;/h3&gt;&lt;ol&gt;
+&lt;li&gt;Xây dựng Local Runtime với giao diện tiếp nhận yêu cầu, các công cụ chỉ đọc và Local Policy cơ bản.&lt;/li&gt;
+&lt;li&gt;Tích hợp Server Agent, Policy Engine và Audit Log.&lt;/li&gt;
+&lt;li&gt;Bổ sung công cụ ghi dữ liệu, cơ chế phê duyệt và &lt;code&gt;action_id&lt;/code&gt;.&lt;/li&gt;
+&lt;li&gt;Tối ưu các chuỗi thao tác phổ biến bằng Composite Tools.&lt;/li&gt;
+&lt;li&gt;Mở rộng hỗ trợ nhiều thiết bị và nhiều nhóm công cụ.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Trong giai đoạn đầu, ưu tiên kiểm chứng luồng điều phối, giới hạn quyền và khả năng phục hồi sau mất kết nối trước khi mở rộng số lượng công cụ.&lt;/p&gt;
+&lt;h2 id="4-kết-luận"&gt;4. Kết luận
+&lt;/h2&gt;&lt;p&gt;Kiến trúc Hybrid AI Agent cho phép kết hợp khả năng suy luận tập trung với năng lực thực thi trên thiết bị người dùng.&lt;/p&gt;
+&lt;p&gt;Trong mô hình đề xuất, &lt;strong&gt;người dùng tương tác qua Local Runtime&lt;/strong&gt;. Local Runtime chuyển yêu cầu đến Server Agent, cung cấp công cụ, kiểm tra quyền và thực thi hành động được phép. Server Agent chịu trách nhiệm phân tích, lập kế hoạch và điều phối. Người dùng giữ quyền phê duyệt những thao tác nhạy cảm.&lt;/p&gt;
+&lt;p&gt;Cách phân chia này giúp xác định rõ trách nhiệm của từng thành phần, kiểm toán hành động và áp dụng chính sách bảo mật nhất quán.&lt;/p&gt;
+&lt;p&gt;Kiến trúc vẫn phải giải quyết độ trễ mạng, bảo mật dữ liệu và quản lý trạng thái khi kết nối gián đoạn. Những vấn đề này cần được kiểm chứng trong quá trình triển khai.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Giá trị cốt lõi của mô hình nằm ở việc tận dụng năng lực của cả Server và Local, trong khi duy trì ranh giới rõ ràng giữa quyết định và thực thi.&lt;/strong&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="tài-liệu-tham-khảo"&gt;Tài liệu tham khảo
+&lt;/h2&gt;&lt;p&gt;Các nguồn giữ theo tài liệu gốc&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Simon Willison — &lt;em&gt;The lethal trifecta for AI agents&lt;/em&gt; (2025).&lt;/li&gt;
+&lt;li&gt;Walden Yan, Cognition — &lt;em&gt;Don&amp;rsquo;t Build Multi-Agents&lt;/em&gt; (2025).&lt;/li&gt;
+&lt;li&gt;Walden Yan, Cognition — &lt;em&gt;Multi-Agents: What&amp;rsquo;s Actually Working&lt;/em&gt;.&lt;/li&gt;
+&lt;li&gt;&lt;a class="link" href="https://modelcontextprotocol.io/specification" target="_blank" rel="noopener"
+&gt;Model Context Protocol Specification&lt;/a&gt;.&lt;/li&gt;
+&lt;li&gt;Anthropic — &lt;em&gt;Writing effective tools for agents — with agents&lt;/em&gt; (2025).&lt;/li&gt;
+&lt;li&gt;Simon Willison — &lt;em&gt;The Dual LLM pattern&lt;/em&gt; (2023).&lt;/li&gt;
+&lt;li&gt;Simon Willison — &lt;em&gt;CaMeL offers a promising new direction for mitigating prompt injection&lt;/em&gt; (2025).&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;Design Patterns for Securing LLM Agents against Prompt Injections&lt;/em&gt; (2025).&lt;/li&gt;
+&lt;li&gt;&lt;a class="link" href="https://genai.owasp.org/llmrisk/llm01-prompt-injection/" target="_blank" rel="noopener"
+&gt;OWASP LLM01:2025 — Prompt Injection&lt;/a&gt;.&lt;/li&gt;
+&lt;/ol&gt;</description></item><item><title>Designing MCP Skill Loader — From Markdown to AI Tool</title><link>https://phongthien99.github.io/posts/designing-mcp-skill-loader-from-markdown-to-ai-tool/</link><pubDate>Sun, 29 Mar 2026 10:00:00 +0700</pubDate><guid>https://phongthien99.github.io/posts/designing-mcp-skill-loader-from-markdown-to-ai-tool/</guid><description>&lt;h2 id="1-đặt-vấn-đề"&gt;1. Đặt vấn đề
+&lt;/h2&gt;&lt;p&gt;AI agents đang xuất hiện khắp nơi — từ code assistant trong IDE đến chatbot hỗ trợ khách hàng. Nhưng có một bài toán mà hầu như dự án nào cũng gặp: &lt;strong&gt;làm thế nào để &amp;ldquo;dạy&amp;rdquo; agent cách thực hiện một tác vụ cụ thể mà không cần viết code?&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Hãy tưởng tượng ta có một agent cần biết cách review code, viết commit message đúng chuẩn, hay debug một lỗi phức tạp. Cách tiếp cận truyền thống thường như sau:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;span class="lnt"&gt;3
+&lt;/span&gt;&lt;span class="lnt"&gt;4
+&lt;/span&gt;&lt;span class="lnt"&gt;5
+&lt;/span&gt;&lt;span class="lnt"&gt;6
+&lt;/span&gt;&lt;span class="lnt"&gt;7
+&lt;/span&gt;&lt;span class="lnt"&gt;8
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-go" data-lang="go"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="c1"&gt;// ❌ Hard-code mọi thứ vào system prompt&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="kd"&gt;func&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nf"&gt;buildSystemPrompt&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kt"&gt;string&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;return&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;`You are a code review expert.
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="s"&gt; When reviewing code: [200 dòng rules]
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="s"&gt; When writing commits: [100 dòng rules]
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="s"&gt; When debugging: [150 dòng rules]
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="s"&gt; ...`&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;Vấn đề với cách này:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Không tái sử dụng&lt;/strong&gt; — mỗi agent copy-paste cùng một đoạn instructions&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Khó bảo trì&lt;/strong&gt; — thay đổi một quy tắc phải sửa nhiều nơi&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Không version control&lt;/strong&gt; — prompt nằm trong code, khó track history&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Tốn token&lt;/strong&gt; — agent load toàn bộ dù chỉ cần một phần nhỏ&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Thêm một ràng buộc: &lt;strong&gt;Model Context Protocol (MCP)&lt;/strong&gt; đang nổi lên như giao thức chuẩn để AI agent giao tiếp với tools. Claude Desktop, VS Code, và nhiều AI client đều hỗ trợ MCP.&lt;/p&gt;
+&lt;p&gt;&lt;em&gt;Câu hỏi: Có cách nào quản lý &amp;ldquo;knowledge&amp;rdquo; của agent theo dạng file — version được, chia sẻ được, load động — và expose qua MCP không?&lt;/em&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="2-giải-pháp"&gt;2. Giải pháp
+&lt;/h2&gt;&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;Ý tưởng cốt lõi:&lt;/strong&gt; Mỗi &amp;ldquo;skill&amp;rdquo; là một thư mục chứa file &lt;code&gt;SKILL.md&lt;/code&gt;. Người viết skill chỉ cần biết Markdown — không cần code. Hệ thống tự scan, parse, và expose qua MCP.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Đây là pattern &lt;strong&gt;Convention over Configuration&lt;/strong&gt;: đặt file đúng chỗ, mọi thứ tự động chạy.&lt;/p&gt;
+&lt;pre class="mermaid"&gt;
+graph LR
+subgraph without[&amp;#34;❌ Không có Skill Loader&amp;#34;]
+A1[Agent 1] --&amp;gt; P1[Hard-coded Prompt]
+A2[Agent 2] --&amp;gt; P2[Copy-paste Prompt]
+A3[Agent 3] --&amp;gt; P3[Another Copy]
+end
+subgraph with[&amp;#34;✅ Có Skill Loader&amp;#34;]
+S1[SKILL.md] --&amp;gt; L[Skill Loader]
+S2[SKILL.md] --&amp;gt; L
+L --&amp;gt; MCP[MCP Server]
+MCP --&amp;gt; A4[Any Agent]
+end
+&lt;/pre&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Vấn đề&lt;/th&gt;
+&lt;th&gt;Trước&lt;/th&gt;
+&lt;th&gt;Sau&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Tái sử dụng&lt;/td&gt;
+&lt;td&gt;Copy-paste&lt;/td&gt;
+&lt;td&gt;Một file, nhiều agents&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Bảo trì&lt;/td&gt;
+&lt;td&gt;Sửa nhiều nơi&lt;/td&gt;
+&lt;td&gt;Sửa một &lt;code&gt;SKILL.md&lt;/code&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Token&lt;/td&gt;
+&lt;td&gt;Load toàn bộ&lt;/td&gt;
+&lt;td&gt;Lazy load qua Resource&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Thêm skill&lt;/td&gt;
+&lt;td&gt;Sửa code, redeploy&lt;/td&gt;
+&lt;td&gt;Thêm file, rescan&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;hr&gt;
+&lt;h2 id="3-thiết-kế"&gt;3. Thiết kế
+&lt;/h2&gt;&lt;h3 id="31-cấu-trúc-skill"&gt;3.1 Cấu trúc Skill
+&lt;/h3&gt;&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;span class="lnt"&gt;3
+&lt;/span&gt;&lt;span class="lnt"&gt;4
+&lt;/span&gt;&lt;span class="lnt"&gt;5
+&lt;/span&gt;&lt;span class="lnt"&gt;6
+&lt;/span&gt;&lt;span class="lnt"&gt;7
+&lt;/span&gt;&lt;span class="lnt"&gt;8
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-gdscript3" data-lang="gdscript3"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="o"&gt;~/.&lt;/span&gt;&lt;span class="n"&gt;skills&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;├──&lt;/span&gt; &lt;span class="n"&gt;code&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="n"&gt;review&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;│&lt;/span&gt; &lt;span class="err"&gt;├──&lt;/span&gt; &lt;span class="n"&gt;SKILL&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;md&lt;/span&gt; &lt;span class="err"&gt;←&lt;/span&gt; &lt;span class="err"&gt;đị&lt;/span&gt;&lt;span class="n"&gt;nh&lt;/span&gt; &lt;span class="n"&gt;nghĩa&lt;/span&gt; &lt;span class="n"&gt;skill&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;bắt&lt;/span&gt; &lt;span class="n"&gt;buộc&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;│&lt;/span&gt; &lt;span class="err"&gt;└──&lt;/span&gt; &lt;span class="n"&gt;checklist&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;md&lt;/span&gt; &lt;span class="err"&gt;←&lt;/span&gt; &lt;span class="n"&gt;tài&lt;/span&gt; &lt;span class="n"&gt;liệu&lt;/span&gt; &lt;span class="n"&gt;tham&lt;/span&gt; &lt;span class="n"&gt;khảo&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;lazy&lt;/span&gt; &lt;span class="nb"&gt;load&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;├──&lt;/span&gt; &lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="n"&gt;commit&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;│&lt;/span&gt; &lt;span class="err"&gt;└──&lt;/span&gt; &lt;span class="n"&gt;SKILL&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;md&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;└──&lt;/span&gt; &lt;span class="n"&gt;debug&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="n"&gt;go&lt;/span&gt;&lt;span class="o"&gt;/&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="err"&gt;└──&lt;/span&gt; &lt;span class="n"&gt;SKILL&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;md&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;File &lt;code&gt;SKILL.md&lt;/code&gt; = YAML frontmatter + Markdown:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;span class="lnt"&gt;3
+&lt;/span&gt;&lt;span class="lnt"&gt;4
+&lt;/span&gt;&lt;span class="lnt"&gt;5
+&lt;/span&gt;&lt;span class="lnt"&gt;6
+&lt;/span&gt;&lt;span class="lnt"&gt;7
+&lt;/span&gt;&lt;span class="lnt"&gt;8
+&lt;/span&gt;&lt;span class="lnt"&gt;9
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-markdown" data-lang="markdown"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nn"&gt;---&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nt"&gt;name&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;code-review&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nt"&gt;description&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;Expert code review guidance&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nt"&gt;references&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;- &lt;span class="l"&gt;checklist.md&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nn"&gt;---&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="gh"&gt;# Code Review Skill
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;When reviewing code, follow these guidelines...
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;h3 id="32-kiến-trúc-tổng-quan"&gt;3.2 Kiến trúc tổng quan
+&lt;/h3&gt;&lt;pre class="mermaid"&gt;
+graph TD
+subgraph Input[&amp;#34;📁 Input Layer&amp;#34;]
+F1[SKILL.md files]
+end
+subgraph Core[&amp;#34;⚙️ Core Layer&amp;#34;]
+P[Parser] --&amp;gt; R[Registry]
+end
+subgraph Output[&amp;#34;🔌 Output Layer&amp;#34;]
+MCP[MCP Server]
+MCP --&amp;gt; PR[Prompts]
+MCP --&amp;gt; RS[Resources]
+end
+F1 --&amp;gt; P
+R --&amp;gt; MCP
+subgraph Clients[&amp;#34;🤖 Clients&amp;#34;]
+C1[Claude Desktop]
+C2[VS Code]
+C3[Custom Agent]
+end
+PR --&amp;gt; C1
+RS --&amp;gt; C2
+PR --&amp;gt; C3
+&lt;/pre&gt;
+&lt;h3 id="33-các-thành-phần-chính"&gt;3.3 Các thành phần chính
+&lt;/h3&gt;&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Component&lt;/th&gt;
+&lt;th&gt;Trách nhiệm&lt;/th&gt;
+&lt;th&gt;Input&lt;/th&gt;
+&lt;th&gt;Output&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;Parser&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;Đọc SKILL.md, tách frontmatter/content&lt;/td&gt;
+&lt;td&gt;File path&lt;/td&gt;
+&lt;td&gt;Skill struct&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;Registry&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;Scan, lưu trữ, detect collision&lt;/td&gt;
+&lt;td&gt;Root dir&lt;/td&gt;
+&lt;td&gt;Map[name]Skill&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;MCP Server&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;Expose skills qua protocol&lt;/td&gt;
+&lt;td&gt;Registry&lt;/td&gt;
+&lt;td&gt;Prompts + Resources&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h3 id="34-luồng-xử-lý"&gt;3.4 Luồng xử lý
+&lt;/h3&gt;&lt;pre class="mermaid"&gt;
+sequenceDiagram
+participant FS as File System
+participant R as Registry
+participant MCP as MCP Server
+participant Agent as AI Agent
+Note over R: Startup
+R-&amp;gt;&amp;gt;FS: WalkDir(~/.skills)
+FS--&amp;gt;&amp;gt;R: List of SKILL.md paths
+loop Each SKILL.md
+R-&amp;gt;&amp;gt;R: Parse &amp;amp; Validate
+R-&amp;gt;&amp;gt;R: Check duplicates
+R-&amp;gt;&amp;gt;R: Store in memory
+end
+R-&amp;gt;&amp;gt;MCP: Register Prompts
+R-&amp;gt;&amp;gt;MCP: Register Resources
+Note over Agent: Runtime
+Agent-&amp;gt;&amp;gt;MCP: GetPrompt(&amp;#34;code_review&amp;#34;)
+MCP--&amp;gt;&amp;gt;Agent: Instructions markdown
+Agent-&amp;gt;&amp;gt;MCP: ReadResource(&amp;#34;skill://code-review/checklist.md&amp;#34;)
+MCP--&amp;gt;&amp;gt;Agent: Reference content (lazy)
+&lt;/pre&gt;
+&lt;h3 id="35-mcp-exposure-model"&gt;3.5 MCP Exposure Model
+&lt;/h3&gt;&lt;p&gt;Mỗi skill được expose theo 2 cách:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt; 1
+&lt;/span&gt;&lt;span class="lnt"&gt; 2
+&lt;/span&gt;&lt;span class="lnt"&gt; 3
+&lt;/span&gt;&lt;span class="lnt"&gt; 4
+&lt;/span&gt;&lt;span class="lnt"&gt; 5
+&lt;/span&gt;&lt;span class="lnt"&gt; 6
+&lt;/span&gt;&lt;span class="lnt"&gt; 7
+&lt;/span&gt;&lt;span class="lnt"&gt; 8
+&lt;/span&gt;&lt;span class="lnt"&gt; 9
+&lt;/span&gt;&lt;span class="lnt"&gt;10
+&lt;/span&gt;&lt;span class="lnt"&gt;11
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-gdscript3" data-lang="gdscript3"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;┌─────────────────────────────────────────────────────────┐&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;│&lt;/span&gt; &lt;span class="n"&gt;Skill&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="n"&gt;code&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="n"&gt;review&lt;/span&gt; &lt;span class="err"&gt;│&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;├─────────────────────────────────────────────────────────┤&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;│&lt;/span&gt; &lt;span class="err"&gt;📝&lt;/span&gt; &lt;span class="n"&gt;Prompt&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;code_review&amp;#34;&lt;/span&gt; &lt;span class="err"&gt;│&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;│&lt;/span&gt; &lt;span class="err"&gt;→&lt;/span&gt; &lt;span class="n"&gt;Agent&lt;/span&gt; &lt;span class="n"&gt;gọi&lt;/span&gt; &lt;span class="err"&gt;để&lt;/span&gt; &lt;span class="n"&gt;lấy&lt;/span&gt; &lt;span class="n"&gt;instructions&lt;/span&gt; &lt;span class="err"&gt;│&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;│&lt;/span&gt; &lt;span class="err"&gt;→&lt;/span&gt; &lt;span class="n"&gt;Load&lt;/span&gt; &lt;span class="n"&gt;ngay&lt;/span&gt; &lt;span class="n"&gt;khi&lt;/span&gt; &lt;span class="n"&gt;cần&lt;/span&gt; &lt;span class="err"&gt;│&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;├─────────────────────────────────────────────────────────┤&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;│&lt;/span&gt; &lt;span class="err"&gt;📎&lt;/span&gt; &lt;span class="ne"&gt;Resource&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;skill://code-review/checklist.md&amp;#34;&lt;/span&gt; &lt;span class="err"&gt;│&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;│&lt;/span&gt; &lt;span class="err"&gt;→&lt;/span&gt; &lt;span class="n"&gt;Agent&lt;/span&gt; &lt;span class="err"&gt;đọ&lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt; &lt;span class="n"&gt;khi&lt;/span&gt; &lt;span class="n"&gt;cần&lt;/span&gt; &lt;span class="n"&gt;thêm&lt;/span&gt; &lt;span class="n"&gt;context&lt;/span&gt; &lt;span class="err"&gt;│&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;│&lt;/span&gt; &lt;span class="err"&gt;→&lt;/span&gt; &lt;span class="n"&gt;Lazy&lt;/span&gt; &lt;span class="nb"&gt;load&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;không&lt;/span&gt; &lt;span class="n"&gt;tốn&lt;/span&gt; &lt;span class="n"&gt;token&lt;/span&gt; &lt;span class="n"&gt;trước&lt;/span&gt; &lt;span class="err"&gt;│&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="err"&gt;└─────────────────────────────────────────────────────────┘&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;hr&gt;
+&lt;h2 id="4-kết-luận"&gt;4. Kết luận
+&lt;/h2&gt;&lt;h3 id="tổng-kết-kiến-trúc"&gt;Tổng kết kiến trúc
+&lt;/h3&gt;&lt;pre class="mermaid"&gt;
+graph LR
+A[SKILL.md] --&amp;gt;|scan| B[Registry]
+B --&amp;gt;|expose| C[MCP Server]
+C --&amp;gt;|HTTP| E[Web Agents]
+&lt;/pre&gt;
+&lt;p&gt;Thiết kế này theo nguyên tắc &lt;strong&gt;Convention over Configuration&lt;/strong&gt;: đặt file đúng chỗ, system tự lo phần còn lại.&lt;/p&gt;
+&lt;h3 id="lợi-ích"&gt;Lợi ích
+&lt;/h3&gt;&lt;p&gt;&lt;strong&gt;Đơn giản cho người dùng — Simplicity&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Chỉ cần biết Markdown để viết skill&lt;/li&gt;
+&lt;li&gt;Không config, không registration thủ công&lt;/li&gt;
+&lt;li&gt;Thêm skill = tạo thư mục + file&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Tích hợp chuẩn — Standards Compliance&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;MCP protocol — hoạt động với mọi MCP client&lt;/li&gt;
+&lt;li&gt;File-based — git, backup, share dễ dàng&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Tiết kiệm tài nguyên — Efficiency&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Lazy load references qua Resource&lt;/li&gt;
+&lt;li&gt;Không nhồi nhét vào context window&lt;/li&gt;
+&lt;/ul&gt;</description></item></channel></rss>

@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Review-Code on phongthien</title><link>https://phongthien99.github.io/categories/review-code/</link><description>Recent content in Review-Code on phongthien</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Sat, 12 Oct 2024 01:17:00 +0800</lastBuildDate><atom:link href="https://phongthien99.github.io/categories/review-code/index.xml" rel="self" type="application/rss+xml"/><item><title>Effective Code Quality Management with SonarSource: A Solution for Tackling Technical Debt in Software Development</title><link>https://phongthien99.github.io/posts/effective-code-quality-management-with-sonarsource-a-solution-for-tackling-technical-debt-in-software-development/</link><pubDate>Sat, 12 Oct 2024 01:17:00 +0800</pubDate><guid>https://phongthien99.github.io/posts/effective-code-quality-management-with-sonarsource-a-solution-for-tackling-technical-debt-in-software-development/</guid><description>&lt;h1 id="effective-code-quality-management-with-sonarsource-a-solution-for-tackling-technical-debt-in-software-development"&gt;Effective Code Quality Management with SonarSource: A Solution for Tackling Technical Debt in Software Development
+&lt;/h1&gt;&lt;h2 id="đặt-vấn-đề"&gt;Đặt vấn đề
+&lt;/h2&gt;&lt;p&gt;Trong quá trình phát triển phần mềm, có những giai đoạn dự án chạy với tốc độ &amp;ldquo;như ăn cướp&amp;rdquo;, khi các nhà phát triển buộc phải tập trung giải quyết các vấn đề trước mắt mà không có thời gian tuân thủ các tiêu chuẩn chất lượng. Điều này dẫn đến mã nguồn có thể trở nên lộn xộn, thiếu cấu trúc và khó bảo trì – tạo thành một &amp;ldquo;đống rác&amp;rdquo; chứa các đoạn mã lỗi, không nhất quán, và tiềm ẩn nhiều rủi ro bảo mật.&lt;/p&gt;
+&lt;p&gt;Những giải pháp tạm thời này có thể giúp dự án tiến triển trong ngắn hạn, nhưng về lâu dài sẽ làm tăng nợ kỹ thuật, khiến mã trở nên cồng kềnh và khó bảo trì. Chính vì vậy, cần một công cụ để phân tích và quản lý chất lượng mã, giúp phát hiện và xử lý các vấn đề này kịp thời, nhằm duy trì tính ổn định và bền vững cho dự án.&lt;/p&gt;
+&lt;h2 id="giải-pháp"&gt;Giải pháp
+&lt;/h2&gt;&lt;p&gt;SonarSource là một công cụ phân tích mã nguồn mạnh mẽ, giúp đội ngũ phát triển kiểm soát chất lượng mã một cách toàn diện. Nó không chỉ phát hiện &amp;ldquo;đống rác&amp;rdquo; ẩn trong mã nguồn mà còn cung cấp các giải pháp cụ thể để dọn dẹp một cách hệ thống. Sử dụng SonarSource giúp giảm thiểu nợ kỹ thuật, duy trì hiệu suất mã ổn định, và giảm thiểu rủi ro bảo mật, ngay cả khi dự án phải phát triển nhanh chóng trong những thời điểm gấp gáp.&lt;/p&gt;
+&lt;h2 id="thực-hiện"&gt;Thực hiện
+&lt;/h2&gt;&lt;p&gt;Dưới đây là các bước để triển khai SonarSource thực nghiệm thông qua Docker Compose:&lt;/p&gt;
+&lt;h3 id="bước-1-tạo-file-docker-compose"&gt;Bước 1: Tạo file Docker Compose
+&lt;/h3&gt;&lt;p&gt;File Docker Compose cấu hình các dịch vụ chính như sau:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt; 1
+&lt;/span&gt;&lt;span class="lnt"&gt; 2
+&lt;/span&gt;&lt;span class="lnt"&gt; 3
+&lt;/span&gt;&lt;span class="lnt"&gt; 4
+&lt;/span&gt;&lt;span class="lnt"&gt; 5
+&lt;/span&gt;&lt;span class="lnt"&gt; 6
+&lt;/span&gt;&lt;span class="lnt"&gt; 7
+&lt;/span&gt;&lt;span class="lnt"&gt; 8
+&lt;/span&gt;&lt;span class="lnt"&gt; 9
+&lt;/span&gt;&lt;span class="lnt"&gt;10
+&lt;/span&gt;&lt;span class="lnt"&gt;11
+&lt;/span&gt;&lt;span class="lnt"&gt;12
+&lt;/span&gt;&lt;span class="lnt"&gt;13
+&lt;/span&gt;&lt;span class="lnt"&gt;14
+&lt;/span&gt;&lt;span class="lnt"&gt;15
+&lt;/span&gt;&lt;span class="lnt"&gt;16
+&lt;/span&gt;&lt;span class="lnt"&gt;17
+&lt;/span&gt;&lt;span class="lnt"&gt;18
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-yaml" data-lang="yaml"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="l"&gt;yaml&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="l"&gt;Copy code&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nt"&gt;services&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;sonarqube&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;image&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;sonarqube:community&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;read_only&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kc"&gt;true&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;volumes&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;- &lt;span class="l"&gt;sonarqube_data:/opt/sonarqube/data&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;- &lt;span class="l"&gt;sonarqube_extensions:/opt/sonarqube/extensions&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;- &lt;span class="l"&gt;sonarqube_logs:/opt/sonarqube/logs&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;- &lt;span class="l"&gt;sonarqube_temp:/opt/sonarqube/temp&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;ports&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;- &lt;span class="s2"&gt;&amp;#34;9000:9000&amp;#34;&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nt"&gt;volumes&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;sonarqube_data&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;sonarqube_extensions&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;sonarqube_logs&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;sonarqube_temp&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;h3 id="bước-2-đăng-nhập-vào-sonarqube"&gt;Bước 2: Đăng nhập vào SonarQube
+&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;Truy cập giao diện SonarQube qua &lt;code&gt;http://localhost:9000&lt;/code&gt;.&lt;/li&gt;
+&lt;li&gt;Đăng nhập bằng tài khoản admin hoặc tài khoản cá nhân của bạn.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="bước-3-tạo-project-mới"&gt;Bước 3: Tạo Project Mới
+&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;Chọn &lt;strong&gt;Projects&lt;/strong&gt; và nhấp vào &lt;strong&gt;Create Project&lt;/strong&gt;.&lt;/li&gt;
+&lt;li&gt;Bạn có thể chọn tạo dự án từ một repository (GitHub, GitLab, Bitbucket) hoặc tạo thủ công.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="bước-4-cấu-hình-project"&gt;Bước 4: Cấu hình Project
+&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;Nhập tên và &lt;strong&gt;key&lt;/strong&gt; duy nhất cho project.&lt;/li&gt;
+&lt;li&gt;Nếu sử dụng SonarCloud, bạn có thể chọn hoặc tạo tổ chức để quản lý.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="bước-5-tạo-token-xác-thực"&gt;Bước 5: Tạo Token Xác Thực
+&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;Tạo token để thực hiện quá trình quét mã.&lt;/li&gt;
+&lt;li&gt;Lưu token này để dùng trong các bước sau.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="bước-6-cấu-hình-công-cụ-phân-tích-mã"&gt;Bước 6: Cấu hình công cụ phân tích mã
+&lt;/h3&gt;&lt;p&gt;Tạo file &lt;code&gt;sonar-project.properties&lt;/code&gt; trong project của bạn:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-bash" data-lang="bash"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;sonar.projectKey&lt;span class="o"&gt;=&lt;/span&gt;&amp;lt;&amp;lt;key đã tạo ở project&amp;gt;&amp;gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;Sau đó, chạy lệnh quét mã bằng cách sử dụng Docker:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-bash" data-lang="bash"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;docker run --rm --net&lt;span class="o"&gt;=&lt;/span&gt;host -e &lt;span class="nv"&gt;SONAR_HOST_URL&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s2"&gt;&amp;#34;http://localhost:9000&amp;#34;&lt;/span&gt; -e &lt;span class="nv"&gt;SONAR_TOKEN&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s2"&gt;&amp;#34;&amp;lt;&amp;lt;token đã tạo ở project&amp;gt;&amp;gt;&amp;#34;&lt;/span&gt; -e &lt;span class="nv"&gt;SONAR_PROJECT_KEY&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s2"&gt;&amp;#34;key đã tạo ở project&amp;#34;&lt;/span&gt; -v &lt;span class="s2"&gt;&amp;#34;&lt;/span&gt;&lt;span class="k"&gt;$(&lt;/span&gt;&lt;span class="nb"&gt;pwd&lt;/span&gt;&lt;span class="k"&gt;)&lt;/span&gt;&lt;span class="s2"&gt;:/usr/src&amp;#34;&lt;/span&gt; sonarsource/sonar-scanner-cli
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;h2 id="kết-luận"&gt;Kết luận
+&lt;/h2&gt;&lt;p&gt;SonarSource là một công cụ mạnh mẽ giúp các đội phát triển phần mềm duy trì chất lượng mã nguồn ngay cả trong những giai đoạn phát triển khẩn trương. Bằng cách tích hợp SonarSource vào quy trình phát triển, chúng ta có thể phát hiện sớm các vấn đề về mã, tối ưu hóa hiệu suất và giảm thiểu rủi ro bảo mật. Kết quả là mã nguồn trở nên dễ quản lý hơn, giảm bớt nợ kỹ thuật và đảm bảo dự án có thể phát triển bền vững hơn về lâu dài.&lt;/p&gt;</description></item></channel></rss>

@@ -67,35 +67,99 @@ Trong phạm vi kiến trúc này, Server Agent là thành phần duy nhất ch�
 
 **Luồng giao tiếp chính: Người dùng → Local Runtime → Server Agent.** Người dùng không gọi trực tiếp Server Agent. Local Runtime đóng vai trò điểm tiếp nhận yêu cầu và cầu nối thực thi công cụ.
 
-```mermaid
-flowchart TB
-    U["Người dùng"]
+{{< archcode title="Hybrid AI Agent - Kiến trúc tổng thể" mode="preview" view="overview" layout="/diagrams/hybrid-ai-agent.layout.yaml" >}}
+version: 1
 
-    subgraph Local["Local Environment — thiết bị người dùng"]
-        LR["Local Runtime<br/>UI · Session · Tool Gateway"]
-        LP["Local Policy<br/>Allowlist · Scope · Approval"]
-        LT["Local Tools<br/>File · IDE · Application"]
-        LR --> LP
-        LP --> LT
-    end
+system:
+  id: hybrid-ai-agent
+  name: Hybrid AI Agent
 
-    subgraph Cloud["Server Environment — quản trị tập trung"]
-        SA["Server Agent"]
-        M["AI Model & Reasoning"]
-        K["Enterprise Knowledge"]
-        ST["Server Tools"]
-        PE["Policy Engine"]
-        AL["State & Audit Log"]
-        SA --> M
-        SA --> K
-        SA --> ST
-        SA --> PE
-        SA <--> AL
-    end
+groups:
+  - id: local
+    name: Local Environment — thiết bị người dùng
+    type: trust-zone
+  - id: server
+    name: Server Environment — quản trị tập trung
+    type: trust-zone
 
-    U <-->|"Yêu cầu · Kết quả · Phê duyệt"| LR
-    LR <-->|"Request · Tool Call · Result"| SA
-```
+components:
+  - id: user
+    name: Người dùng
+    type: person
+
+  - id: local-runtime
+    name: Local Runtime
+    type: frontend
+    group: local
+    description: UI · Session · Tool Gateway
+  - id: local-policy
+    name: Local Policy
+    type: gateway
+    group: local
+    description: Allowlist · Scope · Approval
+  - id: local-tools
+    name: Local Tools
+    type: service
+    group: local
+    description: File · IDE · Application
+
+  - id: server-agent
+    name: Server Agent
+    type: service
+    group: server
+  - id: ai-model
+    name: AI Model & Reasoning
+    type: service
+    group: server
+  - id: enterprise-knowledge
+    name: Enterprise Knowledge
+    type: database
+    group: server
+  - id: server-tools
+    name: Server Tools
+    type: service
+    group: server
+  - id: policy-engine
+    name: Policy Engine
+    type: gateway
+    group: server
+  - id: audit-log
+    name: State & Audit Log
+    type: database
+    group: server
+
+relationships:
+  - from: user
+    to: local-runtime
+    label: Yêu cầu · Kết quả · Phê duyệt
+  - from: local-runtime
+    to: local-policy
+    label: Tool Call
+  - from: local-policy
+    to: local-tools
+    label: Thực thi
+  - from: local
+    to: server
+    type: http
+    label: Request · Tool Call · Result
+  - from: server-agent
+    to: ai-model
+  - from: server-agent
+    to: enterprise-knowledge
+  - from: server-agent
+    to: server-tools
+  - from: server-agent
+    to: policy-engine
+  - from: server-agent
+    to: audit-log
+    label: State · Audit
+
+views:
+  - id: overview
+    name: Overview
+    include: ['*']
+    direction: TB
+{{< /archcode >}}
 
 Mỗi lệnh gọi công cụ từ Server phải đi qua hai lớp kiểm soát:
 

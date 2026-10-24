@@ -1,12 +1,13 @@
 {{- $title := .Get "title" | default "Architecture" -}}
 {{- $view := .Get "view" | default "" -}}
 {{- $mode := .Get "mode" | default "both" -}}
+{{- $layout := .Get "layout" | default "" -}}
 {{- $showPreview := or (eq $mode "preview") (eq $mode "both") -}}
 {{- $showCode := or (eq $mode "code") (eq $mode "both") -}}
 
 <section
   class="archcode-embed archcode-embed-{{ $mode }}"
-  {{ if $showPreview }}data-archcode-viewer data-view="{{ $view }}" data-show-source="{{ if $showCode }}true{{ else }}false{{ end }}"{{ end }}>
+  {{ if $showPreview }}data-archcode-viewer data-view="{{ $view }}" data-show-source="{{ if $showCode }}true{{ else }}false{{ end }}"{{ with $layout }} data-layout-src="{{ . | relURL }}"{{ end }}{{ end }}>
   <style>
     .archcode-embed {
       display: grid;

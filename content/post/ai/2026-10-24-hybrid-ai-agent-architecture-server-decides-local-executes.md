@@ -340,7 +340,7 @@ Kiến trúc vẫn phải giải quyết độ trễ mạng, bảo mật dữ li
 
 ## Tài liệu tham khảo
 
-Các nguồn giữ theo tài liệu gốc; chưa thực hiện kiểm chứng độc lập về nội dung và thời điểm xuất bản.
+Các nguồn giữ theo tài liệu gốc
 
 1. Simon Willison — *The lethal trifecta for AI agents* (2025).
 2. Walden Yan, Cognition — *Don't Build Multi-Agents* (2025).
@@ -352,4 +352,3 @@ Các nguồn giữ theo tài liệu gốc; chưa thực hiện kiểm chứng đ
 8. *Design Patterns for Securing LLM Agents against Prompt Injections* (2025).
 9. [OWASP LLM01:2025 — Prompt Injection](https://genai.owasp.org/llmrisk/llm01-prompt-injection/).
 
-> **Ghi chú:** Bài viết mô tả hướng thiết kế kiến trúc. Composite Tools, chính sách bảo mật hai lớp và cơ chế phục hồi là các giải pháp đề xuất, chưa phải kết quả kiểm chứng hiệu năng hoặc bảo mật của hệ thống đã triển khai.

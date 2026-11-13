@@ -1,0 +1,17 @@
+version: 1
+views:
+  overview:
+    nodes:
+      # Tầng 1: client
+      app: { x: 300, y: 0 }
+      # Tầng 2: pooling + định tuyến
+      pgcat: { x: 300, y: 200 }
+      haproxy: { x: 300, y: 380 }
+      # Tầng 3: cụm PostgreSQL + Patroni
+      pg1: { x: 0, y: 640 }
+      pg2: { x: 300, y: 640 }
+      pg3: { x: 600, y: 640 }
+      # Tầng 4: DCS etcd
+      etcd1: { x: 0, y: 920 }
+      etcd2: { x: 300, y: 920 }
+      etcd3: { x: 600, y: 920 }

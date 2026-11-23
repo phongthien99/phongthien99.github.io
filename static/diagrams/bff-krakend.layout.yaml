@@ -1,0 +1,14 @@
+version: 1
+views:
+  overview:
+    nodes:
+      # Tầng 1: client
+      web-fe: { x: 100, y: 0 }
+      mobile-fe: { x: 500, y: 0 }
+      # Tầng 2: BFF (KrakenD)
+      bff-web: { x: 100, y: 260 }
+      bff-mobile: { x: 500, y: 260 }
+      # Tầng 3: microservice
+      user-svc: { x: 0, y: 540 }
+      order-svc: { x: 300, y: 540 }
+      product-svc: { x: 600, y: 540 }

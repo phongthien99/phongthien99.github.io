@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Golang on phongthien</title><link>https://phongthien99.github.io/tags/golang/</link><description>Recent content in Golang on phongthien</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Sun, 24 Aug 2025 01:17:00 +0800</lastBuildDate><atom:link href="https://phongthien99.github.io/tags/golang/index.xml" rel="self" type="application/rss+xml"/><item><title>Golang Module Design: Simplifying Struct and Interface Reuse</title><link>https://phongthien99.github.io/posts/golang-module-design-simplifying-struct-and-interface-reuse/</link><pubDate>Sun, 24 Aug 2025 01:17:00 +0800</pubDate><guid>https://phongthien99.github.io/posts/golang-module-design-simplifying-struct-and-interface-reuse/</guid><description>&lt;h3 id="1-đặt-vấn-đề"&gt;1. Đặt vấn đề
+&lt;/h3&gt;&lt;p&gt;Trong các dự án Golang lớn, thường gặp tình huống:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Module mới cần sử dụng một &lt;strong&gt;struct&lt;/strong&gt; hoặc &lt;strong&gt;interface&lt;/strong&gt; đã tồn tại trong module cũ.&lt;/li&gt;
+&lt;li&gt;Nếu import trực tiếp module cũ: module mới sẽ phụ thuộc mạnh vào module cũ → &lt;strong&gt;tight coupling&lt;/strong&gt;, khó bảo trì.&lt;/li&gt;
+&lt;li&gt;Nếu di chuyển struct/interface vào &lt;strong&gt;shared module&lt;/strong&gt;: phải sửa code cũ → dễ gây rủi ro phá vỡ logic đã ổn định.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Câu hỏi đặt ra:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Làm sao để module mới dùng lại struct và interface của module cũ thông qua một shared module, mà không thay đổi code cũ, đồng thời giảm phức tạp và dễ maintain?&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;hr&gt;
+&lt;h3 id="2-giải-pháp-type-alias-trong-shared-module"&gt;2. Giải pháp: Type Alias trong Shared Module
+&lt;/h3&gt;&lt;p&gt;Golang hỗ trợ &lt;strong&gt;type alias&lt;/strong&gt;, cho phép tạo &lt;strong&gt;bí danh&lt;/strong&gt; cho struct hoặc interface từ module cũ. Kết hợp với shared module, ta có thể giải quyết vấn đề:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt; 1
+&lt;/span&gt;&lt;span class="lnt"&gt; 2
+&lt;/span&gt;&lt;span class="lnt"&gt; 3
+&lt;/span&gt;&lt;span class="lnt"&gt; 4
+&lt;/span&gt;&lt;span class="lnt"&gt; 5
+&lt;/span&gt;&lt;span class="lnt"&gt; 6
+&lt;/span&gt;&lt;span class="lnt"&gt; 7
+&lt;/span&gt;&lt;span class="lnt"&gt; 8
+&lt;/span&gt;&lt;span class="lnt"&gt; 9
+&lt;/span&gt;&lt;span class="lnt"&gt;10
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-go" data-lang="go"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="c1"&gt;// shared/types.go&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="kn"&gt;package&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;shared&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="kn"&gt;import&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;oldmodule&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;#34;project/module_old&amp;#34;&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="c1"&gt;// Alias cho struct&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="kd"&gt;type&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;User&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;oldmodule&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;User&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="c1"&gt;// Alias cho interface&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="kd"&gt;type&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;UserRepository&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;oldmodule&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;UserRepository&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;ul&gt;
+&lt;li&gt;Module mới chỉ cần import &lt;code&gt;shared&lt;/code&gt;:&lt;/li&gt;
+&lt;/ul&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;span class="lnt"&gt;3
+&lt;/span&gt;&lt;span class="lnt"&gt;4
+&lt;/span&gt;&lt;span class="lnt"&gt;5
+&lt;/span&gt;&lt;span class="lnt"&gt;6
+&lt;/span&gt;&lt;span class="lnt"&gt;7
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-go" data-lang="go"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="kn"&gt;import&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;#34;project/shared&amp;#34;&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="kd"&gt;func&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nf"&gt;UseSharedTypes&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;repo&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;shared&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;UserRepository&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kd"&gt;var&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;u&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;shared&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;User&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;u&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Name&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;#34;Alice&amp;#34;&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;repo&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nf"&gt;Save&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;u&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="c1"&gt;// Gọi phương thức qua interface alias&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Lợi ích:&lt;/strong&gt;
+&lt;ul&gt;
+&lt;li&gt;Module mới &lt;strong&gt;không cần biết module cũ&lt;/strong&gt;.&lt;/li&gt;
+&lt;li&gt;Code cũ &lt;strong&gt;không bị ảnh hưởng&lt;/strong&gt;.&lt;/li&gt;
+&lt;li&gt;Nếu struct/interface gốc thay đổi tên hoặc di chuyển, chỉ cần cập nhật alias trong shared module.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Có thể mở rộng bằng wrapper function:&lt;/strong&gt;&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;span class="lnt"&gt;3
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-go" data-lang="go"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="kd"&gt;func&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nf"&gt;NewUser&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;name&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kt"&gt;string&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;shared&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;User&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;return&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;shared&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;User&lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="nx"&gt;Name&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nx"&gt;name&lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;ul&gt;
+&lt;li&gt;Giúp module mới thêm logic khởi tạo object mà không sửa module cũ.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h3 id="3-giản-hóa-sự-phức-tạp"&gt;3. Giản hóa sự phức tạp
+&lt;/h3&gt;&lt;p&gt;Sử dụng alias cho &lt;strong&gt;struct và interface&lt;/strong&gt; giúp:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;Giảm phụ thuộc trực tiếp&lt;/strong&gt; giữa module mới và module cũ → tránh tight coupling.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Dễ dàng refactor hoặc mở rộng&lt;/strong&gt; → thay đổi struct/interface gốc chỉ cần sửa alias trong shared module.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Chuẩn hóa truy cập các type chung&lt;/strong&gt; → developer dễ nhìn, maintain hơn.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Giảm code lặp lại&lt;/strong&gt;, tránh copy/paste struct hoặc interface.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Nhờ đó, module mới có thể dùng lại cả struct lẫn interface cũ một cách &lt;strong&gt;an toàn, rõ ràng và linh hoạt&lt;/strong&gt;.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h3 id="4-tuân-thủ-và-vi-phạm-nguyên-tắc"&gt;4. Tuân thủ và vi phạm nguyên tắc
+&lt;/h3&gt;&lt;p&gt;&lt;strong&gt;Tuân thủ:&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;DRY (Don&amp;rsquo;t Repeat Yourself):&lt;/strong&gt; Tránh copy struct/interface, tái sử dụng thông qua alias.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Encapsulation &amp;amp; Separation of Concerns:&lt;/strong&gt; Module mới không cần biết chi tiết module cũ.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Maintainability:&lt;/strong&gt; Thay đổi struct/interface gốc không phá vỡ module mới.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Có thể vi phạm:&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Leak abstraction:&lt;/strong&gt; Alias quá nhiều hoặc không rõ ràng → dễ nhầm lẫn giữa alias và struct/interface gốc.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Single Responsibility Principle (SRP):&lt;/strong&gt; Shared module chứa quá nhiều alias → module trở nên “quá tải”.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Overuse:&lt;/strong&gt; Lạm dụng alias cho mọi struct/interface → giảm readability, khó trace code.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h3 id="5-kết-luận"&gt;5. Kết luận
+&lt;/h3&gt;&lt;p&gt;Sử dụng &lt;strong&gt;type alias trong shared module cho cả struct và interface&lt;/strong&gt; là một giải pháp hiệu quả để:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Cho phép module mới &lt;strong&gt;sử dụng struct và interface của module cũ&lt;/strong&gt; mà không phá vỡ code hiện tại.&lt;/li&gt;
+&lt;li&gt;Giảm sự &lt;strong&gt;phức tạp trong quản lý module&lt;/strong&gt;, chuẩn hóa điểm truy cập các type chung.&lt;/li&gt;
+&lt;li&gt;Duy trì &lt;strong&gt;tính maintainable và mở rộng được dự án&lt;/strong&gt;, đồng thời tuân thủ nhiều nguyên tắc cơ bản của lập trình module.&lt;/li&gt;
+&lt;/ul&gt;</description></item></channel></rss>

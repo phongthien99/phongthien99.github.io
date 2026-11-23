@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>AI Chat Bot on phongthien</title><link>https://phongthien99.github.io/categories/ai-chat-bot/</link><description>Recent content in AI Chat Bot on phongthien</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Sat, 13 Jun 2026 00:40:00 +0800</lastBuildDate><atom:link href="https://phongthien99.github.io/categories/ai-chat-bot/index.xml" rel="self" type="application/rss+xml"/><item><title>A Scalable Architecture for Long-Running AI Operations</title><link>https://phongthien99.github.io/posts/a-scalable-architecture-for-long-running-ai-operations/</link><pubDate>Sat, 13 Jun 2026 00:40:00 +0800</pubDate><guid>https://phongthien99.github.io/posts/a-scalable-architecture-for-long-running-ai-operations/</guid><description>&lt;h1 id="long-running-task-for-chat-ai"&gt;&lt;strong&gt;Long-Running Task for Chat AI&lt;/strong&gt;
+&lt;/h1&gt;&lt;h2 id="1-vấn-đề"&gt;&lt;strong&gt;1. Vấn đề&lt;/strong&gt;
+&lt;/h2&gt;&lt;p&gt;Một request chat thông thường: gửi → chờ vài giây → nhận trả lời. Nhưng với các tác vụ AI phức tạp (gọi tool, tra cứu dữ liệu, suy luận nhiều bước), thời gian xử lý có thể kéo dài hàng chục giây đến vài phút.&lt;/p&gt;
+&lt;p&gt;Trong khoảng thời gian đó, nhiều thứ có thể xảy ra:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Người dùng đóng tab, mất mạng, hoặc chuyển sang chat khác.&lt;/li&gt;
+&lt;li&gt;Kết nối real-time bị ngắt &lt;strong&gt;âm thầm&lt;/strong&gt; — không có thông báo lỗi nào cả.&lt;/li&gt;
+&lt;li&gt;Khi quay lại, người dùng cần thấy đúng kết quả, không thiếu không lặp.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Nếu hệ thống chỉ dựa vào &amp;ldquo;một kết nối sống suốt từ đầu đến cuối&amp;rdquo; để truyền kết quả, thì bất kỳ gián đoạn nào cũng làm mất dữ liệu hoặc khiến UI bị &amp;ldquo;treo&amp;rdquo; mãi ở trạng thái đang chạy.&lt;/p&gt;
+&lt;h2 id="2-tư-duy-giải-quyết-tách-thực-thi-khỏi-quan-sát"&gt;&lt;strong&gt;2. Tư duy giải quyết: tách thực thi khỏi quan sát&lt;/strong&gt;
+&lt;/h2&gt;&lt;p&gt;Nguyên tắc cốt lõi: &lt;strong&gt;việc thực thi task&lt;/strong&gt; và &lt;strong&gt;việc client quan sát kết quả&lt;/strong&gt; là hai mối quan tâm hoàn toàn độc lập, không ràng buộc lẫn nhau về vòng đời.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Thực thi (execution)&lt;/strong&gt;: task được giao cho một tiến trình nền (worker), chạy đến khi hoàn tất hoặc lỗi, độc lập với việc có client nào đang kết nối hay không.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Quan sát (observation)&lt;/strong&gt;: client là một bên ngoài cuộc, có thể kết nối, mất kết nối, hoặc rời đi bất cứ lúc nào. Mỗi lần kết nối lại, client chỉ cần trả lời một câu hỏi duy nhất: &lt;em&gt;task đang ở trạng thái nào, phần dữ liệu nào đã nhận được, và còn thiếu phần nào?&lt;/em&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Việc tách bạch này cho phép thiết kế quan sát theo nhiều lớp (tiered observation), ưu tiên lớp có độ trễ thấp/chi phí thấp, và dùng các lớp chậm hơn nhưng bền hơn làm lưới đỡ:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;Theo dõi trực tiếp (real-time)&lt;/strong&gt; — kênh đẩy dữ liệu tức thời, độ trễ thấp nhất, nhưng không đảm bảo bền.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Lấy lại lịch sử (replay)&lt;/strong&gt; — khi quay lại sau một khoảng dài, lấy phần dữ liệu đã sinh ra trong lúc vắng mặt từ nơi lưu trữ bền.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Hỏi trạng thái định kỳ (polling)&lt;/strong&gt; — lưới an toàn cuối cùng, phát hiện task đã xong dù kênh real-time đã chết mà không báo.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Ba lớp trên giải quyết trục thứ nhất (đúng/đủ dữ liệu). Trục thứ hai — chi phí giữ kết nối — cần một cơ chế riêng:&lt;/p&gt;
+&lt;h3 id="tối-ưu-connection-cho-task-dài-giới-hạn-ttl--downgrade-sang-polling"&gt;&lt;strong&gt;Tối ưu connection cho task dài: giới hạn TTL + downgrade sang polling&lt;/strong&gt;
+&lt;/h3&gt;&lt;p&gt;Một kết nối SSE/WebSocket mở suốt nhiều phút cho một task dài sẽ chiếm goroutine/thread + buffer ở server, dễ bị proxy/load balancer chủ động cắt âm thầm sau một ngưỡng timeout cố định, và nếu có hàng trăm task dài chạy đồng thời thì số kết nối mở song song tăng tuyến tính theo số task — dù phần lớn thời gian không có dữ liệu để gửi.&lt;/p&gt;
+&lt;p&gt;Thay vì giữ kết nối real-time &amp;ldquo;chờ chết&amp;rdquo; cho đến khi proxy cắt hoặc task xong, hệ thống cần &lt;strong&gt;chủ động giới hạn thời gian sống của kết nối real-time và chuyển hẳn sang polling khi task được xác định là &amp;ldquo;dài&amp;rdquo;&lt;/strong&gt;. Hai cơ chế phối hợp:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Giới hạn thời gian SSE (connection TTL)&lt;/strong&gt;: server tự đóng kết nối SSE sau một khoảng cố định (ví dụ ngắn hơn timeout của proxy phía trước), trước khi proxy cắt một cách âm thầm. Việc đóng này là &lt;strong&gt;chủ động, có báo hiệu&lt;/strong&gt; — client biết để xử lý tiếp (chuyển sang replay/polling), khác hẳn với bị cắt giữa đường.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Downgrade sang polling khi task dài&lt;/strong&gt;: nếu không có dữ liệu mới trong một khoảng X (ví dụ 30s), thay vì cố giữ kết nối real-time, client &lt;strong&gt;đóng hẳn kết nối&lt;/strong&gt; và chuyển sang hỏi trạng thái định kỳ (lớp 3) với chu kỳ thưa (vài giây) cho đến khi task xong. Điều này đánh đổi độ trễ vài giây — hoàn toàn chấp nhận được vì lúc này tốc độ không còn là ưu tiên — để đổi lấy: số kết nối mở đồng thời giảm từ &amp;ldquo;1 SSE cho mỗi task dài&amp;rdquo; xuống gần 0, chỉ còn các request HTTP ngắn, rời rạc.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Hệ quả: &lt;strong&gt;số lượng task dài chạy song song không còn kéo theo số lượng kết nối real-time mở song song&lt;/strong&gt; — đây là phần quan trọng để hệ thống scale tốt khi tỉ lệ task dài tăng lên. Mỗi lớp, kể cả lớp real-time, đều có một giới hạn rõ ràng thay vì giữ mãi — chi phí vận hành ở điều kiện bình thường gần như bằng 0, và bị chặn trên ở điều kiện task dài nhờ polling thưa.&lt;/p&gt;
+&lt;h2 id="3pattern-lro-long-running-operation"&gt;&lt;strong&gt;3.Pattern: LRO (Long-Running Operation)&lt;/strong&gt;
+&lt;/h2&gt;&lt;p&gt;Cách tiếp cận trên có thể nhìn dưới một khung quen thuộc hơn: pattern &lt;strong&gt;LRO&lt;/strong&gt; cho API (ví dụ Google API design guide). Ý tưởng gốc rất đơn giản — gói toàn bộ trạng thái của một tác vụ chạy lâu vào &lt;strong&gt;một &amp;ldquo;operation resource&amp;rdquo;&lt;/strong&gt;:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;id&lt;/code&gt;: định danh duy nhất của tác vụ.&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;done&lt;/code&gt;: cờ cho biết tác vụ đã xong hay chưa.&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;result&lt;/code&gt; / &lt;code&gt;error&lt;/code&gt;: kết quả cuối cùng, chỉ có khi &lt;code&gt;done = true&lt;/code&gt;.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Client không &amp;ldquo;giữ kết nối&amp;rdquo; tới tác vụ, mà liên tục hỏi resource này (&lt;code&gt;GET /operations/{id}&lt;/code&gt;) cho đến khi &lt;code&gt;done = true&lt;/code&gt;, rồi đọc &lt;code&gt;result&lt;/code&gt;. Đây thực chất chính là &lt;strong&gt;lớp 3 (polling)&lt;/strong&gt; ở trên — và trong LRO thuần, đó là lớp &lt;em&gt;duy nhất&lt;/em&gt;.&lt;/p&gt;
+&lt;p&gt;Ba lớp ở mục 2 có thể coi là &lt;strong&gt;mở rộng của một operation resource&lt;/strong&gt; để phù hợp với chat AI — nơi người dùng cần thấy nội dung sinh ra &lt;em&gt;trong khi&lt;/em&gt; tác vụ đang chạy, không chỉ kết quả cuối:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;&lt;code&gt;id&lt;/code&gt; của operation&lt;/strong&gt; = ID của task/chat. Một ID xuyên suốt cả 3 lớp (kênh real-time, nơi lưu lịch sử, API trạng thái) — nhờ vậy client có thể chuyển từ lớp này sang lớp khác mà không cần ánh xạ ID.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;&lt;code&gt;done&lt;/code&gt; + &lt;code&gt;result&lt;/code&gt;&lt;/strong&gt; = chính là &lt;strong&gt;lớp 3&lt;/strong&gt;. API trạng thái trả về &lt;code&gt;running: true/false&lt;/code&gt;; khi &lt;code&gt;false&lt;/code&gt;, &lt;code&gt;result&lt;/code&gt; được đọc từ nơi lưu trữ bền.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Lớp 1 (real-time) và lớp 2 (replay)&lt;/strong&gt; = phần &amp;ldquo;thêm vào&amp;rdquo; so với LRO gốc, để client thấy dữ liệu trung gian (token, sự kiện) trước khi &lt;code&gt;done = true&lt;/code&gt;.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Điểm quan trọng khi thiết kế: vì lớp 3 chính là &amp;ldquo;operation resource chuẩn&amp;rdquo;, nó nên là &lt;strong&gt;nguồn sự thật cuối cùng&lt;/strong&gt; — độc lập hoàn toàn với việc kênh real-time có đang sống hay không. Lớp 1 và 2 chỉ có nhiệm vụ tối ưu độ trễ và trải nghiệm &amp;ldquo;xem trực tiếp&amp;rdquo;; chúng không được phép là điều kiện duy nhất để client biết tác vụ đã xong. Nói cách khác: &lt;strong&gt;lớp 3 không phải &amp;ldquo;phương án dự phòng yếu hơn&amp;rdquo; của lớp 1 — nó là lớp xác thực, còn lớp 1/2 là lớp trải nghiệm&lt;/strong&gt;.&lt;/p&gt;
+&lt;p&gt;Khung này cũng cho thấy pattern 3 lớp tổng quát hơn &amp;ldquo;chat AI&amp;rdquo;: bất kỳ hệ thống nào đã có một LRO API kiểu &lt;code&gt;operations/{id}&lt;/code&gt; đều có thể thêm lớp real-time + replay theo đúng cách trên mà không cần đổi thiết kế resource gốc.&lt;/p&gt;
+&lt;h2 id="4-sơ-đồ-luồng-tổng-quan"&gt;&lt;strong&gt;4. Sơ đồ luồng tổng quan&lt;/strong&gt;
+&lt;/h2&gt;&lt;pre class="mermaid"&gt;
+sequenceDiagram
+participant C as Client
+participant RT as Kênh real-time (Lớp 1, có TTL)
+participant H as Lưu trữ bền (lịch sử + trạng thái)
+participant API as API trạng thái (Lớp 3)
+Note over C,RT: Task được giao cho tiến trình nền,\nchạy độc lập đến cùng
+C-&amp;gt;&amp;gt;RT: Mở kết nối
+loop Khi còn dữ liệu mới
+RT--&amp;gt;&amp;gt;C: Token/sự kiện (live)
+RT-&amp;gt;&amp;gt;H: Ghi song song
+end
+alt Mất kết nối ngắn / hết TTL
+RT--xC: Kết nối đóng
+C-&amp;gt;&amp;gt;RT: Tự reconnect, tiếp tục nhận live
+else Không có dữ liệu mới &amp;gt; X giây (task dài)
+RT-&amp;gt;&amp;gt;C: Đóng kết nối (chủ động)
+loop Mỗi N giây
+C-&amp;gt;&amp;gt;API: Hỏi trạng thái
+API--&amp;gt;&amp;gt;C: running / done
+end
+API--&amp;gt;&amp;gt;C: done → lấy kết quả cuối từ H
+end
+Note over C: Client quay lại sau gián đoạn dài
+C-&amp;gt;&amp;gt;API: Kiểm tra trạng thái task
+alt Task còn chạy
+C-&amp;gt;&amp;gt;H: Lớp 2 - Replay phần đã bỏ lỡ
+C-&amp;gt;&amp;gt;RT: Mở lại kết nối, tiếp tục nhận live
+else Task đã xong
+C-&amp;gt;&amp;gt;H: Lấy kết quả cuối, hiển thị
+end
+&lt;/pre&gt;
+&lt;h2 id="5-đánh-giá-tổng-quan"&gt;&lt;strong&gt;5. Đánh giá tổng quan&lt;/strong&gt;
+&lt;/h2&gt;&lt;p&gt;&lt;strong&gt;Ưu điểm:&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Mỗi lớp giải quyết đúng một loại gián đoạn (ngắn / dài / âm thầm), không lớp nào &amp;ldquo;ôm&amp;rdquo; hết trách nhiệm.&lt;/li&gt;
+&lt;li&gt;Hệ thống &amp;ldquo;tự lành&amp;rdquo; — client không cần biết trước mình sẽ mất kết nối kiểu gì, cứ theo trình tự 3 lớp là đủ.&lt;/li&gt;
+&lt;li&gt;Việc chủ động đặt TTL cho kênh real-time và downgrade sang polling khi task dài giúp &lt;strong&gt;số kết nối mở đồng thời không tăng theo số task dài&lt;/strong&gt; — yếu tố quyết định để hệ thống scale tốt, tránh tình trạng goroutine/buffer bị chiếm giữ vô thời hạn hoặc bị proxy cắt âm thầm.&lt;/li&gt;
+&lt;li&gt;Có thể tái sử dụng cho mọi loại tác vụ chạy lâu (không chỉ chat AI): export file, render, batch job&amp;hellip;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Đánh đổi cần lưu ý:&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Lớp lưu trữ bền (replay/poll dựa vào) phải ghi &lt;strong&gt;toàn bộ&lt;/strong&gt; dữ liệu trung gian — chi phí lưu trữ và write throughput tăng theo lưu lượng, cần cân nhắc TTL hợp lý.&lt;/li&gt;
+&lt;li&gt;Polling theo từng client/tab có thể nhân bản tải nếu nhiều tab cùng theo dõi một task — nên gom lại ở mức session.&lt;/li&gt;
+&lt;li&gt;Downgrade sang polling đánh đổi độ trễ vài giây để giảm tải kết nối — cần chọn ngưỡng X (thời gian im lặng trước khi downgrade) và chu kỳ polling hợp lý, tránh quá nhạy (downgrade ngay cả khi task vẫn đang &amp;ldquo;nhanh&amp;rdquo; nhưng tạm chững).&lt;/li&gt;
+&lt;li&gt;Độ phức tạp state trên client tăng đáng kể (phải nhớ: đang xem trực tiếp / đã hết TTL / đang replay / đang poll / đã rời đi) — cần thiết kế state machine rõ ràng để tránh leak hoặc trùng lặp xử lý.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="6-kết-luận"&gt;&lt;strong&gt;6. Kết luận&lt;/strong&gt;
+&lt;/h2&gt;&lt;p&gt;Long-running task trong chat AI không phải vấn đề &amp;ldquo;stream bị đứt&amp;rdquo; đơn lẻ, mà là vấn đề &lt;strong&gt;thiết kế quan hệ giữa task chạy ngầm và client theo dõi, đồng thời kiểm soát chi phí giữ kết nối&lt;/strong&gt;. Giải pháp 3 lớp (real-time có TTL → replay → polling thưa khi task dài) là một pattern tổng quát: đơn giản về nguyên lý nhưng đòi hỏi kỷ luật khi triển khai — mọi dữ liệu trung gian phải có nơi lưu bền, mọi điểm chuyển trạng thái ở client phải được dọn dẹp đúng cách, và mọi kênh real-time phải có giới hạn thời gian sống rõ ràng, chủ động đóng và downgrade sang polling trước khi bị cắt âm thầm. Khi làm đúng, người dùng có cảm giác hệ thống &amp;ldquo;luôn đúng&amp;rdquo; dù mạng có chập chờn, còn hệ thống thì không phải đánh đổi khả năng mở rộng để có được điều đó.&lt;/p&gt;</description></item></channel></rss>

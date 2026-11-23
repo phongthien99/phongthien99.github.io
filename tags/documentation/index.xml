@@ -1,0 +1,529 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Documentation on phongthien</title><link>https://phongthien99.github.io/tags/documentation/</link><description>Recent content in Documentation on phongthien</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Sat, 10 Oct 2026 22:20:00 +0700</lastBuildDate><atom:link href="https://phongthien99.github.io/tags/documentation/index.xml" rel="self" type="application/rss+xml"/><item><title>Giới thiệu ArchCode: Visual Architecture as Code cho đội ngũ dùng Git</title><link>https://phongthien99.github.io/posts/introducing-archcode-visual-architecture-as-code/</link><pubDate>Sat, 10 Oct 2026 22:20:00 +0700</pubDate><guid>https://phongthien99.github.io/posts/introducing-archcode-visual-architecture-as-code/</guid><description>&lt;h1 id="introducing-archcode-visual-architecture-as-code"&gt;Introducing ArchCode: Visual Architecture as Code
+&lt;/h1&gt;&lt;p&gt;Hầu hết sơ đồ kiến trúc đều bắt đầu với một ý định rất tốt.&lt;/p&gt;
+&lt;p&gt;Ở đầu dự án, ai đó vẽ một sơ đồ rõ ràng: service, database, queue, gateway, hệ thống bên thứ ba, và vài mũi tên quan trọng. Nhìn vào đó, cả đội hiểu hệ thống nhanh hơn.&lt;/p&gt;
+&lt;p&gt;Rồi hệ thống thay đổi.&lt;/p&gt;
+&lt;p&gt;Một service mới được thêm vào. Một database bị tách ra. Một queue trở thành một phần của luồng xử lý. API Gateway nhận thêm trách nhiệm mới. Nhưng sơ đồ thì thường vẫn đứng yên.&lt;/p&gt;
+&lt;p&gt;Sau vài tháng, sơ đồ đó không còn là tài liệu kiến trúc nữa. Nó chỉ là ký ức về kiến trúc ở một thời điểm cũ.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;ArchCode&lt;/strong&gt; là một thử nghiệm để làm cho sơ đồ kiến trúc dễ sống lâu hơn.&lt;/p&gt;
+&lt;p&gt;Ý tưởng cốt lõi rất đơn giản:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Sơ đồ kiến trúc nên đủ trực quan để hiểu nhanh, nhưng cũng phải đủ có cấu trúc để review, validate và version như code.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id="vấn-đề-với-sơ-đồ-kiến-trúc-truyền-thống"&gt;Vấn đề với sơ đồ kiến trúc truyền thống
+&lt;/h2&gt;&lt;p&gt;Các công cụ vẽ sơ đồ truyền thống rất tốt cho việc vẽ, nhưng yếu ở phần bảo trì lâu dài.&lt;/p&gt;
+&lt;p&gt;Chúng thường có vài vấn đề:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;sơ đồ được lưu dưới dạng ảnh hoặc file proprietary,&lt;/li&gt;
+&lt;li&gt;thay đổi khó review trong Pull Request,&lt;/li&gt;
+&lt;li&gt;model phía sau sơ đồ không dễ validate,&lt;/li&gt;
+&lt;li&gt;team khó chạy kiểm tra kiến trúc trong CI,&lt;/li&gt;
+&lt;li&gt;tài liệu nhanh bị cũ vì việc cập nhật sơ đồ tách rời khỏi flow phát triển hằng ngày.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Điều này tạo ra khoảng cách giữa hệ thống thật và hệ thống được tài liệu hóa.&lt;/p&gt;
+&lt;p&gt;Kết quả rất quen thuộc: sơ đồ vẫn tồn tại, nhưng team không còn hoàn toàn tin vào nó.&lt;/p&gt;
+&lt;h2 id="architecture-as-code"&gt;Architecture as Code
+&lt;/h2&gt;&lt;p&gt;Architecture as Code cố gắng giải quyết vấn đề này bằng cách biến kiến trúc thành một artifact dạng text.&lt;/p&gt;
+&lt;p&gt;Thay vì xem sơ đồ như một hình ảnh tĩnh, source of truth trở thành một file có cấu trúc, có thể sống trong Git:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt; 1
+&lt;/span&gt;&lt;span class="lnt"&gt; 2
+&lt;/span&gt;&lt;span class="lnt"&gt; 3
+&lt;/span&gt;&lt;span class="lnt"&gt; 4
+&lt;/span&gt;&lt;span class="lnt"&gt; 5
+&lt;/span&gt;&lt;span class="lnt"&gt; 6
+&lt;/span&gt;&lt;span class="lnt"&gt; 7
+&lt;/span&gt;&lt;span class="lnt"&gt; 8
+&lt;/span&gt;&lt;span class="lnt"&gt; 9
+&lt;/span&gt;&lt;span class="lnt"&gt;10
+&lt;/span&gt;&lt;span class="lnt"&gt;11
+&lt;/span&gt;&lt;span class="lnt"&gt;12
+&lt;/span&gt;&lt;span class="lnt"&gt;13
+&lt;/span&gt;&lt;span class="lnt"&gt;14
+&lt;/span&gt;&lt;span class="lnt"&gt;15
+&lt;/span&gt;&lt;span class="lnt"&gt;16
+&lt;/span&gt;&lt;span class="lnt"&gt;17
+&lt;/span&gt;&lt;span class="lnt"&gt;18
+&lt;/span&gt;&lt;span class="lnt"&gt;19
+&lt;/span&gt;&lt;span class="lnt"&gt;20
+&lt;/span&gt;&lt;span class="lnt"&gt;21
+&lt;/span&gt;&lt;span class="lnt"&gt;22
+&lt;/span&gt;&lt;span class="lnt"&gt;23
+&lt;/span&gt;&lt;span class="lnt"&gt;24
+&lt;/span&gt;&lt;span class="lnt"&gt;25
+&lt;/span&gt;&lt;span class="lnt"&gt;26
+&lt;/span&gt;&lt;span class="lnt"&gt;27
+&lt;/span&gt;&lt;span class="lnt"&gt;28
+&lt;/span&gt;&lt;span class="lnt"&gt;29
+&lt;/span&gt;&lt;span class="lnt"&gt;30
+&lt;/span&gt;&lt;span class="lnt"&gt;31
+&lt;/span&gt;&lt;span class="lnt"&gt;32
+&lt;/span&gt;&lt;span class="lnt"&gt;33
+&lt;/span&gt;&lt;span class="lnt"&gt;34
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-yaml" data-lang="yaml"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nt"&gt;version&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;1&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nt"&gt;system&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;document-platform&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;name&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;Document Platform&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nt"&gt;components&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;- &lt;span class="nt"&gt;id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;web-app&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;type&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;frontend&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;technology&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;React&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;- &lt;span class="nt"&gt;id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;document-service&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;type&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;service&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;technology&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;Go&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;- &lt;span class="nt"&gt;id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;document-db&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;type&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;database&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;technology&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;PostgreSQL&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nt"&gt;relationships&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;- &lt;span class="nt"&gt;from&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;web-app&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;to&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;document-service&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;type&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;http&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;label&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;REST /documents&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;- &lt;span class="nt"&gt;from&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;document-service&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;to&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;document-db&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;type&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;sql&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nt"&gt;views&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;- &lt;span class="nt"&gt;id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;overview&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;name&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;System Overview&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;include&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;*&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;direction&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;LR&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;Cách này tạo ra một workflow tốt hơn:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;thay đổi kiến trúc được review như YAML diff,&lt;/li&gt;
+&lt;li&gt;diagram được sinh ra từ model,&lt;/li&gt;
+&lt;li&gt;CI có thể validate rule kiến trúc,&lt;/li&gt;
+&lt;li&gt;tài liệu có thể publish tự động,&lt;/li&gt;
+&lt;li&gt;model có thể tiến hóa cùng codebase.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="archcode-nằm-ở-đâu"&gt;ArchCode nằm ở đâu?
+&lt;/h2&gt;&lt;p&gt;ArchCode không cố thay thế mọi công cụ vẽ sơ đồ.&lt;/p&gt;
+&lt;p&gt;Nó tập trung vào một workflow cụ thể:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Developer hoặc architect mô tả hệ thống phần mềm bằng YAML, chỉnh trực quan khi cần, validate trong CI, rồi publish thành tài liệu tĩnh.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Hướng đi hiện tại:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;YAML-first&lt;/strong&gt;: architecture model là plain text.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Visual-first editing&lt;/strong&gt;: người dùng vẫn có thể chỉnh qua canvas.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Git-friendly&lt;/strong&gt;: thay đổi semantic nằm trong YAML; layout có thể nằm ở file riêng.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Browser-only&lt;/strong&gt;: không cần backend để render hoặc edit.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;CI-ready&lt;/strong&gt;: cùng core engine có thể validate model từ CLI.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Docs-friendly&lt;/strong&gt;: diagram có thể embed vào Hugo hoặc các static documentation site khác.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Chính tổ hợp này mới là điểm đáng chú ý.&lt;/p&gt;
+&lt;h2 id="chỉnh-trực-quan-nhưng-không-đánh-mất-source-of-truth"&gt;Chỉnh trực quan nhưng không đánh mất source of truth
+&lt;/h2&gt;&lt;p&gt;Trong nhiều team thường có hai nhóm người dùng:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;người thích sửa trực tiếp bằng text,&lt;/li&gt;
+&lt;li&gt;người thích nhìn và thao tác trên diagram.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;ArchCode cố gắng hỗ trợ cả hai.&lt;/p&gt;
+&lt;p&gt;Developer có thể sửa YAML trực tiếp:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;span class="lnt"&gt;3
+&lt;/span&gt;&lt;span class="lnt"&gt;4
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-yaml" data-lang="yaml"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nt"&gt;relationships&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;- &lt;span class="nt"&gt;from&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;api-gateway&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;to&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;document-service&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;type&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;http&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;Architect có thể dùng canvas để thêm node, nối service, kéo thả component.&lt;/p&gt;
+&lt;p&gt;Điểm quan trọng là cả hai thao tác đều cập nhật cùng một model.&lt;/p&gt;
+&lt;p&gt;Diagram không phải artifact tách biệt. Nó là một projection của architecture model.&lt;/p&gt;
+&lt;h2 id="rule-và-validation"&gt;Rule và validation
+&lt;/h2&gt;&lt;p&gt;Sơ đồ sẽ hữu ích hơn khi nó có thể phát hiện vấn đề kiến trúc.&lt;/p&gt;
+&lt;p&gt;ArchCode hỗ trợ các rule đơn giản như:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt; 1
+&lt;/span&gt;&lt;span class="lnt"&gt; 2
+&lt;/span&gt;&lt;span class="lnt"&gt; 3
+&lt;/span&gt;&lt;span class="lnt"&gt; 4
+&lt;/span&gt;&lt;span class="lnt"&gt; 5
+&lt;/span&gt;&lt;span class="lnt"&gt; 6
+&lt;/span&gt;&lt;span class="lnt"&gt; 7
+&lt;/span&gt;&lt;span class="lnt"&gt; 8
+&lt;/span&gt;&lt;span class="lnt"&gt; 9
+&lt;/span&gt;&lt;span class="lnt"&gt;10
+&lt;/span&gt;&lt;span class="lnt"&gt;11
+&lt;/span&gt;&lt;span class="lnt"&gt;12
+&lt;/span&gt;&lt;span class="lnt"&gt;13
+&lt;/span&gt;&lt;span class="lnt"&gt;14
+&lt;/span&gt;&lt;span class="lnt"&gt;15
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-yaml" data-lang="yaml"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nt"&gt;rules&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;- &lt;span class="nt"&gt;id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kc"&gt;no&lt;/span&gt;-&lt;span class="l"&gt;cycles&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;type&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kc"&gt;no&lt;/span&gt;-&lt;span class="l"&gt;circular&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;severity&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;error&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;- &lt;span class="nt"&gt;id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kc"&gt;no&lt;/span&gt;-&lt;span class="l"&gt;orphans&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;type&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kc"&gt;no&lt;/span&gt;-&lt;span class="l"&gt;orphan&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;severity&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;warning&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;- &lt;span class="nt"&gt;id&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kc"&gt;no&lt;/span&gt;-&lt;span class="l"&gt;cross-domain-db&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;type&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;forbidden&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;severity&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;error&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;from&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;{&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;type&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;service }&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;to&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;{&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;type&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;database }&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;unless&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;same-group&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;Những rule này giúp team bắt các vấn đề như:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;vòng phụ thuộc,&lt;/li&gt;
+&lt;li&gt;component bị mồ côi,&lt;/li&gt;
+&lt;li&gt;dependency bị cấm,&lt;/li&gt;
+&lt;li&gt;service truy cập database không thuộc quyền sở hữu của nó.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Cùng một cơ chế validation có thể chạy local hoặc trong CI:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-bash" data-lang="bash"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;pnpm archcode validate architecture.yaml
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;Điều này biến tài liệu kiến trúc thành một thứ gần giống fitness function.&lt;/p&gt;
+&lt;h2 id="tài-liệu-tĩnh"&gt;Tài liệu tĩnh
+&lt;/h2&gt;&lt;p&gt;ArchCode có thể sinh output tĩnh, nhưng cũng có thể embed trực tiếp vào documentation site.&lt;/p&gt;
+&lt;p&gt;Ví dụ, trong Hugo site này, một architecture block có thể được viết như sau:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt; 1
+&lt;/span&gt;&lt;span class="lnt"&gt; 2
+&lt;/span&gt;&lt;span class="lnt"&gt; 3
+&lt;/span&gt;&lt;span class="lnt"&gt; 4
+&lt;/span&gt;&lt;span class="lnt"&gt; 5
+&lt;/span&gt;&lt;span class="lnt"&gt; 6
+&lt;/span&gt;&lt;span class="lnt"&gt; 7
+&lt;/span&gt;&lt;span class="lnt"&gt; 8
+&lt;/span&gt;&lt;span class="lnt"&gt; 9
+&lt;/span&gt;&lt;span class="lnt"&gt;10
+&lt;/span&gt;&lt;span class="lnt"&gt;11
+&lt;/span&gt;&lt;span class="lnt"&gt;12
+&lt;/span&gt;&lt;span class="lnt"&gt;13
+&lt;/span&gt;&lt;span class="lnt"&gt;14
+&lt;/span&gt;&lt;span class="lnt"&gt;15
+&lt;/span&gt;&lt;span class="lnt"&gt;16
+&lt;/span&gt;&lt;span class="lnt"&gt;17
+&lt;/span&gt;&lt;span class="lnt"&gt;18
+&lt;/span&gt;&lt;span class="lnt"&gt;19
+&lt;/span&gt;&lt;span class="lnt"&gt;20
+&lt;/span&gt;&lt;span class="lnt"&gt;21
+&lt;/span&gt;&lt;span class="lnt"&gt;22
+&lt;/span&gt;&lt;span class="lnt"&gt;23
+&lt;/span&gt;&lt;span class="lnt"&gt;24
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-md" data-lang="md"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;{{&amp;lt; archcode title=&amp;#34;Document Platform&amp;#34; mode=&amp;#34;both&amp;#34; view=&amp;#34;overview&amp;#34; &amp;gt;}}
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;version: 1
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;system:
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; id: document-platform
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; name: Document Platform
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;components:
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="k"&gt;-&lt;/span&gt; id: web-app
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; type: frontend
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="k"&gt;-&lt;/span&gt; id: document-service
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; type: service
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;relationships:
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="k"&gt;-&lt;/span&gt; from: web-app
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; to: document-service
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; type: http
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;views:
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; &lt;span class="k"&gt;-&lt;/span&gt; id: overview
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; name: Overview
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; include: [&amp;#39;*&amp;#39;]
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; direction: LR
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;{{&amp;lt; /archcode &amp;gt;}}
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;Embed có ba chế độ hiển thị:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;preview&lt;/code&gt;: chỉ hiện diagram đã render,&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;code&lt;/code&gt;: chỉ hiện YAML source,&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;both&lt;/code&gt;: hiện cả diagram và YAML.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Dưới đây là ví dụ render trực tiếp ngay trong bài viết.&lt;/p&gt;
+&lt;h3 id="view-diagram"&gt;View diagram
+&lt;/h3&gt;&lt;section
+class="archcode-embed archcode-embed-preview"
+data-archcode-viewer data-view="overview" data-show-source="false"&gt;
+&lt;style&gt;
+.archcode-embed {
+display: grid;
+gap: 0.75rem;
+margin: 1.25rem 0;
+}
+.archcode-embed-header {
+display: flex;
+align-items: center;
+justify-content: space-between;
+gap: 0.75rem;
+flex-wrap: wrap;
+}
+.archcode-embed-title {
+margin: 0;
+font-size: 1rem;
+font-weight: 700;
+}
+.archcode-embed-full {
+font-size: 0.875rem;
+font-weight: 600;
+text-decoration: none;
+}
+.archcode-embed .archcode-output,
+.archcode-embed-code {
+border: 1px solid var(--card-separator-color, #d0d7de);
+border-radius: 8px;
+}
+.archcode-embed-code {
+overflow: auto;
+margin: 0;
+padding: 0.85rem;
+background: var(--code-background-color, rgba(127, 127, 127, 0.08));
+}
+&lt;/style&gt;
+&lt;div class="archcode-embed-header"&gt;
+&lt;p class="archcode-embed-title"&gt;Document Platform - Diagram&lt;/p&gt;
+&lt;a class="archcode-embed-full" href="https://phongthien99.github.io/archcode/" target="_blank" rel="noopener"&gt;Open editor&lt;/a&gt;
+&lt;/div&gt;
+&lt;div class="archcode-output" aria-live="polite"&gt;&lt;/div&gt;
+&lt;div class="archcode-diagnostics" aria-live="polite"&gt;&lt;/div&gt;
+&lt;pre class="archcode-source archcode-embed-code"&gt;&lt;code&gt;
+version: 1
+system:
+id: document-platform
+name: Document Platform
+components:
+- id: web-app
+type: frontend
+- id: document-service
+type: service
+relationships:
+- from: web-app
+to: document-service
+type: http
+views:
+- id: overview
+name: Overview
+include: [&amp;#39;*&amp;#39;]
+direction: LR
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/section&gt;
+&lt;script&gt;
+window.__archcodeViewerScript =
+window.__archcodeViewerScript ||
+(function () {
+var script = document.createElement('script');
+script.src = '/js/archcode-viewer.js';
+script.defer = true;
+document.head.appendChild(script);
+return script;
+})();
+&lt;/script&gt;
+&lt;h3 id="view-code"&gt;View code
+&lt;/h3&gt;&lt;section
+class="archcode-embed archcode-embed-code"
+&gt;
+&lt;style&gt;
+.archcode-embed {
+display: grid;
+gap: 0.75rem;
+margin: 1.25rem 0;
+}
+.archcode-embed-header {
+display: flex;
+align-items: center;
+justify-content: space-between;
+gap: 0.75rem;
+flex-wrap: wrap;
+}
+.archcode-embed-title {
+margin: 0;
+font-size: 1rem;
+font-weight: 700;
+}
+.archcode-embed-full {
+font-size: 0.875rem;
+font-weight: 600;
+text-decoration: none;
+}
+.archcode-embed .archcode-output,
+.archcode-embed-code {
+border: 1px solid var(--card-separator-color, #d0d7de);
+border-radius: 8px;
+}
+.archcode-embed-code {
+overflow: auto;
+margin: 0;
+padding: 0.85rem;
+background: var(--code-background-color, rgba(127, 127, 127, 0.08));
+}
+&lt;/style&gt;
+&lt;div class="archcode-embed-header"&gt;
+&lt;p class="archcode-embed-title"&gt;Document Platform - Source&lt;/p&gt;
+&lt;a class="archcode-embed-full" href="https://phongthien99.github.io/archcode/" target="_blank" rel="noopener"&gt;Open editor&lt;/a&gt;
+&lt;/div&gt;
+&lt;pre class="archcode-embed-code"&gt;&lt;code&gt;
+version: 1
+system:
+id: document-platform
+name: Document Platform
+components:
+- id: web-app
+type: frontend
+- id: document-service
+type: service
+relationships:
+- from: web-app
+to: document-service
+type: http
+views:
+- id: overview
+name: Overview
+include: [&amp;#39;*&amp;#39;]
+direction: LR
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/section&gt;
+&lt;p&gt;Nếu muốn reviewer vừa xem diagram vừa kiểm tra YAML trong cùng một block, dùng &lt;code&gt;mode=&amp;quot;both&amp;quot;&lt;/code&gt;:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt;1
+&lt;/span&gt;&lt;span class="lnt"&gt;2
+&lt;/span&gt;&lt;span class="lnt"&gt;3
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-md" data-lang="md"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;{{&amp;lt; archcode title=&amp;#34;Document Platform&amp;#34; mode=&amp;#34;both&amp;#34; view=&amp;#34;overview&amp;#34; &amp;gt;}}
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;...
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;{{&amp;lt; /archcode &amp;gt;}}
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;Cách này hữu ích cho blog post, tài liệu thiết kế kỹ thuật, hoặc architecture portal nội bộ.&lt;/p&gt;
+&lt;p&gt;Bạn có thể thử demo tại đây:&lt;/p&gt;
+&lt;p&gt;&lt;a class="link" href="https://phongthien99.github.io/archcode/" &gt;Mở ArchCode&lt;/a&gt;&lt;/p&gt;
+&lt;h2 id="điểm-khác-biệt-là-gì"&gt;Điểm khác biệt là gì?
+&lt;/h2&gt;&lt;p&gt;Trong không gian này đã có nhiều công cụ mạnh như Structurizr, LikeC4, Mermaid và D2.&lt;/p&gt;
+&lt;p&gt;ArchCode không có giá trị chỉ vì nó tự phát minh lại diagram-as-code. Nó chỉ thật sự có giá trị nếu làm cho một workflow cụ thể trở nên mượt hơn:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;chỉnh trực quan cho người không muốn viết mọi thứ bằng tay,&lt;/li&gt;
+&lt;li&gt;YAML source vẫn dễ đọc trong Pull Request,&lt;/li&gt;
+&lt;li&gt;chạy hoàn toàn trên browser cho team không muốn vận hành server,&lt;/li&gt;
+&lt;li&gt;embed tốt vào tài liệu tĩnh,&lt;/li&gt;
+&lt;li&gt;validation nhẹ cho architecture governance.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Đó là niche của ArchCode.&lt;/p&gt;
+&lt;h2 id="so-sánh-với-mermaid-và-drawio"&gt;So sánh với Mermaid và draw.io
+&lt;/h2&gt;&lt;p&gt;Mermaid và draw.io đều là những công cụ rất phổ biến, nhưng chúng phục vụ những nhu cầu hơi khác ArchCode.&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Tiêu chí&lt;/th&gt;
+&lt;th&gt;Mermaid&lt;/th&gt;
+&lt;th&gt;draw.io&lt;/th&gt;
+&lt;th&gt;ArchCode&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Cách làm việc chính&lt;/td&gt;
+&lt;td&gt;Viết diagram bằng text&lt;/td&gt;
+&lt;td&gt;Vẽ thủ công trên canvas&lt;/td&gt;
+&lt;td&gt;Mô tả architecture model bằng YAML, rồi render thành diagram&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Review trong Git&lt;/td&gt;
+&lt;td&gt;Tốt, vì là text&lt;/td&gt;
+&lt;td&gt;Khó hơn, vì diff thường không semantic&lt;/td&gt;
+&lt;td&gt;Tốt, vì thay đổi nằm trong YAML có cấu trúc&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Chỉnh trực quan&lt;/td&gt;
+&lt;td&gt;Hạn chế&lt;/td&gt;
+&lt;td&gt;Rất mạnh&lt;/td&gt;
+&lt;td&gt;Có, nhưng vẫn giữ YAML làm source of truth&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Validation kiến trúc&lt;/td&gt;
+&lt;td&gt;Không phải trọng tâm&lt;/td&gt;
+&lt;td&gt;Không phải trọng tâm&lt;/td&gt;
+&lt;td&gt;Có rule để bắt lỗi kiến trúc&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Phù hợp nhất cho&lt;/td&gt;
+&lt;td&gt;Flowchart, sequence diagram, tài liệu kỹ thuật nhanh&lt;/td&gt;
+&lt;td&gt;Sơ đồ tự do, workshop, bản vẽ trình bày&lt;/td&gt;
+&lt;td&gt;System architecture, C4-style model, tài liệu sống trong Git&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;CI/CD&lt;/td&gt;
+&lt;td&gt;Có thể render được&lt;/td&gt;
+&lt;td&gt;Khó tự động hóa hơn&lt;/td&gt;
+&lt;td&gt;Có thể validate và publish tự động&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;Nếu chỉ cần một sequence diagram hoặc flowchart nhỏ trong README, Mermaid là lựa chọn rất gọn.&lt;/p&gt;
+&lt;p&gt;Nếu cần vẽ tự do, làm workshop với stakeholder, hoặc tạo một sơ đồ trình bày đẹp nhanh chóng, draw.io vẫn rất tiện.&lt;/p&gt;
+&lt;p&gt;ArchCode phù hợp hơn khi sơ đồ không chỉ để nhìn, mà còn là một phần của engineering workflow:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;kiến trúc được review cùng Pull Request,&lt;/li&gt;
+&lt;li&gt;diagram được sinh từ model thay vì vẽ rời,&lt;/li&gt;
+&lt;li&gt;rule kiến trúc có thể chạy trong CI,&lt;/li&gt;
+&lt;li&gt;tài liệu được publish lại mỗi khi source thay đổi.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Nói ngắn gọn: Mermaid mạnh ở diagram-as-text, draw.io mạnh ở free-form drawing, còn ArchCode nhắm tới architecture-as-code có validation và workflow Git rõ ràng.&lt;/p&gt;
+&lt;h2 id="trạng-thái-hiện-tại"&gt;Trạng thái hiện tại
+&lt;/h2&gt;&lt;p&gt;ArchCode vẫn còn rất sớm.&lt;/p&gt;
+&lt;p&gt;Những phần hữu ích đã có:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;YAML schema,&lt;/li&gt;
+&lt;li&gt;parser và semantic validation,&lt;/li&gt;
+&lt;li&gt;diagram rendering,&lt;/li&gt;
+&lt;li&gt;visual canvas,&lt;/li&gt;
+&lt;li&gt;CLI validation,&lt;/li&gt;
+&lt;li&gt;export HTML/SVG,&lt;/li&gt;
+&lt;li&gt;Hugo embed mode.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Các bước tiếp theo đáng làm:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;thêm nhiều ví dụ tốt hơn,&lt;/li&gt;
+&lt;li&gt;import/export với ecosystem hiện có,&lt;/li&gt;
+&lt;li&gt;rule kiến trúc phong phú hơn,&lt;/li&gt;
+&lt;li&gt;report thân thiện cho Pull Request,&lt;/li&gt;
+&lt;li&gt;package publishing sạch hơn,&lt;/li&gt;
+&lt;li&gt;tài liệu tốt hơn cho team muốn áp dụng.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="kết-luận"&gt;Kết luận
+&lt;/h2&gt;&lt;p&gt;Tài liệu kiến trúc không nên là một screenshot chậm rãi trở nên sai.&lt;/p&gt;
+&lt;p&gt;Nó nên là một artifact sống:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;gần với code,&lt;/li&gt;
+&lt;li&gt;dễ review,&lt;/li&gt;
+&lt;li&gt;dễ render,&lt;/li&gt;
+&lt;li&gt;dễ validate,&lt;/li&gt;
+&lt;li&gt;dễ publish.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Đó là hướng mà ArchCode đang thử nghiệm.&lt;/p&gt;</description></item></channel></rss>

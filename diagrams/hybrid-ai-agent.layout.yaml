@@ -1,0 +1,23 @@
+version: 1
+views:
+  overview:
+    nodes:
+      user: { x: 0, y: 0 }
+      local-runtime: { x: 0, y: 200 }
+      local-policy: { x: 500, y: 200 }
+      local-tools: { x: 1000, y: 200 }
+      server-agent: { x: 500, y: 480 }
+      ai-model: { x: 0, y: 660 }
+      enterprise-knowledge: { x: 250, y: 660 }
+      server-tools: { x: 500, y: 660 }
+      policy-engine: { x: 750, y: 660 }
+      audit-log: { x: 1000, y: 660 }
+    edges:
+      server-agent->ai-model:
+        points: [[544, 580], [110, 580]]
+      server-agent->enterprise-knowledge:
+        points: [[577, 610], [360, 610]]
+      server-agent->policy-engine:
+        points: [[643, 610], [860, 610]]
+      server-agent->audit-log:
+        points: [[676, 580], [1110, 580]]

@@ -1,0 +1,601 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Etcd on phongthien</title><link>https://phongthien99.github.io/tags/etcd/</link><description>Recent content in Etcd on phongthien</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Fri, 13 Nov 2026 00:00:00 +0000</lastBuildDate><atom:link href="https://phongthien99.github.io/tags/etcd/index.xml" rel="self" type="application/rss+xml"/><item><title>PostgreSQL High Availability (Part 1): A Production Guide to Patroni, etcd v3, HAProxy and PgCat</title><link>https://phongthien99.github.io/posts/postgresql-high-availability-part-1-a-production-guide-to-patroni-etcd-v3-haproxy-and-pgcat/</link><pubDate>Fri, 13 Nov 2026 00:00:00 +0000</pubDate><guid>https://phongthien99.github.io/posts/postgresql-high-availability-part-1-a-production-guide-to-patroni-etcd-v3-haproxy-and-pgcat/</guid><description>&lt;h1 id="postgresql-high-availability-part-1-a-production-guide-to-patroni-etcd-v3-haproxy-and-pgcat"&gt;PostgreSQL High Availability (Part 1): A Production Guide to Patroni, etcd v3, HAProxy and PgCat
+&lt;/h1&gt;&lt;p&gt;Cách dựng một cụm PostgreSQL HA có &lt;strong&gt;failover tự động&lt;/strong&gt;, &lt;strong&gt;replication đồng bộ&lt;/strong&gt;, định tuyến bằng &lt;strong&gt;health-check của HAProxy&lt;/strong&gt; và &lt;strong&gt;connection pooling với PgCat&lt;/strong&gt;. Bài viết có kèm số liệu đo thật từ một POC Docker Compose.&lt;/p&gt;
+&lt;h2 id="tóm-tắt--kết-luận-kiến-trúc"&gt;Tóm tắt &amp;amp; Kết luận kiến trúc
+&lt;/h2&gt;&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Vấn đề cốt lõi:&lt;/strong&gt; Streaming replication của PostgreSQL không có cơ chế đồng thuận tự động. Khi primary sập hoặc bị cô lập mạng, các script failover tự viết hoặc gây &lt;strong&gt;split-brain&lt;/strong&gt; (hai node cùng nhận ghi), hoặc không promote được standby.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Topology tham chiếu:&lt;/strong&gt; Cụm etcd 3 node giữ leader lock. Patroni quản lý 3 node PostgreSQL 16. HAProxy định tuyến theo REST API của Patroni. PgCat đứng phía trước để gom kết nối và tách đọc/ghi.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Mục tiêu khôi phục:&lt;/strong&gt; Đo thực tế được &lt;strong&gt;RTO ~31 s&lt;/strong&gt; khi primary chết đột ngột và &lt;strong&gt;6,7 s&lt;/strong&gt; khi switchover có kế hoạch. Bật &lt;code&gt;synchronous_mode&lt;/code&gt; thì &lt;strong&gt;RPO = 0&lt;/strong&gt;. Không xảy ra split-brain trong bất kỳ kịch bản nào, kể cả khi etcd mất quorum hoặc primary bị cô lập mạng.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="1-vì-sao-ha-kiểu-truyền-thống-thất-bại-khi-lên-production"&gt;1. Vì sao HA kiểu truyền thống thất bại khi lên production
+&lt;/h2&gt;&lt;p&gt;Phần lớn các cụm PostgreSQL &amp;ldquo;HA&amp;rdquo; tự dựng chỉ gồm một primary, một hoặc hai standby và một script theo dõi. Kiểu thiết lập này thường thất bại vì ba lý do sau.&lt;/p&gt;
+&lt;h3 id="11-thảm-họa-split-brain"&gt;1.1 Thảm họa split-brain
+&lt;/h3&gt;&lt;p&gt;Script theo dõi ping primary, không thấy phản hồi trong 10 giây thì promote standby. Vấn đề là primary &lt;strong&gt;chưa chết&lt;/strong&gt;. Nó chỉ bị treo tạm thời, chẳng hạn kernel khựng 15 giây hoặc switch mạng chập chờn. Khi hồi lại, primary cũ vẫn tin mình là leader và tiếp tục nhận ghi. Lúc này hai node cùng ghi dữ liệu và hai timeline tách rời nhau. Việc hợp nhất dữ liệu sau đó gần như phải làm bằng tay, từng bảng một.&lt;/p&gt;
+&lt;p&gt;Cách xử lý duy nhất đáng tin cậy là &lt;strong&gt;một nguồn sự thật bên ngoài có cơ chế đồng thuận&lt;/strong&gt;. Node nào không chứng minh được với nguồn đó rằng mình vẫn là leader thì phải tự hạ cấp.&lt;/p&gt;
+&lt;h3 id="12-cái-bẫy-của-replication-bất-đồng-bộ"&gt;1.2 Cái bẫy của replication bất đồng bộ
+&lt;/h3&gt;&lt;p&gt;Streaming replication mặc định là bất đồng bộ: primary trả lời &lt;code&gt;COMMIT&lt;/code&gt; cho client &lt;strong&gt;trước khi&lt;/strong&gt; WAL tới được standby. Nếu primary chết đúng lúc đó, các giao dịch mà client đã thấy &amp;ldquo;thành công&amp;rdquo; sẽ không tồn tại trên node được promote. Ứng dụng không hề biết dữ liệu đã mất.&lt;/p&gt;
+&lt;p&gt;Bật replication đồng bộ thủ công qua &lt;code&gt;synchronous_standby_names&lt;/code&gt; lại tạo ra vấn đề ngược lại: khi standby đồng bộ chết, primary &lt;strong&gt;treo mọi lệnh ghi&lt;/strong&gt;. Cần một tầng điều khiển biết tự đổi standby đồng bộ khi topology thay đổi.&lt;/p&gt;
+&lt;h3 id="13-bão-kết-nối-khi-promote-primary"&gt;1.3 Bão kết nối khi promote primary
+&lt;/h3&gt;&lt;p&gt;PostgreSQL dùng mô hình &lt;strong&gt;một process cho mỗi kết nối&lt;/strong&gt;. Ngay sau failover, hàng trăm instance ứng dụng cùng reconnect vào primary mới, mỗi kết nối phải fork process và xác thực SCRAM. Primary mới bị dồn tải đúng lúc nó vừa promote xong, khi cache còn lạnh.&lt;/p&gt;
+&lt;p&gt;Ứng dụng mở và đóng kết nối liên tục (PHP, serverless, cron job) chịu chi phí này cả khi không có sự cố.&lt;/p&gt;
+&lt;h2 id="2-kiến-trúc-tham-chiếu-patroni--etcd--haproxy--pgcat"&gt;2. Kiến trúc tham chiếu: Patroni + etcd + HAProxy + PgCat
+&lt;/h2&gt;&lt;section
+class="archcode-embed archcode-embed-preview"
+data-archcode-viewer data-view="overview" data-show-source="false" data-layout-src="https://phongthien99.github.io/diagrams/postgresql-ha.layout.yaml"&gt;
+&lt;style&gt;
+.archcode-embed {
+display: grid;
+gap: 0.75rem;
+margin: 1.25rem 0;
+}
+.archcode-embed-header {
+display: flex;
+align-items: center;
+justify-content: space-between;
+gap: 0.75rem;
+flex-wrap: wrap;
+}
+.archcode-embed-title {
+margin: 0;
+font-size: 1rem;
+font-weight: 700;
+}
+.archcode-embed-full {
+font-size: 0.875rem;
+font-weight: 600;
+text-decoration: none;
+}
+.archcode-embed .archcode-output,
+.archcode-embed-code {
+border: 1px solid var(--card-separator-color, #d0d7de);
+border-radius: 8px;
+}
+.archcode-embed-code {
+overflow: auto;
+margin: 0;
+padding: 0.85rem;
+background: var(--code-background-color, rgba(127, 127, 127, 0.08));
+}
+&lt;/style&gt;
+&lt;div class="archcode-embed-header"&gt;
+&lt;p class="archcode-embed-title"&gt;PostgreSQL HA - Kiến trúc tham chiếu&lt;/p&gt;
+&lt;a class="archcode-embed-full" href="https://phongthien99.github.io/archcode/" target="_blank" rel="noopener"&gt;Open editor&lt;/a&gt;
+&lt;/div&gt;
+&lt;div class="archcode-output" aria-live="polite"&gt;&lt;/div&gt;
+&lt;div class="archcode-diagnostics" aria-live="polite"&gt;&lt;/div&gt;
+&lt;pre class="archcode-source archcode-embed-code"&gt;&lt;code&gt;
+version: 1
+system:
+id: postgresql-ha
+name: PostgreSQL High Availability
+groups:
+- id: access
+name: Tầng truy cập — pooling &amp;amp; định tuyến
+type: network
+- id: pg-cluster
+name: Cụm PostgreSQL 16 + Patroni
+type: cluster
+- id: dcs
+name: DCS — etcd v3 (Raft, quorum = 2)
+type: cluster
+components:
+- id: app
+name: Ứng dụng
+type: system
+- id: pgcat
+name: PgCat :6432
+type: gateway
+group: access
+description: Pooling + tách đọc/ghi
+- id: haproxy
+name: HAProxy
+type: gateway
+group: access
+description: &amp;#34;:5000 → GET /primary · :5001 → GET /replica&amp;#34;
+- id: pg1
+name: pg1 — Leader
+type: database
+group: pg-cluster
+technology: PostgreSQL 16 + Patroni
+- id: pg2
+name: pg2 — Sync Standby
+type: database
+group: pg-cluster
+technology: PostgreSQL 16 + Patroni
+- id: pg3
+name: pg3 — Replica
+type: database
+group: pg-cluster
+technology: PostgreSQL 16 + Patroni
+- id: etcd1
+name: etcd1
+type: storage
+group: dcs
+- id: etcd2
+name: etcd2
+type: storage
+group: dcs
+- id: etcd3
+name: etcd3
+type: storage
+group: dcs
+relationships:
+- from: app
+to: pgcat
+type: sql
+label: &amp;#34;:6432&amp;#34;
+- from: pgcat
+to: haproxy
+type: tcp
+label: &amp;#34;primary → :5000 · replica → :5001&amp;#34;
+- from: haproxy
+to: pg1
+type: sql
+label: Ghi (/primary = 200)
+- from: haproxy
+to: pg2
+type: sql
+label: Đọc (/replica = 200)
+- from: haproxy
+to: pg3
+type: sql
+label: Đọc (/replica = 200)
+- from: pg1
+to: pg2
+label: Streaming replication (sync)
+- from: pg1
+to: pg3
+label: Streaming replication
+- from: pg-cluster
+to: dcs
+type: http
+label: Leader lock (TTL)
+views:
+- id: overview
+name: Overview
+include: [&amp;#39;*&amp;#39;]
+direction: TB
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/section&gt;
+&lt;script&gt;
+window.__archcodeViewerScript =
+window.__archcodeViewerScript ||
+(function () {
+var script = document.createElement('script');
+script.src = '/js/archcode-viewer.js';
+script.defer = true;
+document.head.appendChild(script);
+return script;
+})();
+&lt;/script&gt;
+&lt;h3 id="21-trách-nhiệm-của-từng-thành-phần"&gt;2.1 Trách nhiệm của từng thành phần
+&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Cụm etcd (3 node):&lt;/strong&gt; Là DCS (Distributed Configuration Store), lưu leader key có TTL và cấu hình động của cụm dưới &lt;code&gt;/service/pg-ha/&lt;/code&gt;. Quorum là 2/3, nên chịu được mất 1 node. Khi mất quorum, không node nào gia hạn được leader key và primary buộc phải hạ cấp.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Patroni (chạy trên mỗi node PostgreSQL):&lt;/strong&gt; Mỗi &lt;code&gt;loop_wait&lt;/code&gt; giây chạy một vòng HA. Leader gia hạn key, replica theo dõi. Khi key hết hạn, replica có WAL mới nhất (lag ≤ &lt;code&gt;maximum_lag_on_failover&lt;/code&gt;) giành lock và promote. Primary cũ quay lại sẽ được &lt;code&gt;pg_rewind&lt;/code&gt; thay vì phải clone lại toàn bộ.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;PostgreSQL 16 (3 node):&lt;/strong&gt; Streaming replication dùng replication slot cho từng replica, nên WAL không bị xoá trước khi replica nhận. Bật &lt;code&gt;data-checksums&lt;/code&gt; và &lt;code&gt;wal_log_hints&lt;/code&gt; để &lt;code&gt;pg_rewind&lt;/code&gt; hoạt động.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;HAProxy:&lt;/strong&gt; Proxy TCP thuần, nhưng health-check bằng HTTP tới REST API &lt;code&gt;:8008&lt;/code&gt; của Patroni:
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;:5000&lt;/code&gt; chỉ chuyển tới node trả &lt;code&gt;200&lt;/code&gt; cho &lt;code&gt;GET /primary&lt;/code&gt; — luôn đúng một node.&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;:5001&lt;/code&gt; cân bằng round-robin giữa các node trả &lt;code&gt;200&lt;/code&gt; cho &lt;code&gt;GET /replica&lt;/code&gt;.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;PgCat:&lt;/strong&gt; Connection pooler viết bằng Rust, có phân tích cú pháp SQL. Ứng dụng chỉ biết một endpoint duy nhất là &lt;code&gt;pgcat:6432&lt;/code&gt;. &lt;code&gt;SELECT&lt;/code&gt; được chuyển sang replica, mọi câu lệnh khác sang primary.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;Về thứ tự tầng:&lt;/strong&gt; PgCat đứng &lt;strong&gt;trước&lt;/strong&gt; HAProxy, không nối thẳng vào PostgreSQL. PgCat chỉ biết vai trò của server qua cấu hình tĩnh và không tự phát hiện failover. HAProxy, nhờ Patroni, luôn biết primary thật đang ở đâu. Trỏ PgCat vào hai cổng cố định &lt;code&gt;5000&lt;/code&gt;/&lt;code&gt;5001&lt;/code&gt; giúp failover hoàn toàn trong suốt với tầng pooling.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;hr&gt;
+&lt;h2 id="3-cấu-hình-production"&gt;3. Cấu hình production
+&lt;/h2&gt;&lt;h3 id="31-cấu-hình-dcs-cho-patroni-patroniyml"&gt;3.1 Cấu hình DCS cho Patroni (&lt;code&gt;patroni.yml&lt;/code&gt;)
+&lt;/h3&gt;&lt;p&gt;Cấu hình dưới đây dùng chung cho cả ba node. Giá trị riêng của từng node (&lt;code&gt;PATRONI_NAME&lt;/code&gt;, &lt;code&gt;PATRONI_RESTAPI_CONNECT_ADDRESS&lt;/code&gt;, &lt;code&gt;PATRONI_POSTGRESQL_CONNECT_ADDRESS&lt;/code&gt;, mật khẩu) được truyền qua biến môi trường.&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;Ràng buộc bắt buộc:&lt;/strong&gt; &lt;code&gt;loop_wait + 2 × retry_timeout ≤ ttl&lt;/code&gt;.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt; 1
+&lt;/span&gt;&lt;span class="lnt"&gt; 2
+&lt;/span&gt;&lt;span class="lnt"&gt; 3
+&lt;/span&gt;&lt;span class="lnt"&gt; 4
+&lt;/span&gt;&lt;span class="lnt"&gt; 5
+&lt;/span&gt;&lt;span class="lnt"&gt; 6
+&lt;/span&gt;&lt;span class="lnt"&gt; 7
+&lt;/span&gt;&lt;span class="lnt"&gt; 8
+&lt;/span&gt;&lt;span class="lnt"&gt; 9
+&lt;/span&gt;&lt;span class="lnt"&gt;10
+&lt;/span&gt;&lt;span class="lnt"&gt;11
+&lt;/span&gt;&lt;span class="lnt"&gt;12
+&lt;/span&gt;&lt;span class="lnt"&gt;13
+&lt;/span&gt;&lt;span class="lnt"&gt;14
+&lt;/span&gt;&lt;span class="lnt"&gt;15
+&lt;/span&gt;&lt;span class="lnt"&gt;16
+&lt;/span&gt;&lt;span class="lnt"&gt;17
+&lt;/span&gt;&lt;span class="lnt"&gt;18
+&lt;/span&gt;&lt;span class="lnt"&gt;19
+&lt;/span&gt;&lt;span class="lnt"&gt;20
+&lt;/span&gt;&lt;span class="lnt"&gt;21
+&lt;/span&gt;&lt;span class="lnt"&gt;22
+&lt;/span&gt;&lt;span class="lnt"&gt;23
+&lt;/span&gt;&lt;span class="lnt"&gt;24
+&lt;/span&gt;&lt;span class="lnt"&gt;25
+&lt;/span&gt;&lt;span class="lnt"&gt;26
+&lt;/span&gt;&lt;span class="lnt"&gt;27
+&lt;/span&gt;&lt;span class="lnt"&gt;28
+&lt;/span&gt;&lt;span class="lnt"&gt;29
+&lt;/span&gt;&lt;span class="lnt"&gt;30
+&lt;/span&gt;&lt;span class="lnt"&gt;31
+&lt;/span&gt;&lt;span class="lnt"&gt;32
+&lt;/span&gt;&lt;span class="lnt"&gt;33
+&lt;/span&gt;&lt;span class="lnt"&gt;34
+&lt;/span&gt;&lt;span class="lnt"&gt;35
+&lt;/span&gt;&lt;span class="lnt"&gt;36
+&lt;/span&gt;&lt;span class="lnt"&gt;37
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-yaml" data-lang="yaml"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nt"&gt;scope&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;pg-ha&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nt"&gt;namespace&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;/service/&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nt"&gt;restapi&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;listen&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;0.0.0.0&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="m"&gt;8008&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nt"&gt;etcd3&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;hosts&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;etcd1:2379,etcd2:2379,etcd3:2379&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nt"&gt;bootstrap&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;dcs&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;ttl&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;30&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="c"&gt;# leader key hết hạn sau 30 s nếu không được gia hạn&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;loop_wait&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;10&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="c"&gt;# chu kỳ vòng HA&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;retry_timeout&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;10&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="c"&gt;# thời gian thử lại DCS/PG trước khi hạ cấp&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;maximum_lag_on_failover&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;1048576&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="c"&gt;# 1 MB: replica lag hơn mức này không được promote&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;synchronous_mode&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kc"&gt;false&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="c"&gt;# bật động bằng patronictl khi cần RPO = 0&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;postgresql&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;use_pg_rewind&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kc"&gt;true&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="c"&gt;# primary cũ tự rewind thay vì clone lại&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;use_slots&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kc"&gt;true&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="c"&gt;# replication slot cho mỗi replica&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;parameters&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;wal_level&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;replica&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;hot_standby&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s2"&gt;&amp;#34;on&amp;#34;&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;wal_log_hints&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s2"&gt;&amp;#34;on&amp;#34;&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="c"&gt;# bắt buộc cho pg_rewind&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;max_wal_senders&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;10&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;max_replication_slots&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;10&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;wal_keep_size&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;256MB&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;password_encryption&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;scram-sha-256&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;initdb&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;- &lt;span class="nt"&gt;encoding&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;UTF8&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;- &lt;span class="l"&gt;data-checksums&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nt"&gt;postgresql&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;listen&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="m"&gt;0.0.0.0&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="m"&gt;5432&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;data_dir&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;/var/lib/postgresql/data/pgdata&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;bin_dir&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;/usr/lib/postgresql/16/bin&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nt"&gt;basebackup&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="w"&gt; &lt;/span&gt;- &lt;span class="nt"&gt;checkpoint&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="l"&gt;fast &lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="c"&gt;# không chờ spread checkpoint khi clone replica&lt;/span&gt;&lt;span class="w"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;Hãy chú ý dòng &lt;code&gt;basebackup: checkpoint: fast&lt;/code&gt;. Nếu thiếu nó, &lt;code&gt;pg_basebackup&lt;/code&gt; chờ một spread checkpoint, mặc định rải trên 90% của &lt;code&gt;checkpoint_timeout&lt;/code&gt; 5 phút. Replica mới sẽ đứng ở trạng thái &lt;code&gt;creating replica&lt;/code&gt; tới khoảng &lt;strong&gt;4,5 phút&lt;/strong&gt; mà log không báo lỗi gì.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Về &lt;code&gt;synchronous_mode&lt;/code&gt;:&lt;/strong&gt; Patroni mặc định &lt;code&gt;synchronous_mode_strict: false&lt;/code&gt;. Khi không còn standby nào khả dụng, primary vẫn tiếp tục nhận ghi, nghĩa là ưu tiên tính sẵn sàng. Chỉ đặt &lt;code&gt;strict: true&lt;/code&gt; khi việc mất dữ liệu là không thể chấp nhận và có thể chịu được việc primary chặn ghi.&lt;/p&gt;
+&lt;h3 id="32-định-tuyến-động-bằng-haproxy-haproxycfg"&gt;3.2 Định tuyến động bằng HAProxy (&lt;code&gt;haproxy.cfg&lt;/code&gt;)
+&lt;/h3&gt;&lt;p&gt;HAProxy không hiểu giao thức PostgreSQL. Toàn bộ logic định tuyến dựa vào mã HTTP mà Patroni trả về. Trong môi trường container, phải khai báo &lt;code&gt;resolvers&lt;/code&gt; để HAProxy khởi động được kể cả khi node PostgreSQL chưa lên.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt; 1
+&lt;/span&gt;&lt;span class="lnt"&gt; 2
+&lt;/span&gt;&lt;span class="lnt"&gt; 3
+&lt;/span&gt;&lt;span class="lnt"&gt; 4
+&lt;/span&gt;&lt;span class="lnt"&gt; 5
+&lt;/span&gt;&lt;span class="lnt"&gt; 6
+&lt;/span&gt;&lt;span class="lnt"&gt; 7
+&lt;/span&gt;&lt;span class="lnt"&gt; 8
+&lt;/span&gt;&lt;span class="lnt"&gt; 9
+&lt;/span&gt;&lt;span class="lnt"&gt;10
+&lt;/span&gt;&lt;span class="lnt"&gt;11
+&lt;/span&gt;&lt;span class="lnt"&gt;12
+&lt;/span&gt;&lt;span class="lnt"&gt;13
+&lt;/span&gt;&lt;span class="lnt"&gt;14
+&lt;/span&gt;&lt;span class="lnt"&gt;15
+&lt;/span&gt;&lt;span class="lnt"&gt;16
+&lt;/span&gt;&lt;span class="lnt"&gt;17
+&lt;/span&gt;&lt;span class="lnt"&gt;18
+&lt;/span&gt;&lt;span class="lnt"&gt;19
+&lt;/span&gt;&lt;span class="lnt"&gt;20
+&lt;/span&gt;&lt;span class="lnt"&gt;21
+&lt;/span&gt;&lt;span class="lnt"&gt;22
+&lt;/span&gt;&lt;span class="lnt"&gt;23
+&lt;/span&gt;&lt;span class="lnt"&gt;24
+&lt;/span&gt;&lt;span class="lnt"&gt;25
+&lt;/span&gt;&lt;span class="lnt"&gt;26
+&lt;/span&gt;&lt;span class="lnt"&gt;27
+&lt;/span&gt;&lt;span class="lnt"&gt;28
+&lt;/span&gt;&lt;span class="lnt"&gt;29
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-fallback" data-lang="fallback"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;resolvers docker
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; nameserver dns1 127.0.0.11:53
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; hold valid 5s
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;defaults
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; mode tcp
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; timeout connect 4s
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; timeout client 30m
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; timeout server 30m
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; timeout check 5s
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;listen primary
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; bind *:5000
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; option httpchk GET /primary
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; http-check expect status 200
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; default-server inter 3s fall 3 rise 2 on-marked-down shutdown-sessions resolvers docker init-addr last,libc,none
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; server pg1 pg1:5432 maxconn 500 check port 8008
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; server pg2 pg2:5432 maxconn 500 check port 8008
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; server pg3 pg3:5432 maxconn 500 check port 8008
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;listen replicas
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; bind *:5001
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; balance roundrobin
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; option httpchk GET /replica
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; http-check expect status 200
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; default-server inter 3s fall 3 rise 2 on-marked-down shutdown-sessions resolvers docker init-addr last,libc,none
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; server pg1 pg1:5432 maxconn 500 check port 8008
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; server pg2 pg2:5432 maxconn 500 check port 8008
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt; server pg3 pg3:5432 maxconn 500 check port 8008
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;Hãy chú ý directive &lt;code&gt;on-marked-down shutdown-sessions&lt;/code&gt;. Khi một node mất vai trò primary, HAProxy cắt ngay mọi kết nối đang mở tới nó, thay vì để client tiếp tục ghi vào một node đã chuyển sang read-only. &lt;code&gt;inter 3s fall 3&lt;/code&gt; nghĩa là thay đổi vai trò được phát hiện trong khoảng &lt;strong&gt;9 giây&lt;/strong&gt;.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="4-connection-pooling-pgcat"&gt;4. Connection Pooling: PgCat
+&lt;/h2&gt;&lt;p&gt;PgCat chạy ở chế độ &lt;strong&gt;transaction&lt;/strong&gt;: một kết nối server chỉ bị giữ trong suốt một giao dịch rồi trả về pool. Bật query parser để tách đọc/ghi tự động.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;div class="chroma"&gt;
+&lt;table class="lntable"&gt;&lt;tr&gt;&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code&gt;&lt;span class="lnt"&gt; 1
+&lt;/span&gt;&lt;span class="lnt"&gt; 2
+&lt;/span&gt;&lt;span class="lnt"&gt; 3
+&lt;/span&gt;&lt;span class="lnt"&gt; 4
+&lt;/span&gt;&lt;span class="lnt"&gt; 5
+&lt;/span&gt;&lt;span class="lnt"&gt; 6
+&lt;/span&gt;&lt;span class="lnt"&gt; 7
+&lt;/span&gt;&lt;span class="lnt"&gt; 8
+&lt;/span&gt;&lt;span class="lnt"&gt; 9
+&lt;/span&gt;&lt;span class="lnt"&gt;10
+&lt;/span&gt;&lt;span class="lnt"&gt;11
+&lt;/span&gt;&lt;span class="lnt"&gt;12
+&lt;/span&gt;&lt;span class="lnt"&gt;13
+&lt;/span&gt;&lt;span class="lnt"&gt;14
+&lt;/span&gt;&lt;span class="lnt"&gt;15
+&lt;/span&gt;&lt;span class="lnt"&gt;16
+&lt;/span&gt;&lt;span class="lnt"&gt;17
+&lt;/span&gt;&lt;span class="lnt"&gt;18
+&lt;/span&gt;&lt;span class="lnt"&gt;19
+&lt;/span&gt;&lt;span class="lnt"&gt;20
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;
+&lt;td class="lntd"&gt;
+&lt;pre tabindex="0" class="chroma"&gt;&lt;code class="language-toml" data-lang="toml"&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="nx"&gt;general&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nx"&gt;port&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;6432&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nx"&gt;connect_timeout&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;3000&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nx"&gt;healthcheck_delay&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;10000&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nx"&gt;ban_time&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;10&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="nx"&gt;pools&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;appdb&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nx"&gt;pool_mode&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;transaction&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nx"&gt;query_parser_enabled&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="kc"&gt;true&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nx"&gt;query_parser_read_write_splitting&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="kc"&gt;true&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nx"&gt;primary_reads_enabled&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="kc"&gt;false&lt;/span&gt; &lt;span class="c"&gt;# SELECT chỉ đi replica&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="nx"&gt;pools&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;appdb&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;users&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nx"&gt;username&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;app&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nx"&gt;pool_size&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;20&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nx"&gt;min_pool_size&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt; &lt;span class="c"&gt;# mở kết nối lazy, xem caveat bên dưới&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="nx"&gt;pools&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;appdb&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;shards&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nx"&gt;database&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;appdb&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span class="line"&gt;&lt;span class="cl"&gt;&lt;span class="nx"&gt;servers&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="p"&gt;[[&lt;/span&gt;&lt;span class="s2"&gt;&amp;#34;haproxy&amp;#34;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;5000&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;primary&amp;#34;&lt;/span&gt;&lt;span class="p"&gt;],&lt;/span&gt; &lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s2"&gt;&amp;#34;haproxy&amp;#34;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;5001&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;replica&amp;#34;&lt;/span&gt;&lt;span class="p"&gt;]]&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;&lt;p&gt;Hãy chú ý &lt;code&gt;min_pool_size = 0&lt;/code&gt;. Nếu đặt lớn hơn 0, PgCat mở sẵn kết nối tới &lt;code&gt;haproxy:5001&lt;/code&gt; ngay lúc khởi động, có thể trước khi HAProxy kịp đánh dấu replica nào là UP. Các kết nối đó chết ngay, và request đọc đầu tiên nhận lỗi &lt;code&gt;AllServersDown&lt;/code&gt;.&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;⚠️ &lt;strong&gt;Lưu ý quan trọng cho production: PgCat không tự retry kết nối hỏng&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Sau mỗi lần failover hoặc restart HAProxy, các kết nối đang nằm trong pool của PgCat bị cắt ở phía sau (do &lt;code&gt;shutdown-sessions&lt;/code&gt; hoặc do HAProxy dừng). Khi client mượn một kết nối như vậy, PgCat health-check, phát hiện hỏng và trả lỗi &lt;code&gt;AllServersDown&lt;/code&gt; ngay cho client, thay vì mở kết nối mới rồi thử lại. Lỗi tự hết sau vài request, khi các kết nối hỏng đã bị loại khỏi pool.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Hệ quả:&lt;/strong&gt; ứng dụng &lt;strong&gt;bắt buộc&lt;/strong&gt; phải có cơ chế retry cho lỗi kết nối, ví dụ 2–3 lần với backoff khoảng 1 giây. Không tầng HA nào miễn cho ứng dụng trách nhiệm này. Giảm &lt;code&gt;idle_timeout&lt;/code&gt; và &lt;code&gt;server_lifetime&lt;/code&gt; thu hẹp được khoảng thời gian bị ảnh hưởng nhưng không loại bỏ được hoàn toàn.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Chế độ transaction còn có các ràng buộc quen thuộc của mọi pooler: &lt;code&gt;SET&lt;/code&gt; cấp session, advisory lock cấp session, &lt;code&gt;LISTEN/NOTIFY&lt;/code&gt; và temporary table không hoạt động đúng giữa các giao dịch.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="5-diễn-tập-failover--khôi-phục-sự-cố"&gt;5. Diễn tập failover &amp;amp; khôi phục sự cố
+&lt;/h2&gt;&lt;p&gt;Một bài test failover nên chạy trước khi go-live: tạo tải ghi liên tục qua PgCat, sau đó &lt;code&gt;docker kill&lt;/code&gt; (hoặc tắt nguồn VM) node đang là leader.&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;code&gt;kill -9&lt;/code&gt; tiến trình postgres &lt;strong&gt;không phải&lt;/strong&gt; là bài test failover: Patroni vẫn sống, nó sẽ khởi động lại PostgreSQL tại chỗ mà không có cuộc bầu leader nào.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Client đo lường cần chạy ở một container hoặc máy riêng. Nếu chạy &lt;code&gt;pgbench&lt;/code&gt; bên trong container sắp bị kill, công cụ đo sẽ chết cùng đối tượng được đo.&lt;/p&gt;
+&lt;h3 id="51-dòng-thời-gian-failover-primary-chết-đột-ngột"&gt;5.1 Dòng thời gian failover (primary chết đột ngột)
+&lt;/h3&gt;&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Giai đoạn&lt;/th&gt;
+&lt;th&gt;Sự kiện&lt;/th&gt;
+&lt;th&gt;Phản ứng của hệ thống&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;T+0 s&lt;/td&gt;
+&lt;td&gt;Primary bị kill&lt;/td&gt;
+&lt;td&gt;Kết nối ghi lỗi, PgCat trả lỗi cho client&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;T+3–9 s&lt;/td&gt;
+&lt;td&gt;HAProxy health-check thất bại 3 lần&lt;/td&gt;
+&lt;td&gt;Node bị đánh dấu DOWN trên &lt;code&gt;:5000&lt;/code&gt;, cổng ghi không còn backend&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;T+≤30 s&lt;/td&gt;
+&lt;td&gt;Leader key trong etcd hết TTL&lt;/td&gt;
+&lt;td&gt;Các replica phát hiện không còn leader&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;T+~30 s&lt;/td&gt;
+&lt;td&gt;Replica so sánh WAL LSN&lt;/td&gt;
+&lt;td&gt;Node đủ điều kiện (Sync Standby nếu bật sync mode) giành lock và chạy &lt;code&gt;pg_ctl promote&lt;/code&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;T+~31 s&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;/primary&lt;/code&gt; trả 200 trên node mới&lt;/td&gt;
+&lt;td&gt;HAProxy đưa node vào &lt;code&gt;:5000&lt;/code&gt;, lệnh ghi qua PgCat thành công trở lại&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;T+~35 s&lt;/td&gt;
+&lt;td&gt;Replica còn lại nhận leader mới&lt;/td&gt;
+&lt;td&gt;Replica chuyển sang follow timeline mới&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Khi node cũ khởi động lại&lt;/td&gt;
+&lt;td&gt;Patroni phát hiện timeline lệch&lt;/td&gt;
+&lt;td&gt;Chạy &lt;code&gt;pg_rewind&lt;/code&gt; rồi rejoin làm replica&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h3 id="52-kết-quả-các-kịch-bản-đã-diễn-tập"&gt;5.2 Kết quả các kịch bản đã diễn tập
+&lt;/h3&gt;&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;#&lt;/th&gt;
+&lt;th&gt;Kịch bản&lt;/th&gt;
+&lt;th&gt;Kết quả đo được&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;T1&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;docker kill&lt;/code&gt; leader&lt;/td&gt;
+&lt;td&gt;Ghi lại được sau &lt;strong&gt;30,9 s&lt;/strong&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;T2&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;patronictl switchover&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;Ghi lại được sau &lt;strong&gt;6,7 s&lt;/strong&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;T3&lt;/td&gt;
+&lt;td&gt;Leader cũ khởi động lại&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;pg_rewind&lt;/code&gt; exit code=0, rejoin làm replica&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;T4&lt;/td&gt;
+&lt;td&gt;Kill 1/3 etcd&lt;/td&gt;
+&lt;td&gt;Không ảnh hưởng&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;T5&lt;/td&gt;
+&lt;td&gt;Kill 2/3 etcd (mất quorum)&lt;/td&gt;
+&lt;td&gt;Leader tự hạ cấp sau ~12 s, cụm chuyển sang read-only. Khôi phục etcd thì cụm tự lành&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;T6&lt;/td&gt;
+&lt;td&gt;Cô lập mạng primary&lt;/td&gt;
+&lt;td&gt;Primary cũ tự hạ cấp, node khác lên leader sau ~25 s. Tối đa 1 primary tại mọi thời điểm&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;T7&lt;/td&gt;
+&lt;td&gt;Restart HAProxy / PgCat&lt;/td&gt;
+&lt;td&gt;Ghi lại được sau 10,6 s / 1,6 s&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;T8&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;synchronous_mode&lt;/code&gt; + kill leader dưới tải&lt;/td&gt;
+&lt;td&gt;905 giao dịch đã ACK → 905 dòng trên primary mới. &lt;strong&gt;RPO = 0&lt;/strong&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;Kịch bản &lt;strong&gt;T5&lt;/strong&gt; thường gây bất ngờ cho đội ứng dụng: mất quorum etcd khiến toàn bộ cụm từ chối ghi, dù cả ba node PostgreSQL đều khỏe. Đây là hành vi đúng thiết kế, vì hệ thống chọn &lt;strong&gt;nhất quán&lt;/strong&gt; thay vì &lt;strong&gt;sẵn sàng&lt;/strong&gt;. Nếu cần giữ primary hoạt động khi chỉ DCS gặp sự cố, xem xét &lt;code&gt;failsafe_mode: true&lt;/code&gt; của Patroni.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Cách kiểm chứng RPO ở T8:&lt;/strong&gt; một client ghi tuần tự các số nguyên và chỉ ghi lại số nào đã được server xác nhận &lt;code&gt;COMMIT&lt;/code&gt;. Sau failover, so sánh danh sách đó với dữ liệu trên primary mới. Số nào đã được xác nhận mà không tồn tại trong database chính là dữ liệu bị mất.&lt;/p&gt;
+&lt;p&gt;Hãy ghi lại thời gian thực tế trong môi trường của bạn, xác nhận không giao dịch đã ACK nào bị mất sau test, và lặp lại các bài diễn tập này sau mỗi lần nâng cấp Patroni, etcd hoặc thay đổi topology mạng.&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="6-benchmark-chi-phí-của-từng-tầng"&gt;6. Benchmark: Chi phí của từng tầng
+&lt;/h2&gt;&lt;p&gt;Số liệu dưới đây đo bằng &lt;code&gt;pgbench&lt;/code&gt;, scale 50 (~750 MB), 30 s mỗi lượt. Toàn bộ cụm và client chạy chung một máy 16 vCPU cùng các dịch vụ khác, nên chỉ nên dùng số liệu để &lt;strong&gt;so sánh tương đối&lt;/strong&gt; (nhiễu khoảng ±30%). Hãy benchmark lại với workload của chính bạn trước khi chốt cấu hình.&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Kịch bản (32 client)&lt;/th&gt;
+&lt;th&gt;Trực tiếp&lt;/th&gt;
+&lt;th&gt;Qua PgCat&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Ghi TPC-B, async&lt;/td&gt;
+&lt;td&gt;1 480 TPS · 22 ms&lt;/td&gt;
+&lt;td&gt;754 TPS · 42 ms&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Ghi TPC-B, sync&lt;/td&gt;
+&lt;td&gt;879 TPS · 36 ms&lt;/td&gt;
+&lt;td&gt;589 TPS · 54 ms&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Đọc select-only (primary)&lt;/td&gt;
+&lt;td&gt;22 083 TPS · 1,45 ms&lt;/td&gt;
+&lt;td&gt;—&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Đọc select-only (replica &lt;code&gt;:5001&lt;/code&gt;)&lt;/td&gt;
+&lt;td&gt;28 940 TPS · 1,11 ms&lt;/td&gt;
+&lt;td&gt;18 895 TPS · 1,69 ms&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Mở kết nối mới mỗi giao dịch (&lt;code&gt;-C&lt;/code&gt;)&lt;/td&gt;
+&lt;td&gt;301 TPS · 106 ms&lt;/td&gt;
+&lt;td&gt;981 TPS · 33 ms&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;Ba kết luận rút ra:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;PgCat có overhead khi kết nối sống lâu.&lt;/strong&gt; TPS giảm 15–50% do thêm một hop proxy, chi phí phân tích SQL và giới hạn &lt;code&gt;pool_size = 20&lt;/code&gt; buộc 32 client phải xếp hàng.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;PgCat có lợi rõ rệt khi kết nối sống ngắn:&lt;/strong&gt; thông lượng tăng 3,3 lần, độ trễ giảm 3 lần. Đây là lý do chính để đặt pooler trong kiến trúc.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Replication đồng bộ làm giảm ~40% thông lượng ghi&lt;/strong&gt; ở 32 client. Đó là cái giá của RPO = 0, và nên được quyết định theo yêu cầu nghiệp vụ.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;hr&gt;
+&lt;h2 id="7-ma-trận-quyết-định-kiến-trúc"&gt;7. Ma trận quyết định kiến trúc
+&lt;/h2&gt;&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Tiêu chí&lt;/th&gt;
+&lt;th&gt;Script failover tự viết&lt;/th&gt;
+&lt;th&gt;Patroni + etcd + HAProxy&lt;/th&gt;
+&lt;th&gt;Patroni + etcd + HAProxy + PgCat&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Chống split-brain&lt;/td&gt;
+&lt;td&gt;Không&lt;/td&gt;
+&lt;td&gt;Có (bầu leader qua DCS)&lt;/td&gt;
+&lt;td&gt;Có (bầu leader qua DCS)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Failover tự động&lt;/td&gt;
+&lt;td&gt;Có, nhưng không an toàn&lt;/td&gt;
+&lt;td&gt;Có, ~30 s&lt;/td&gt;
+&lt;td&gt;Có, ~30 s&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;RPO = 0&lt;/td&gt;
+&lt;td&gt;Phải cấu hình thủ công&lt;/td&gt;
+&lt;td&gt;Có (&lt;code&gt;synchronous_mode&lt;/code&gt;)&lt;/td&gt;
+&lt;td&gt;Có (&lt;code&gt;synchronous_mode&lt;/code&gt;)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Tách đọc/ghi&lt;/td&gt;
+&lt;td&gt;Ứng dụng tự xử lý&lt;/td&gt;
+&lt;td&gt;Hai cổng 5000/5001, ứng dụng tự chọn&lt;/td&gt;
+&lt;td&gt;Tự động qua query parser&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Chịu kết nối ngắn&lt;/td&gt;
+&lt;td&gt;Kém&lt;/td&gt;
+&lt;td&gt;Kém (301 TPS với &lt;code&gt;-C&lt;/code&gt;)&lt;/td&gt;
+&lt;td&gt;Tốt (981 TPS với &lt;code&gt;-C&lt;/code&gt;)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Độ trễ ghi thêm&lt;/td&gt;
+&lt;td&gt;0&lt;/td&gt;
+&lt;td&gt;~0&lt;/td&gt;
+&lt;td&gt;+~20 ms ở 32 client&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;</description></item></channel></rss>

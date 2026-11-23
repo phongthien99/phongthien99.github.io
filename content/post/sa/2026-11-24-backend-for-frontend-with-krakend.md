@@ -1,5 +1,5 @@
 ---
-title: "Backend-for-Frontend with KrakenD: From Problem to Implementation"
+title: "Backend-for-Frontend (BFF) Pattern"
 date: "2026-11-23T00:00:00Z"
 draft: false
 categories: [SA]
@@ -8,7 +8,7 @@ slug: "backend-for-frontend-with-krakend"
 author: "phongthien"
 ---
 
-# Backend-for-Frontend with KrakenD: From Problem to Implementation
+# Backend-for-Frontend (BFF) Pattern
 
 > Một màn hình, ba API, hai loại client và một câu hỏi: có thể xây lớp BFF chỉ bằng file cấu hình không?
 

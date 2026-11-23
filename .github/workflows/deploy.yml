@@ -33,6 +33,9 @@ jobs:
                   go-version: "^1.17.0"
             - run: go version
 
+            - name: Install Dart Sass
+              run: sudo snap install dart-sass
+
             - name: Setup Hugo
               uses: peaceiris/actions-hugo@v2
               with:
